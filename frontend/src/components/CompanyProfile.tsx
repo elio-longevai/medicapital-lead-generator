@@ -176,7 +176,7 @@ export const CompanyProfile = ({ company, onBack }) => {
                           <label className="text-sm font-medium text-gray-500">Website</label>
                           <div className="mt-1 flex items-center">
                             <a 
-                              href={`https://${company.website}`} 
+                              href={`${company.website}`} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:text-blue-800 flex items-center"

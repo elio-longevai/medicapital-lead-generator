@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# MediCapital Lead Generation Engine - Frontend
 
-## Project info
+## Project Overview
 
-**URL**: https://lovable.dev/projects/f6a1841a-4cf6-4752-940b-c74e082ea84b
+AI-powered lead generation system frontend for MediCapital Solutions. Built with React, TypeScript, and modern web technologies to provide an intuitive interface for managing B2B prospects.
 
-## How can I edit this code?
+## Development Setup
 
-There are several ways of editing your application.
+### Prerequisites
+- Node.js (v18+) - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Bun package manager
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/f6a1841a-4cf6-4752-940b-c74e082ea84b) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Getting Started
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Navigate to frontend directory
+cd frontend
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Install dependencies
+bun install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Start development server
+bun run dev
 ```
 
-**Edit a file directly in GitHub**
+The frontend will be available at http://localhost:8080
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Available Scripts
 
-**Use GitHub Codespaces**
+- `bun run dev` - Start development server with hot reload
+- `bun run build` - Build for production
+- `bun run lint` - Run ESLint
+- `bun run preview` - Preview production build
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Technologies Used
 
-## What technologies are used for this project?
+- **Vite** - Build tool and dev server
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **shadcn/ui** - Component library
+- **React Query** - Data fetching and caching
+- **React Router** - Navigation
 
-This project is built with:
+## Project Structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+src/
+├── components/     # Reusable UI components
+├── hooks/         # Custom React hooks
+├── pages/         # Page components
+├── services/      # API services
+└── lib/           # Utilities and helpers
+```
 
-## How can I deploy this project?
+## API Integration
 
-Simply open [Lovable](https://lovable.dev/projects/f6a1841a-4cf6-4752-940b-c74e082ea84b) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+The frontend connects to the FastAPI backend running on port 8000. See the backend README for setup instructions.

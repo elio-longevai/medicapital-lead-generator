@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,94 +14,77 @@ import {
   Plus,
   Sparkles,
   Globe,
-  Filter
+  Filter,
+  Loader2
 } from "lucide-react";
 import { LeadDatabase } from "@/components/LeadDatabase";
 import { CompanyProfile } from "@/components/CompanyProfile";
 import { QualificationWorkflow } from "@/components/QualificationWorkflow";
+import { useDashboardStats, useCompanies } from "@/hooks/useCompanies";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedCompany, setSelectedCompany] = useState(null);
 
-  const dashboardMetrics = [
+  // Fetch real dashboard data
+  const { data: dashboardData, isLoading: dashboardLoading } = useDashboardStats();
+  const { data: recentLeadsData, isLoading: leadsLoading } = useCompanies({
+    limit: 3,
+    sort_by: "activity"
+  });
+
+  const recentLeads = recentLeadsData?.companies || [];
+
+  // Dynamic dashboard metrics based on real data
+  const dashboardMetrics = dashboardData ? [
     {
       title: "Total Leads Discovered",
-      value: "1,247",
-      change: "+156 this week",
+      value: dashboardData.totalLeads.toString(),
+      change: `${dashboardData.qualificationRate.toFixed(1)}% qualified`,
       changeType: "positive",
       icon: Users,
       description: "Across all target industries"
     },
     {
       title: "Target Industries",
-      value: "3",
-      change: "Healthcare, Beauty, Horeca",
+      value: dashboardData.topIndustries.length.toString(),
+      change: dashboardData.topIndustries.map(i => i.industry).join(", "),
       changeType: "neutral",
       icon: Target,
       description: "Defined ICPs with qualification criteria"
     },
     {
       title: "High-Quality Prospects",
-      value: "342",
-      change: "+47 this week",
+      value: dashboardData.qualifiedLeads.toString(),
+      change: `Avg score: ${dashboardData.avgScore.toFixed(0)}`,
       changeType: "positive",
       icon: TrendingUp,
       description: "Meeting initial qualification criteria"
     },
     {
       title: "Ready for Outreach",
-      value: "156",
+      value: dashboardData.qualifiedLeads.toString(),
       change: "Data enriched & qualified",
       changeType: "positive",
       icon: Sparkles,
       description: "Prospects with complete profiles"
     }
-  ];
-
-  const recentLeads = [
-    {
-      id: 1,
-      company: "Amsterdam Medical Center",
-      industry: "Healthcare",
-      score: 92,
-      status: "Qualified",
-      lastActivity: "2 hours ago",
-      equipmentNeed: "Diagnostic Equipment",
-      value: "€85,000",
-      location: "Amsterdam, NL"
-    },
-    {
-      id: 2,
-      company: "Beauty Clinic Rotterdam",
-      industry: "Beauty & Wellness",
-      score: 88,
-      status: "In Review",
-      lastActivity: "4 hours ago",
-      equipmentNeed: "Laser Systems",
-      value: "€45,000",
-      location: "Rotterdam, NL"
-    },
-    {
-      id: 3,
-      company: "TechMed Innovations",
-      industry: "Healthcare",
-      score: 94,
-      status: "Qualified",
-      lastActivity: "6 hours ago",
-      equipmentNeed: "Laboratory Equipment",
-      value: "€125,000",
-      location: "Eindhoven, NL"
-    }
-  ];
+  ] : [];
 
   const getStatusBadge = (status) => {
     const variants = {
-      "Qualified": "bg-emerald-100 text-emerald-800 border-emerald-200",
-      "In Review": "bg-amber-100 text-amber-800 border-amber-200",
-      "Discovered": "bg-slate-100 text-slate-800 border-slate-200"
+      "qualified": "bg-emerald-100 text-emerald-800 border-emerald-200",
+      "in_review": "bg-amber-100 text-amber-800 border-amber-200",
+      "discovered": "bg-slate-100 text-slate-800 border-slate-200"
     };
-    return <Badge className={`${variants[status]} border font-medium`}>{status}</Badge>;
+    
+    // Handle both frontend display format and backend API format
+    const normalizedStatus = status.toLowerCase().replace(/\s+/g, '_');
+    const displayStatus = status.includes('_') 
+      ? status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+      : status;
+      
+    return <Badge className={`${variants[normalizedStatus] || variants.discovered} border font-medium`}>{displayStatus}</Badge>;
   };
 
   const getScoreColor = (score) => {
@@ -164,39 +146,55 @@ const Index = () => {
 
           <TabsContent value="dashboard" className="space-y-8">
             {/* Metrics Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {dashboardMetrics.map((metric, index) => (
-                <Card key={index} className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold text-slate-700">
-                      {metric.title}
-                    </CardTitle>
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                      <metric.icon className="h-5 w-5 text-blue-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-slate-900 mb-2">
-                      {metric.value}
-                    </div>
-                    <div className="flex items-center text-sm mb-1">
-                      <span className={`font-medium ${
-                        metric.changeType === 'positive' 
-                          ? 'text-emerald-600' 
-                          : metric.changeType === 'neutral'
-                          ? 'text-slate-600'
-                          : 'text-red-600'
-                      }`}>
-                        {metric.change}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      {metric.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {dashboardLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, index) => (
+                  <Card key={index} className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                    <CardContent className="p-6">
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-slate-200 rounded w-3/4 mb-4"></div>
+                        <div className="h-8 bg-slate-200 rounded w-1/2 mb-2"></div>
+                        <div className="h-3 bg-slate-200 rounded w-full"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {dashboardMetrics.map((metric, index) => (
+                  <Card key={index} className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <CardTitle className="text-sm font-semibold text-slate-700">
+                        {metric.title}
+                      </CardTitle>
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                        <metric.icon className="h-5 w-5 text-blue-600" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-slate-900 mb-2">
+                        {metric.value}
+                      </div>
+                      <div className="flex items-center text-sm mb-1">
+                        <span className={`font-medium ${
+                          metric.changeType === 'positive' 
+                            ? 'text-emerald-600' 
+                            : metric.changeType === 'neutral'
+                            ? 'text-slate-600'
+                            : 'text-red-600'
+                        }`}>
+                          {metric.change}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {metric.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             {/* ICP Status & Recent Leads */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -281,40 +279,60 @@ const Index = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {recentLeads.map((lead) => (
-                    <div 
-                      key={lead.id}
-                      className="flex items-center justify-between p-5 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl hover:shadow-lg cursor-pointer transition-all duration-200 hover:border-blue-300 group"
-                      onClick={() => setSelectedCompany(lead)}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold text-slate-900 text-lg group-hover:text-blue-900 transition-colors">
-                            {lead.company}
-                          </h4>
-                          <div className="flex items-center space-x-2">
-                            <div className={`flex items-center font-bold text-lg ${getScoreColor(lead.score)}`}>
-                              {lead.score}
-                              <Star className="h-4 w-4 ml-1 text-amber-500" />
-                            </div>
+                  {leadsLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, index) => (
+                        <div key={index} className="p-5 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl">
+                          <div className="animate-pulse">
+                            <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+                            <div className="h-3 bg-slate-200 rounded w-1/2 mb-2"></div>
+                            <div className="h-3 bg-slate-200 rounded w-full"></div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between text-sm mb-2">
-                          <span className="text-slate-600 font-medium">{lead.industry}</span>
-                          {getStatusBadge(lead.status)}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-700 font-medium">{lead.equipmentNeed}</span>
-                          <span className="font-bold text-slate-900 text-lg">{lead.value}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
-                          <span>{lead.location}</span>
-                          <span>{lead.lastActivity}</span>
-                        </div>
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-slate-400 ml-4 group-hover:text-blue-600 transition-colors" />
+                      ))}
                     </div>
-                  ))}
+                  ) : recentLeads.length > 0 ? (
+                    <>
+                      {recentLeads.map((lead) => (
+                        <div 
+                          key={lead.id}
+                          className="flex items-center justify-between p-5 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl hover:shadow-lg cursor-pointer transition-all duration-200 hover:border-blue-300 group"
+                          onClick={() => setSelectedCompany(lead)}
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-slate-900 text-lg group-hover:text-blue-900 transition-colors">
+                                {lead.company}
+                              </h4>
+                              <div className="flex items-center space-x-2">
+                                <div className={`flex items-center font-bold text-lg ${getScoreColor(lead.score)}`}>
+                                  {lead.score}
+                                  <Star className="h-4 w-4 ml-1 text-amber-500" />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between text-sm mb-2">
+                              <span className="text-slate-600 font-medium">{lead.industry}</span>
+                              {getStatusBadge(lead.status)}
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-700 font-medium">{lead.equipmentNeed}</span>
+                              <span className="font-bold text-slate-900 text-lg">{lead.estimatedValue}</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
+                              <span>{lead.location}</span>
+                              <span>{lead.lastActivity}</span>
+                            </div>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-slate-400 ml-4 group-hover:text-blue-600 transition-colors" />
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-slate-600">No recent leads found</p>
+                    </div>
+                  )}
                   
                   <Button 
                     variant="outline" 

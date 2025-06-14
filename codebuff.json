@@ -1,0 +1,33 @@
+{
+  "description": "MediCapital Lead Generation Engine - AI-powered B2B lead discovery and qualification system",
+  "startupProcesses": [
+    {
+      "name": "backend-api",
+      "command": "make run-api",
+      "stdoutFile": "logs/backend-api.log"
+    },
+    {
+      "name": "frontend-dev",
+      "command": "make frontend-dev",
+      "cwd": ".",
+      "stdoutFile": "logs/frontend-dev.log"
+    }
+  ],
+  "fileChangeHooks": [
+    {
+      "name": "backend-format",
+      "command": "make format",
+      "filePattern": "backend/**/*.py"
+    },
+    {
+      "name": "backend-lint", 
+      "command": "make lint",
+      "filePattern": "backend/**/*.py"
+    },
+    {
+      "name": "frontend-lint",
+      "command": "make frontend-lint",
+      "filePattern": "frontend/src/**/*.{ts,tsx}"
+    }
+  ]
+}

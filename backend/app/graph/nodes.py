@@ -52,7 +52,7 @@ def execute_web_search(state: GraphState) -> dict:
 
     all_results = []
     for i, query in enumerate(state.search_queries):
-        print(f"  > [{i+1}/{len(state.search_queries)}] Searching: '{query}'")
+        print(f"  > [{i + 1}/{len(state.search_queries)}] Searching: '{query}'")
 
         # Execute search (synchronous)
         results = brave_client.search(query=query, country=state.target_country)
@@ -92,13 +92,13 @@ def triage_and_extract_leads(state: GraphState) -> dict:
                 }
             )
             print(
-                f"  > [Result {i+1}] PASS: Found potential lead '{candidate.discovered_name}'"
+                f"  > [Result {i + 1}] PASS: Found potential lead '{candidate.discovered_name}'"
             )
             candidate_leads.append(candidate)
         except Exception:
             # Pydantic parser will raise an exception if the output is not valid JSON
             # or if the LLM outputs `null`, which we treat as a rejection.
-            print(f"  > [Result {i+1}] REJECTED: Not a B2B lead.")
+            print(f"  > [Result {i + 1}] REJECTED: Not a B2B lead.")
 
     print(f"  > Completed triage. {len(candidate_leads)} potential leads identified.")
     return {"candidate_leads": candidate_leads}

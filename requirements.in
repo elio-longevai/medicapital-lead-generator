@@ -11,3 +11,5 @@ typer
 apscheduler
 httpx
 langsmith
+fastapi
+uvicorn[standard]

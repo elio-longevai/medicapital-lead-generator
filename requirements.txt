@@ -5,11 +5,12 @@ alembic==1.16.1
 annotated-types==0.7.0
     # via pydantic
 anyio==4.9.0
-    # via httpx
+    # via
+    #   httpx
+    #   starlette
+    #   watchfiles
 apscheduler==3.11.0
     # via -r requirements.in
-async-timeout==4.0.3
-    # via langchain
 cachetools==5.5.2
     # via google-auth
 certifi==2025.4.26
@@ -20,9 +21,11 @@ certifi==2025.4.26
 charset-normalizer==3.4.2
     # via requests
 click==8.2.1
-    # via typer
-exceptiongroup==1.3.0
-    # via anyio
+    # via
+    #   typer
+    #   uvicorn
+fastapi==0.115.12
+    # via -r requirements.in
 filetype==1.2.0
     # via langchain-google-genai
 google-ai-generativelanguage==0.6.18
@@ -44,9 +47,13 @@ grpcio==1.73.0
 grpcio-status==1.73.0
     # via google-api-core
 h11==0.16.0
-    # via httpcore
+    # via
+    #   httpcore
+    #   uvicorn
 httpcore==1.0.9
     # via httpx
+httptools==0.6.4
+    # via uvicorn
 httpx==0.28.1
     # via
     #   -r requirements.in
@@ -130,6 +137,7 @@ pyasn1-modules==0.4.2
 pydantic==2.11.7
     # via
     #   -r requirements.in
+    #   fastapi
     #   langchain
     #   langchain-core
     #   langchain-google-genai
@@ -146,10 +154,12 @@ python-dotenv==1.1.0
     # via
     #   -r requirements.in
     #   pydantic-settings
+    #   uvicorn
 pyyaml==6.0.2
     # via
     #   langchain
     #   langchain-core
+    #   uvicorn
 requests==2.32.4
     # via
     #   google-api-core
@@ -171,21 +181,19 @@ sqlalchemy==2.0.41
     #   -r requirements.in
     #   alembic
     #   langchain
+starlette==0.46.2
+    # via fastapi
 tenacity==9.1.2
     # via langchain-core
-tomli==2.2.1
-    # via alembic
 typer==0.16.0
     # via -r requirements.in
 typing-extensions==4.14.0
     # via
     #   alembic
-    #   anyio
-    #   exceptiongroup
+    #   fastapi
     #   langchain-core
     #   pydantic
     #   pydantic-core
-    #   rich
     #   sqlalchemy
     #   typer
     #   typing-inspection
@@ -197,6 +205,14 @@ tzlocal==5.3.1
     # via apscheduler
 urllib3==2.4.0
     # via requests
+uvicorn==0.34.3
+    # via -r requirements.in
+uvloop==0.21.0
+    # via uvicorn
+watchfiles==1.0.5
+    # via uvicorn
+websockets==15.0.1
+    # via uvicorn
 xxhash==3.5.0
     # via langgraph
 zstandard==0.23.0

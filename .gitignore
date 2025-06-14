@@ -206,3 +206,8 @@ checkpoints/
 *.backup
 
 .ruff_cache/
+
+# Frontend dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/

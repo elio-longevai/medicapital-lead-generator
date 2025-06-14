@@ -35,9 +35,9 @@ def load_icp_text() -> str:
 
 def run_lead_generation_for_country(country_code: str):
     """Executes the full lead generation workflow for a given country."""
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"🚀 STARTING LEAD GENERATION RUN FOR: {country_code.upper()} 🚀")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     initial_state = GraphState(
         raw_icp_text=load_icp_text(), target_country=country_code
@@ -50,11 +50,11 @@ def run_lead_generation_for_country(country_code: str):
         final_state = event[state_key]
         print(f"\n--- Just finished {state_key} ---")
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"🏁 LEAD GENERATION RUN FOR {country_code.upper()} COMPLETE 🏁")
     saved = final_state.get("newly_saved_leads_count", 0)
     print(f"✅ New Leads Saved: {saved}")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
 
 @cli.command()
@@ -128,9 +128,9 @@ def view_leads():
             print("No leads found in database.")
             return
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"📊 FOUND {len(leads)} LEADS IN DATABASE")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         for i, lead in enumerate(leads, 1):
             print(f"\n[{i}] {lead.discovered_name}")

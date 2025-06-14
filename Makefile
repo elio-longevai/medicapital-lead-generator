@@ -5,7 +5,7 @@
 #  To see all available commands, run `make help`.
 # ====================================================================================
 
-.PHONY: help install compile-requirements clean test run lint format setup setup-pre-commit vulture create-db run-nl run-be start-scheduler frontend-install frontend-dev frontend-build frontend-lint
+.PHONY: help install compile-requirements clean test run run-api lint format setup setup-pre-commit vulture create-db run-nl run-be start-scheduler frontend-install frontend-dev frontend-build frontend-lint
 
 # --- Variables ---
 # Customize these for your project
@@ -32,8 +32,8 @@ help:
 	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-build" "🏗️  Build frontend for production."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-lint" "🔍 Lint frontend code."
 	@printf "\n\033[1m--- Lead Generation ---\033[0m\n"
-	@printf "  \033[36m%-25s\033[0m %s\n" "make run-nl" "🇳🇱 Run lead generation for Netherlands (NL)."
-	@printf "  \033[36m%-25s\033[0m %s\n" "make run-be" "🇧🇪 Run lead generation for Belgium (BE)."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make run" "🚀 Run lead generation for Netherlands."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make run-api" "🌐 Start the FastAPI backend server."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make start-scheduler" "⏰ Start automated scheduler (4-hour intervals)."
 	@printf "\n\033[1m--- Code Quality ---\033[0m\n"
 	@printf "  \033[36m%-25s\033[0m %s\n" "make test" "🧪 Run the entire test suite with pytest."
@@ -74,7 +74,7 @@ setup: clean install frontend-install setup-pre-commit
 	@echo "Next steps:"
 	@echo "  1. Copy .env.example to .env and add your API keys"
 	@echo "  2. Run 'make create-db' to initialize the database"
-	@echo "  3. Run 'make run-nl' to test lead generation for Netherlands"
+	@echo "  3. Run 'make run' to test lead generation for Netherlands"
 	@echo "  4. Run 'make frontend-dev' to start the frontend development server"
 
 # ====================================================================================
@@ -126,30 +126,30 @@ clean:
 
 create-db:
 	@echo "\n🗄️  Initializing database tables..."
-	@$(VENV)/bin/python -m backend.app.main create-db
+	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main create-db
 	@echo "\n✅ Database is ready for lead generation!"
 
 # ====================================================================================
 #  🚀 Lead Generation Operations
 # ====================================================================================
 
-run-nl:
+run:
 	@echo "\n🇳🇱 Running lead generation for Netherlands..."
 	@echo "--> This will discover and qualify B2B leads in the Netherlands"
 	@echo "--> Rate limited to 1 search per second to respect API limits"
-	@$(VENV)/bin/python -m backend.app.main run-once --country NL
+	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main run-once --country NL
 
-run-be:
-	@echo "\n🇧🇪 Running lead generation for Belgium..."
-	@echo "--> This will discover and qualify B2B leads in Belgium"
-	@echo "--> Rate limited to 1 search per second to respect API limits"
-	@$(VENV)/bin/python -m backend.app.main run-once --country BE
+run-api:
+	@echo "\n🌐 Starting FastAPI backend server..."
+	@echo "--> API will be available at http://localhost:8000"
+	@echo "--> Press CTRL+C to stop the server"
+	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m uvicorn app.api_server:app --reload --host 0.0.0.0 --port 8000
 
 start-scheduler:
 	@echo "\n⏰ Starting automated lead generation scheduler..."
 	@echo "--> Will run every 4 hours, alternating between NL and BE"
 	@echo "--> Press CTRL+C to stop the scheduler"
-	@$(VENV)/bin/python -m backend.app.main start-scheduler --interval-hours 4
+	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main start-scheduler --interval-hours 4
 
 # ====================================================================================
 #  ✨ Code Quality & Testing

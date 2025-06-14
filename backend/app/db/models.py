@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     Text,
     UniqueConstraint,
+    JSON,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -31,6 +32,19 @@ class Company(Base):
     # For Sprint 3+
     qualification_score = Column(Integer, nullable=True)
     qualification_reasoning = Column(Text, nullable=True)
+
+    # New enhanced fields
+    contact_email = Column(String, nullable=True)
+    contact_phone = Column(String, nullable=True)
+    employee_count = Column(String, nullable=True)  # e.g., "10-50", "100-250"
+    estimated_revenue = Column(String, nullable=True)  # e.g., "€1M-5M"
+    equipment_needs = Column(Text, nullable=True)  # Specific equipment requirements
+    estimated_deal_value = Column(String, nullable=True)  # e.g., "€35,000-€125,000"
+    recent_news = Column(Text, nullable=True)  # Latest company news/developments
+    qualification_details = Column(
+        JSON, nullable=True
+    )  # Detailed qualification breakdown
+    location_details = Column(String, nullable=True)  # Full location (city, country)
 
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
