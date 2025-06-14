@@ -2,6 +2,7 @@ from langgraph.graph import StateGraph, END
 from app.graph.state import GraphState
 from app.graph import nodes
 
+
 def build_workflow():
     """Builds and compiles the LangGraph workflow."""
     workflow = StateGraph(GraphState)
@@ -20,10 +21,11 @@ def build_workflow():
     workflow.add_edge("execute_web_search", "triage_and_extract_leads")
     workflow.add_edge("triage_and_extract_leads", "save_leads_to_db")
     workflow.add_edge("save_leads_to_db", END)
-    
+
     # Compile the graph
     app = workflow.compile()
     return app
+
 
 # A single, compiled instance to be used by the application
 main_workflow = build_workflow()

@@ -1,15 +1,18 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     """Manages application settings and secrets."""
-    
+
     # Load from a .env file
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     # LangSmith
     LANGCHAIN_TRACING_V2: str = "true"
-    LANGCHAIN_ENDPOINT: str = "https://api.smith.langchain.com"
+    LANGCHAIN_ENDPOINT: str = "https://eu.api.smith.langchain.com"
     LANGCHAIN_API_KEY: str
     LANGCHAIN_PROJECT: str = "MediCapital Lead Engine"
 
@@ -19,9 +22,10 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "sqlite:///./medicapital.db"
-    
+
     # Application
     LOG_LEVEL: str = "INFO"
+
 
 # Instantiate settings to be imported by other modules
 settings = Settings()

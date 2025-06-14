@@ -1,0 +1,13 @@
+langchain
+langgraph
+langchain-google-genai
+pydantic
+pydantic-settings
+sqlalchemy
+alembic
+psycopg2-binary
+python-dotenv
+typer
+apscheduler
+httpx
+langsmith
