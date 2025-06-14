@@ -12,6 +12,7 @@ def build_workflow():
     workflow.add_node("generate_search_queries", nodes.generate_search_queries)
     workflow.add_node("execute_web_search", nodes.execute_web_search)
     workflow.add_node("triage_and_extract_leads", nodes.triage_and_extract_leads)
+    workflow.add_node("scrape_and_enrich_companies", nodes.scrape_and_enrich_companies)
     workflow.add_node("save_leads_to_db", nodes.save_leads_to_db)
 
     # Define edges
@@ -19,7 +20,8 @@ def build_workflow():
     workflow.add_edge("structure_icp", "generate_search_queries")
     workflow.add_edge("generate_search_queries", "execute_web_search")
     workflow.add_edge("execute_web_search", "triage_and_extract_leads")
-    workflow.add_edge("triage_and_extract_leads", "save_leads_to_db")
+    workflow.add_edge("triage_and_extract_leads", "scrape_and_enrich_companies")
+    workflow.add_edge("scrape_and_enrich_companies", "save_leads_to_db")
     workflow.add_edge("save_leads_to_db", END)
 
     # Compile the graph

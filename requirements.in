@@ -13,3 +13,4 @@ httpx
 langsmith
 fastapi
 uvicorn[standard]
+crawl4ai

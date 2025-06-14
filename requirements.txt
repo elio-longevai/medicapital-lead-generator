@@ -205,7 +205,7 @@ tzlocal==5.3.1
     # via apscheduler
 urllib3==2.4.0
     # via requests
-uvicorn==0.34.3
+uvicorn[standard]==0.32.1
     # via -r requirements.in
 uvloop==0.21.0
     # via uvicorn
@@ -217,3 +217,4 @@ xxhash==3.5.0
     # via langgraph
 zstandard==0.23.0
     # via langsmith
+crawl4ai>=0.6.0

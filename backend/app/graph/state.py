@@ -27,6 +27,7 @@ class GraphState(BaseModel):
     search_queries: list[str] = Field(default_factory=list)
     search_results: list[dict] = Field(default_factory=list)
     candidate_leads: list[CandidateLead] = Field(default_factory=list)
+    enriched_companies: list[dict] = Field(default_factory=list)
 
     # Final output
     newly_saved_leads_count: int = 0
