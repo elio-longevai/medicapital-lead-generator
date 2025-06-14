@@ -5,7 +5,7 @@
 #  To see all available commands, run `make help`.
 # ====================================================================================
 
-.PHONY: help install compile-requirements clean test run lint format setup setup-pre-commit vulture create-db run-nl run-be start-scheduler
+.PHONY: help install compile-requirements clean test run lint format setup setup-pre-commit vulture create-db run-nl run-be start-scheduler frontend-install frontend-dev frontend-build frontend-lint
 
 # --- Variables ---
 # Customize these for your project
@@ -23,9 +23,14 @@ help:
 	@printf "\n\033[1m🚀 MediCapital Lead Generation Engine - Available Commands:\033[0m\n\n"
 	@printf "  \033[36m%-25s\033[0m %s\n" "make setup" "🛠️  Run this first! Cleans, installs, and sets up git hooks."
 	@printf "\n\033[1m--- Development ---\033[0m\n"
-	@printf "  \033[36m%-25s\033[0m %s\n" "make install" "📦 Install all project and development dependencies."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make install" "📦 Install all backend dependencies."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make compile-requirements" "📝 Lock new dependencies from requirements.in to requirements.txt."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make create-db" "🗄️  Initialize the database tables."
+	@printf "\n\033[1m--- Frontend ---\033[0m\n"
+	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-install" "📦 Install frontend dependencies."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-dev" "🚀 Start frontend development server."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-build" "🏗️  Build frontend for production."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-lint" "🔍 Lint frontend code."
 	@printf "\n\033[1m--- Lead Generation ---\033[0m\n"
 	@printf "  \033[36m%-25s\033[0m %s\n" "make run-nl" "🇳🇱 Run lead generation for Netherlands (NL)."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make run-be" "🇧🇪 Run lead generation for Belgium (BE)."
@@ -50,26 +55,51 @@ help:
 # ====================================================================================
 
 install:
-	@echo "\n📦 Installing all dependencies..."
+	@echo "\n📦 Installing all backend dependencies..."
 	@echo "--> Step 1: Creating a fresh virtual environment at '$(VENV)'..."
 	@$(UV) venv $(VENV) --seed
 	@echo "--> Step 2: Installing project dependencies from 'requirements.txt'..."
 	@$(UV) pip install -r requirements.txt
 	@echo "--> Step 3: Installing essential development tools (ruff, pre-commit, vulture)..."
 	@$(UV) pip install pre-commit vulture ruff pytest pytest-cov
-	@echo "\n✅ Dependencies installed successfully!"
+	@echo "\n✅ Backend dependencies installed successfully!"
 
 compile-requirements:
 	@echo "\n📝 Compiling 'requirements.in' to lock dependencies in 'requirements.txt'..."
 	@$(UV) pip compile requirements.in -o requirements.txt
 	@echo "\n✅ 'requirements.txt' has been updated. Don't forget to commit it!"
 
-setup: clean install setup-pre-commit
+setup: clean install frontend-install setup-pre-commit
 	@echo "\n🎉 Hooray! Your development environment is ready to go! 🎉"
 	@echo "Next steps:"
 	@echo "  1. Copy .env.example to .env and add your API keys"
 	@echo "  2. Run 'make create-db' to initialize the database"
 	@echo "  3. Run 'make run-nl' to test lead generation for Netherlands"
+	@echo "  4. Run 'make frontend-dev' to start the frontend development server"
+
+# ====================================================================================
+#  🎨 Frontend Commands
+# ====================================================================================
+
+frontend-install:
+	@echo "\n📦 Installing frontend dependencies..."
+	@cd frontend && bun install
+	@echo "\n✅ Frontend dependencies installed successfully!"
+
+frontend-dev:
+	@echo "\n🚀 Starting frontend development server..."
+	@echo "--> Frontend will be available at http://localhost:5173"
+	@cd frontend && bun run dev
+
+frontend-build:
+	@echo "\n🏗️  Building frontend for production..."
+	@cd frontend && bun run build
+	@echo "\n✅ Frontend build complete!"
+
+frontend-lint:
+	@echo "\n🔍 Linting frontend code..."
+	@cd frontend && bun run lint
+	@echo "\n✅ Frontend linting complete!"
 
 # ====================================================================================
 #  🧹 Housekeeping
@@ -87,6 +117,7 @@ clean:
 	@find . -type d -name "*.egg-info" -exec rm -rf {} +
 	@find . -type d -name ".mypy_cache" -exec rm -rf {} +
 	@rm -f medicapital.db
+	@cd frontend && rm -rf node_modules dist .vite
 	@echo "\n✅ Project is sparkling clean!"
 
 # ====================================================================================
@@ -95,7 +126,7 @@ clean:
 
 create-db:
 	@echo "\n🗄️  Initializing database tables..."
-	@$(VENV)/bin/python -m app.main create-db
+	@$(VENV)/bin/python -m backend.app.main create-db
 	@echo "\n✅ Database is ready for lead generation!"
 
 # ====================================================================================
@@ -106,19 +137,19 @@ run-nl:
 	@echo "\n🇳🇱 Running lead generation for Netherlands..."
 	@echo "--> This will discover and qualify B2B leads in the Netherlands"
 	@echo "--> Rate limited to 1 search per second to respect API limits"
-	@$(VENV)/bin/python -m app.main run-once --country NL
+	@$(VENV)/bin/python -m backend.app.main run-once --country NL
 
 run-be:
 	@echo "\n🇧🇪 Running lead generation for Belgium..."
 	@echo "--> This will discover and qualify B2B leads in Belgium"
 	@echo "--> Rate limited to 1 search per second to respect API limits"
-	@$(VENV)/bin/python -m app.main run-once --country BE
+	@$(VENV)/bin/python -m backend.app.main run-once --country BE
 
 start-scheduler:
 	@echo "\n⏰ Starting automated lead generation scheduler..."
 	@echo "--> Will run every 4 hours, alternating between NL and BE"
 	@echo "--> Press CTRL+C to stop the scheduler"
-	@$(VENV)/bin/python -m app.main start-scheduler --interval-hours 4
+	@$(VENV)/bin/python -m backend.app.main start-scheduler --interval-hours 4
 
 # ====================================================================================
 #  ✨ Code Quality & Testing
@@ -126,26 +157,26 @@ start-scheduler:
 
 test:
 	@echo "\n🧪 Running the test suite with pytest..."
-	@$(PYTEST) tests/ -v --cov=app --cov-report=term-missing
+	@$(PYTEST) backend/tests/ -v --cov=backend.app --cov-report=term-missing
 	@echo "\n🏁 Test run finished."
 
 lint:
 	@echo "\n🔍 Checking code for style issues and potential errors..."
 	@echo "--> Running Ruff linter..."
-	@ruff check .
+	@ruff check backend/
 	@echo "\n🏁 Linting complete."
 
 format:
 	@echo "\n✨ Auto-formatting code to match project style..."
 	@echo "--> Formatting with Ruff Formatter..."
-	@ruff format .
+	@ruff format backend/
 	@echo "--> Auto-fixing fixable lint issues with Ruff..."
-	@ruff check --fix .
+	@ruff check --fix backend/
 	@echo "\n✅ Code formatting complete."
 
 vulture:
 	@echo "\n🦅 Hunting for dead code with Vulture..."
-	@vulture . --exclude .venv
+	@vulture backend/ --exclude .venv
 	@echo "\n🏁 Vulture scan complete."
 
 # ====================================================================================
