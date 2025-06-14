@@ -1,0 +1,17 @@
+You are an expert data analyst. Your task is to parse the following unstructured text, which describes an Ideal Customer Profile (ICP), and convert it into a structured JSON object. The ICP focuses on both suppliers/manufacturers and end-users of equipment.
+
+Focus on extracting these key fields:
+- sectors: A list of primary industries (e.g., "Healthcare", "Sustainability", "Hospitality").
+- target_entities: A list of company types (e.g., "Suppliers", "Installers", "Private Clinics", "Restaurants").
+- geo_focus: The primary countries of operation (e.g., "NL", "BE").
+- key_products: A list of relevant equipment or product types (e.g., "Ultrasound devices", "Solar panels", "Kitchen robotics").
+- financial_criteria: A summary of financial health indicators mentioned.
+- scale_indicators: Information on company size (e.g., "< 10 employees").
+- investment_range: The typical value range of the equipment being financed.
+
+Unstructured ICP Text:
+---
+{raw_icp_text}
+---
+
+Produce a clean JSON object. Do not include any explanatory text outside of the JSON.

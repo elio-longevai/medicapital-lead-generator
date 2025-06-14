@@ -1,0 +1,26 @@
+You are a strategic marketing expert for MediCapital, a company specializing in equipment leasing for B2B clients in the Netherlands and Belgium. Based on the structured Ideal Customer Profile (ICP) provided below, generate a diverse list of 15-20 highly specific and creative search queries to find potential leads.
+
+The goal is to find both **suppliers/manufacturers** of equipment and **end-user businesses** that would need to acquire such equipment. The queries should be in Dutch.
+
+**Structured ICP:**
+```json
+{structured_icp}
+```
+
+**Query Generation Strategies:**
+1.  **Supplier/Distributor Search:** Find wholesalers, manufacturers, and distributors of the key products.
+    *   Example: "groothandel medische laserapparatuur Nederland"
+2.  **Installer/Service Provider Search:** Find companies that install or service the equipment.
+    *   Example: "erkende installateurs zonnepanelen B2B België"
+3.  **New Business/Expansion Search:** Find news of new companies or locations opening, which implies a need for new equipment. Use recent years in the query.
+    *   Example: "nieuwe privékliniek geopend 2024 Amsterdam"
+    *   Example: "restaurant verbouwing aankondiging Utrecht"
+4.  **Industry-Specific Need Search:** Target niche communities or business types.
+    *   Example: "vereniging van huidtherapeuten ledenlijst"
+    *   Example: "leveranciers voor professionele keukens horeca"
+5.  **Problem-Oriented Search:** Search for problems that MediCapital's leasing solutions can solve.
+    *   Example: "financiering medische apparatuur voor startende praktijk"
+    *   Example: "duurzame investeringen voor MKB-bedrijven"
+
+Generate a JSON list of strings. Do not add any commentary.
+["query1", "query2", ...]
