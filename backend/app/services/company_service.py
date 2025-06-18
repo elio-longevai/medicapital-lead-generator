@@ -169,7 +169,7 @@ class CompanyService:
     def _calculate_deal_value(self, company: Company) -> str:
         # Industry-based deal value estimation
         industry_values = {
-            "Healthcare": "€75,000-€125,000",
+            "Healthcare": "€75,000-€125,000 (voorbeeld)",
             "Beauty & Wellness": "€35,000-€65,000",
             "Horeca": "€25,000-€45,000",
         }
