@@ -23,7 +23,6 @@ help:
 	@printf "\n\033[1m🚀 MediCapital Lead Generation Engine - Available Commands:\033[0m\n\n"
 	@printf "  \033[36m%-25s\033[0m %s\n" "make setup" "🛠️  Run this first! Installs uv, cleans, installs deps, and sets up git hooks."
 	@printf "\n\033[1m--- Development ---\033[0m\n"
-	@printf "  \033[36m%-25s\033[0m %s\n" "make install-uv" "🔧 Install uv package manager (automatically done in setup)."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make install" "📦 Install all backend dependencies."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make compile-requirements" "📝 Lock new dependencies from requirements.in to requirements.txt."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make create-db" "🗄️  Initialize the database tables."
@@ -55,37 +54,23 @@ help:
 #  ⚙️ Setup & Installation
 # ====================================================================================
 
-install-uv:
-	@echo "\n🔧 Installing uv package manager..."
-	@if command -v uv >/dev/null 2>&1; then \
-		echo "✅ uv is already installed!"; \
-	else \
-		echo "--> Installing uv from https://astral.sh/uv/install.sh..."; \
-		curl -LsSf https://astral.sh/uv/install.sh | sh; \
-		echo "--> Adding uv to PATH for this session..."; \
-		export PATH="$$HOME/.local/bin:$$PATH"; \
-		echo "✅ uv installed successfully!"; \
-		echo "💡 Note: You may need to restart your terminal or run 'source ~/.zshrc' to use uv in new sessions."; \
-	fi
 
 install:
 	@echo "\n📦 Installing all backend dependencies..."
-	@echo "--> Ensuring uv is available in PATH..."
-	@export PATH="$$HOME/.local/bin:$$PATH"
 	@echo "--> Step 1: Creating a fresh virtual environment at '$(VENV)'..."
-	@export PATH="$$HOME/.local/bin:$$PATH" && $(UV) venv $(VENV) --seed
+	@$(UV) venv $(VENV) --seed
 	@echo "--> Step 2: Installing project dependencies from 'requirements.txt'..."
-	@export PATH="$$HOME/.local/bin:$$PATH" && $(UV) pip install -r requirements.txt
-	@echo "--> Step 3: Installing essential development tools (ruff, pre-commit, vulture, uvicorn)..."
-	@export PATH="$$HOME/.local/bin:$$PATH" && $(UV) pip install --python $(VENV)/bin/python pre-commit vulture ruff pytest pytest-cov uvicorn[standard]
+	@$(UV) pip install -r requirements.txt
+	@echo " -> Step 3: Installing essential development tools (ruff, pre-commit, vulture, uvicorn)..."
+	@$(UV) pip install --python $(VENV)/bin/python pre-commit vulture ruff pytest pytest-cov uvicorn[standard]
 	@echo "\n✅ Backend dependencies installed successfully!"
 
 compile-requirements:
 	@echo "\n📝 Compiling 'requirements.in' to lock dependencies in 'requirements.txt'..."
-	@export PATH="$$HOME/.local/bin:$$PATH" && $(UV) pip compile requirements.in -o requirements.txt
+	@$(UV) pip compile requirements.in -o requirements.txt
 	@echo "\n✅ 'requirements.txt' has been updated. Don't forget to commit it!"
 
-setup: clean install-uv install frontend-install setup-pre-commit
+setup: clean install frontend-install setup-pre-commit
 	@echo "\n🎉 Hooray! Your development environment is ready to go! 🎉"
 	@echo "Next steps:"
 	@echo "  1. Copy .env.example to .env and add your API keys"
