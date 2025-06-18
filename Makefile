@@ -76,8 +76,8 @@ install:
 	@export PATH="$$HOME/.local/bin:$$PATH" && $(UV) venv $(VENV) --seed
 	@echo "--> Step 2: Installing project dependencies from 'requirements.txt'..."
 	@export PATH="$$HOME/.local/bin:$$PATH" && $(UV) pip install -r requirements.txt
-	@echo "--> Step 3: Installing essential development tools (ruff, pre-commit, vulture)..."
-	@export PATH="$$HOME/.local/bin:$$PATH" && $(UV) pip install pre-commit vulture ruff pytest pytest-cov
+	@echo "--> Step 3: Installing essential development tools (ruff, pre-commit, vulture, uvicorn)..."
+	@export PATH="$$HOME/.local/bin:$$PATH" && $(UV) pip install --python $(VENV)/bin/python pre-commit vulture ruff pytest pytest-cov uvicorn[standard]
 	@echo "\n✅ Backend dependencies installed successfully!"
 
 compile-requirements:
