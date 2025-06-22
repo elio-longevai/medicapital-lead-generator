@@ -46,7 +46,7 @@ def triage_and_extract_leads(state: GraphState) -> dict:
     chain = prompt | llm_client | parser
 
     async def _run_triage():
-        semaphore = asyncio.Semaphore(2)  # Limit to 2 concurrent tasks
+        semaphore = asyncio.Semaphore(4)  # Limit to 4 concurrent tasks
         tasks = [
             _triage_one_result(result, state.target_country, chain, semaphore)
             for result in state.search_results
