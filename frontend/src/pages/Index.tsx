@@ -201,54 +201,53 @@ const Index = () => {
               {/* ICP Development Status */}
               <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader>
-                  <CardTitle className="flex items-center text-xl">
-                    <Target className="h-6 w-6 mr-3 text-blue-600" />
-                    Ideal Customer Profiles
-                  </CardTitle>
-                  <CardDescription className="text-base">
-                    Defined target markets with qualification criteria
+                  <CardTitle>Campaign Overview</CardTitle>
+                  <CardDescription>
+                    Automated lead discovery is running for the following customer profiles.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
+
                     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200">
                       <div className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-emerald-600 mr-3" />
+                        <Building2 className="h-5 w-5 text-emerald-600 mr-3" />
                         <div>
-                          <h4 className="font-semibold text-emerald-900">Healthcare</h4>
-                          <p className="text-sm text-emerald-700">Medical devices & diagnostic equipment</p>
+                          <h4 className="font-semibold text-emerald-900">Sustainability Suppliers</h4>
+                          <p className="text-sm text-emerald-700">Producers & installers of green tech</p>
                         </div>
                       </div>
                       <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Active</Badge>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                       <div className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-blue-600 mr-3" />
+                        <Sparkles className="h-5 w-5 text-blue-600 mr-3" />
                         <div>
-                          <h4 className="font-semibold text-blue-900">Beauty & Wellness</h4>
-                          <p className="text-sm text-blue-700">Laser systems & wellness equipment</p>
+                          <h4 className="font-semibold text-blue-900">Sustainability End-Users</h4>
+                          <p className="text-sm text-blue-700">High energy usage companies (MKB+)</p>
                         </div>
                       </div>
                       <Badge className="bg-blue-100 text-blue-800 border-blue-200">Active</Badge>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
                       <div className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-amber-600 mr-3" />
+                        <Users className="h-5 w-5 text-amber-600 mr-3" />
                         <div>
-                          <h4 className="font-semibold text-amber-900">Horeca</h4>
-                          <p className="text-sm text-amber-700">Kitchen robotics & hospitality equipment</p>
+                          <h4 className="font-semibold text-amber-900">Healthcare End-Users</h4>
+                          <p className="text-sm text-amber-700">Private clinics & independent practices</p>
                         </div>
                       </div>
                       <Badge className="bg-amber-100 text-amber-800 border-amber-200">Active</Badge>
                     </div>
+
                   </div>
 
                   <div className="pt-4 border-t border-slate-200">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold text-slate-900">Lead Discovery Status</h4>
-                      <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
                         <Globe className="h-3 w-3 mr-1" />
                         Scanning Active
                       </Badge>
@@ -256,11 +255,11 @@ const Index = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-slate-600">Daily discovery rate</span>
-                        <span className="font-semibold text-slate-900">25-35 leads</span>
+                        <span className="font-semibold text-slate-900">15-25 leads</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-600">Quality threshold</span>
-                        <span className="font-semibold text-emerald-600">85%+ match</span>
+                        <span className="font-semibold text-emerald-600">75%+ match</span>
                       </div>
                     </div>
                   </div>

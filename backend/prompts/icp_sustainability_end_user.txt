@@ -1,0 +1,23 @@
+## **ICP 2: Duurzaamheidssector voor Eindgebruikers: "De Slimme Energieverbruiker"**
+Dit zijn de uiteindelijke klanten die de apparatuur leasen. Ze hebben een acuut probleem (kosten, capaciteit) en de financiële middelen om een leasecontract aan te gaan.
+* **Beschrijving:** Een MKB+ bedrijf in Nederland met een hoog energieverbruik of gevestigd in een regio met netcongestie. Duurzaamheid is voor hen niet alleen ideologisch, maar ook economisch gedreven. Ze zoeken een manier om te investeren in energie-onafhankelijkheid zonder hun werkkapitaal aan te tasten.
+* **Concrete Kenmerken & Filters:**
+  * **Bedrijfstype (met hoge energiebehoefte):**
+    * Productiebedrijven.
+    * Logistieke centra / Warehouses.
+    * Grote agrarische bedrijven (boeren met veel dakoppervlak voor zonnepanelen).
+    * Datacenters (klein tot middelgroot).
+    * Grote kantoorpanden of Horeca met koelcellen.
+    * Bedrijven die CO2-uitstoot verminderen.
+  * **Trigger Events & Signalen (waarom nu?):**
+    * **Geografisch:** Gevestigd in een bewezen netcongestieregio (dit is online op te zoeken via netbeheerders).
+    * **Zichtbaar bezit:** Bezitten al een aanzienlijke hoeveelheid zonnepanelen (zichtbaar via Google Maps/satelliet) en zijn dus een logische kandidaat voor batterijopslag.
+    * **Publieke communicatie:** Vermelden duurzaamheidsdoelstellingen of energiebesparing in hun jaarverslagen of op hun website.
+  * **Financieel Profiel (cruciaal voor goedkeuring):**
+    * Minimaal 3 jaar actief en winstgevend.
+    * Investeringsbehoefte ligt in de range **€35.000 - €150.000**.
+    * Positief eigen vermogen.
+* **Ideale Contactpersoon:**
+  * Finance Manager / Financieel Directeur
+  * Operations Manager
+  * Eigenaar / DGA 

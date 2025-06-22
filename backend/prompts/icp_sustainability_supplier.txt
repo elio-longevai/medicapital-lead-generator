@@ -1,0 +1,32 @@
+## **ICP 1: Duurzaamheidssector voor Leveranciers / Partners: "De Groene Groeipartner**
+
+Dit zijn de producenten, distributeurs of gespecialiseerde installateurs van duurzame technologie. Een partnerschap met hen levert een continue stroom van gekwalificeerde eindklanten op.
+* **Beschrijving:** Een gevestigd Nederlands bedrijf (producent of directe verkoper/installateur) dat kapitaalintensieve duurzame oplossingen levert aan een B2B-markt. Ze zijn te klein voor complexe corporate finance-structuren maar groot genoeg voor een stabiele salesflow. Leasing is voor hen dé tool om grotere deals te sluiten, de verkoopcyclus te verkorten en de concurrentie voor te blijven.
+* **Concrete Kenmerken & Filters:**
+  * **Bedrijfstype:**
+    * Producent die direct aan eindklanten verkoopt (hoogste prioriteit).
+    * Gespecialiseerde distributeur/installateur met een eigen salesforce.
+    * **Uitsluiten:** Algemene groothandels die primair fungeren als doorgeefluik zonder eigen sales/advies.
+  * **Productaanbod (indicatie van dealgrootte):**
+    * **Batterijopslagsystemen** (zoals Positron, Boltainer).
+    * **Commerciële laadpaal-infrastructuur** (meerdere laadpalen per project).
+    * **Grotere zonne-energieprojecten** (niet de standaard 4 panelen op een woonhuis).
+    * **Warmtepompen en Infraroodpanelen** voor commercieel/industrieel gebruik.
+    * **Geëlektrificeerd bouwmaterieel.**
+    * **Energietransitie**
+    * **Robotics**
+    * **En andere duurzaamheidsgerelateerde producten die geleased zouden kunnen worden.**
+  * **Bedrijfsgrootte (Proxy voor tractie):**
+    * **Sweet Spot:** 10 - 25 medewerkers (zichtbaar op LinkedIn).
+    * **Potentieel:** 5 - 10 medewerkers, mits ze een zeer gespecialiseerd product hebben (zoals Positron).
+    * **Uitsluiten:** Bedrijven >200 medewerkers (hebben vaak al eigen leasepartners) en <5 medewerkers (vaak te weinig salesvolume).
+  * **Financieel Profiel (Proxy voor stabiliteit):**
+    * Minimaal 2-3 jaar actief (KVK-data).
+    * Rechtsvorm: BV (eenmanszaken uitsluiten).
+  * **Online Signalen:**
+    * Ze hebben een professionele website met duidelijke productinformatie en case studies.
+    * Ze nemen deel aan vakbeurzen (bv. Solar Solutions) - exposantenlijsten zijn een goudmijn.
+    * KVK-nummer is vindbaar op de website (vaak in de footer of algemene voorwaarden).
+* **Ideale Contactpersoon:**
+  * Eigenaar / Directeur-Grootaandeelhouder (DGA)
+  * Commercieel Directeur / Head of Sales 

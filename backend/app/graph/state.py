@@ -20,9 +20,10 @@ class CandidateLead(BaseModel):
 class GraphState(BaseModel):
     """The state object that moves through the lead generation graph."""
 
+    icp_name: str
     raw_icp_text: str
     target_country: str  # 'NL'
-    search_query_limit: int | None = None
+    queries_per_icp: int | None = None
 
     structured_icp: dict = Field(default_factory=dict)
     search_queries: list[str] = Field(default_factory=list)

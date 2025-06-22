@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 def structure_icp(state: GraphState) -> dict:
     """Parses the raw ICP text into a structured dictionary. Caches result to a file."""
     logger.info("---NODE: Structuring ICP---")
+    icp_name = state.icp_name
 
-    # Define cache path
-    cache_path = (
-        Path(__file__).parent.parent.parent.parent / "prompts" / "structured_icp.json"
-    )
+    # Define cache path based on the ICP name
+    base_prompts_dir = Path(__file__).parent.parent.parent.parent / "prompts"
+    cache_path = base_prompts_dir / f"structured_{icp_name}.json"
 
     # Check if cached file exists
     if cache_path.exists():

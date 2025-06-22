@@ -10,7 +10,7 @@ from sqlalchemy import (
     Date,
     Boolean,
 )
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, Mapped, mapped_column
 
 Base = declarative_base()
 
@@ -18,9 +18,10 @@ Base = declarative_base()
 class Company(Base):
     __tablename__ = "companies"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    icp_name: Mapped[str] = mapped_column(String, nullable=True, index=True)
     normalized_name = Column(String, nullable=False, unique=True, index=True)
-    discovered_name = Column(String, nullable=False)
+    discovered_name: Mapped[str] = mapped_column(String, nullable=False)
     source_url = Column(String, nullable=False)
     country = Column(String(2), nullable=False)
     primary_industry = Column(String, nullable=True)
@@ -29,10 +30,12 @@ class Company(Base):
 
     # For Sprint 2+
     website_url = Column(String, nullable=True)
-    enriched_data = Column(Text, nullable=True)
+    enriched_data: Mapped[dict] = mapped_column(
+        JSON, nullable=True
+    )  # For storing the raw enrichment JSON
 
     # For Sprint 3+
-    qualification_score = Column(Integer, nullable=True)
+    qualification_score: Mapped[int] = mapped_column(Integer, nullable=True, index=True)
     qualification_reasoning = Column(Text, nullable=True)
 
     # New enhanced fields
@@ -95,3 +98,13 @@ class SearchQuery(Base):
 
     def __repr__(self):
         return f"<SearchQuery(query='{self.query_text[:50]}...', country='{self.country}', used_at='{self.used_at}')>"
+
+
+class Lead(Base):
+    __tablename__ = "leads"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    icp_name: Mapped[str] = mapped_column(String, nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String, default="NEW", index=True)
+    company_name: Mapped[str] = mapped_column(String, index=True)
+    source_url: Mapped[str] = mapped_column(String, unique=True, index=True)

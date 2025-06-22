@@ -19,6 +19,7 @@ def save_leads_to_db(state: GraphState) -> dict:
     )
     db = SessionLocal()
     saved_count = 0
+    icp_name = state.icp_name
 
     try:
         existing_names = {row[0] for row in db.query(Company.normalized_name).all()}
@@ -41,6 +42,7 @@ def save_leads_to_db(state: GraphState) -> dict:
                 primary_industry=lead.primary_industry,
                 initial_reasoning=lead.initial_reasoning,
                 status="discovered",
+                icp_name=icp_name,
             )
 
             # Add enriched data if available

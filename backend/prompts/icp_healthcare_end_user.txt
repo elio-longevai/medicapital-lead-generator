@@ -1,0 +1,12 @@
+## **ICP 3: Gezondheidssector voor Eindgebruikers: "De Praktijkhouder-Ondernemer"**
+* **Beschrijving:** De eigenaar van een zelfstandige praktijk of kliniek. Overdag is hij/zij zorgverlener, 's avonds ondernemer. Efficiëntie en ontzorging zijn cruciaal. Ze willen de beste apparatuur voor hun patiënten, maar moeten ook de cashflow bewaken. Leasing is de perfecte oplossing: "one-stop-shopping" voor apparatuur en financiering.
+* **Concrete Kenmerken & Filters:**
+  * **Subsector:**
+    * **Eerstelijnszorg:** Huisartsenpraktijken, Fysiotherapiepraktijken, Tandartspraktijken.
+    * **Commerciële zorg:** Zelfstandige Behandelcentra (ZBC's), privéklinieken (o.a. huidtherapie, oogklinieken), wellness/beauty-klinieken met medisch-gecertificeerde apparatuur (FDA-approval).
+  * **Trigger Events & Signalen:**
+    * Opening van een nieuwe praktijk/locatie.
+    * Uitbreiding van het aantal behandelkamers.
+    * Berichten over het aanbieden van een nieuwe type behandeling (waar apparatuur voor nodig is).
+  * **Data Bronnen:** BIG-register, registers van ZBC's, verenigingen (bv. Vereniging van Huidtherapeuten).
+* **Ideale Contactpersoon:** Praktijkhouder / Eigenaar, Office Manager (die vaak de financiën regelt). 

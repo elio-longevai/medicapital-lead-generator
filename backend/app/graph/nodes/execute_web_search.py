@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def execute_web_search(state: GraphState) -> dict:
     """Executes web searches concurrently using the multi-provider client."""
     queries_to_run = state.search_queries
-    limit = state.search_query_limit
+    limit = state.queries_per_icp
 
     if not queries_to_run:
         logger.warning("⚠️ No search queries were generated. Skipping web search.")
