@@ -19,17 +19,6 @@ logging.basicConfig(
 )
 # ---
 
-# This is the raw text from the provided documents
-# In a real app, this might be loaded from a file or a database
-MEDICAPITAL_ICP_TEXT = """
-Sectoren leveranciers / gebruikers van Duurzaam => energie voorzieningen / infrastructuur en Healthcare => Medisch (diagnose & behandeling) => Verpleeg => Laboratorium / onderzoek => Sport => Wellness / beauty.
-Producten duurzaam: Batterijen, zonnepanelen, laadpalen, LED, infraroodpanelen, ge-electrificeerd bouwmaterieel, boilers, warmtepomp, airco, etc.
-Producten healthcare: Medische en laboratorium apparatuur / inrichten zoals Ultrasound, holters, ecg, lasers maar ook behandeltafels, stoelen etc.
-Ideale contact bij leveranciers (Duurzaam en healthcare) is de sales verantwoordelijke / eigenaar.
-Ideale contact bij klanten / gebruikers van units is dat (project-)verantwoordelijke voor operations/ finance manager bij grotere bedrijven of eigenaar van kleinere bedrijven (< 10 man personeel).
-Vereisten klant: B2B, geregistreerd in NL / BE. Financieel: minimale bestaansduur 1,5 jaar, omzet in relatie tot investering (3 x), winstgevend, positief vermogen en werkkapitaal.
-Investering minimaal bedrag per unit 2.500,- euro, optimaal bedrag 35.000 tot 125.000.
-"""
 
 cli = typer.Typer()
 
@@ -80,9 +69,6 @@ def run_once(
     ),
 ):
     """Run the lead generation process one time for the specified country."""
-    if country.upper() not in ["NL", "BE"]:
-        logging.error("❌ Error: Country must be 'NL' or 'BE'.")
-        raise typer.Exit()
     run_lead_generation_for_country(country.upper(), query_limit)
 
 
@@ -106,20 +92,8 @@ def start_scheduler(
         # Run immediately on start
         next_run_time=datetime.datetime.now(datetime.timezone.utc),
     )
-    scheduler.add_job(
-        run_lead_generation_for_country,
-        "interval",
-        hours=interval_hours,
-        args=["BE"],
-        id="be_run",
-        # Start the BE run halfway through the interval
-        next_run_time=datetime.datetime.now(datetime.timezone.utc)
-        + datetime.timedelta(hours=interval_hours / 2),
-    )
 
-    logging.info(
-        f"📅 Scheduler started. Running every {interval_hours} hours for NL and BE (offset)."
-    )
+    logging.info(f"📅 Scheduler started. Running every {interval_hours} hours for NL.")
     logging.info("ℹ️ Press Ctrl+C to exit.")
 
     try:

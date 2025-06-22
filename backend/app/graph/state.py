@@ -8,7 +8,7 @@ class CandidateLead(BaseModel):
     source_url: str = Field(
         description="The URL of the page where the company was mentioned."
     )
-    country: str = Field(description="The two-letter country code (e.g., 'NL', 'BE').")
+    country: str = Field(description="The two-letter country code (e.g., 'NL').")
     primary_industry: str = Field(
         description="The main industry of the company (e.g., 'Healthcare', 'Sustainability')."
     )
@@ -21,7 +21,7 @@ class GraphState(BaseModel):
     """The state object that moves through the lead generation graph."""
 
     raw_icp_text: str
-    target_country: str  # 'NL' or 'BE'
+    target_country: str  # 'NL'
     search_query_limit: int | None = None
 
     structured_icp: dict = Field(default_factory=dict)

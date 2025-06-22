@@ -6,7 +6,7 @@ def normalize_name(name: str) -> str:
     Cleans and standardizes a company name for consistent matching.
 
     - Converts to lowercase.
-    - Removes common legal entity suffixes for NL/BE.
+    - Removes common legal entity suffixes for NL.
     - Removes punctuation except for hyphens.
     - Collapses extra whitespace.
     """

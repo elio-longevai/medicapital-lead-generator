@@ -85,9 +85,7 @@ def get_used_queries(state: GraphState) -> dict:
         logger.info(
             f"  > Found {len(used_queries)} used queries for country '{country}'."
         )
-        # Format for display in prompt
-        formatted_queries = json.dumps(used_queries, indent=2)
-        return {"used_queries": formatted_queries}
+        return {"used_queries": used_queries}
 
 
 def generate_search_queries(state: GraphState) -> dict:
@@ -99,8 +97,12 @@ def generate_search_queries(state: GraphState) -> dict:
         input_variables=["structured_icp", "used_queries"],
     )
     chain = prompt | llm_client | parser
+
+    # Format the list of used queries into a JSON string for the prompt
+    used_queries_str = json.dumps(state.used_queries, indent=2)
+
     queries_result = chain.invoke(
-        {"structured_icp": state.structured_icp, "used_queries": state.used_queries}
+        {"structured_icp": state.structured_icp, "used_queries": used_queries_str}
     )
 
     # The parser may return a dict {'queries': [...]} or a direct list [...]
@@ -708,7 +710,7 @@ def extract_and_merge_missing_info(state: GraphState) -> dict:
         )
 
         prompt = PromptTemplate(
-            template=prompts.REFINEMENT_EXTRACTION_PROMPT,
+            template=prompts.REFINEMENT_PROMPT,
             input_variables=["company_name", "search_results", "missing_fields"],
             partial_variables={"parser_instructions": parser.get_format_instructions()},
         )
