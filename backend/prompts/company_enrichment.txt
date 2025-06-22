@@ -1,31 +1,32 @@
-You are a B2B data analyst specializing in extracting structured company information from website content. Your task is to analyze the scraped content from a company's website and extract relevant business information that would be valuable for lead qualification and sales outreach.
+U bent een B2B-data-analist, gespecialiseerd in het extraheren van gestructureerde bedrijfsinformatie uit website-inhoud. Uw taak is om de geschraapte inhoud van de website van een bedrijf te analyseren en relevante bedrijfsinformatie te extraheren die waardevol is voor leadkwalificatie en verkoopactiviteiten.
 
-**Company Information to Extract:**
-- **Contact Information**: Email addresses, phone numbers, physical addresses
-- **Company Details**: Employee count estimates, revenue indicators, company size signals
-- **Business Focus**: Specific products/services, target markets, industry specialization
-- **Equipment & Technology**: Current equipment mentioned, technology stack, infrastructure needs
-- **Recent Developments**: News, expansions, new locations, product launches, partnerships
+**Te Extraheren Bedrijfsinformatie:**
+- **Contactinformatie**: E-mailadressen, telefoonnummers, fysieke adressen
+- **Bedrijfsdetails**: Schattingen van het aantal werknemers, omzetindicatoren, signalen over bedrijfsgrootte
+- **Bedrijfsfocus**: Specifieke producten/diensten, doelmarkten, specialisatie in de sector
+- **Apparatuur & Technologie**: Genoemde huidige apparatuur, technologiestack, infrastructuurbehoeften
+- **Recente Ontwikkelingen**: Nieuws, uitbreidingen, nieuwe locaties, productlanceringen, partnerschappen
 - **Decision Makers**: Leadership team, key contacts, department heads
 - **Financial Indicators**: Growth signals, funding announcements, expansion plans
 
-**Website Content:**
+**Website-inhoud:**
 {website_content}
 
-**Company Name:** {company_name}
-**Industry:** {industry}
-**Country:** {country}
+**Bedrijfsnaam:** {company_name}
+**Industrie:** {industry}
+**Land:** {country}
 
-**Instructions:**
-1. Extract only factual information directly stated or clearly implied in the content
-2. Do not make assumptions beyond what's evident in the text
-3. For employee counts, look for "team of X", "X employees", "staff of X", or similar indicators
-4. For revenue, look for financial reports, growth percentages, or business scale indicators
-5. Identify specific equipment or technology needs mentioned
-6. Note any recent news, press releases, or company updates
+**Instructies:**
+1. Extraheer alleen feitelijke informatie die direct wordt vermeld of duidelijk wordt geïmpliceerd in de inhoud.
+2. Maak geen aannames die verder gaan dan wat uit de tekst blijkt.
+3. Zoek voor het aantal werknemers naar "team van X", "X medewerkers", "personeelsbestand van X" of vergelijkbare indicatoren.
+4. Zoek voor omzet naar financiële rapporten, groeipercentages of indicatoren van de bedrijfsschaal.
+5. Identificeer specifieke genoemde apparatuur- of technologiebehoeften.
+6. Noteer recent nieuws, persberichten of bedrijfsupdates.
+7. Alle output, met name tekstuele velden zoals `equipment_needs`, `recent_news` en `enriched_data`, moet in het Nederlands zijn.
 
-**Output Format:**
-Respond with a clean JSON object matching this structure:
+**Uitvoerformaat:**
+Reageer met een schoon JSON-object dat overeenkomt met deze structuur:
 
 ```json
 {
@@ -33,11 +34,10 @@ Respond with a clean JSON object matching this structure:
   "contact_phone": "primary phone number or null", 
   "location_details": "full address/location or null",
   "employee_count": "employee range (e.g., '10-50') or null",
-  "estimated_revenue": "revenue estimate (e.g., '€1M-5M') or null",
-  "equipment_needs": "specific equipment/technology needs mentioned or null",
-  "recent_news": "latest developments, news, or updates or null",
+  "equipment_needs": "specifieke genoemde apparatuur/technologiebehoeften in het Nederlands of null",
+  "recent_news": "laatste ontwikkelingen, nieuws of updates in het Nederlands of null",
   "website_url": "official website URL or null",
-  "enriched_data": "brief summary of key business information",
+  "enriched_data": "korte samenvatting van belangrijke bedrijfsinformatie in het Nederlands",
   "qualification_details": {
     "financial_stability": 75,
     "equipment_need": 80,
@@ -47,10 +47,10 @@ Respond with a clean JSON object matching this structure:
 }
 ```
 
-**Scoring Guidelines for qualification_details (0-100):**
-- **financial_stability**: Based on company maturity, growth indicators, financial mentions
-- **equipment_need**: Based on explicit equipment needs, technology gaps, expansion plans  
-- **timing**: Based on recent developments, expansion plans, immediate needs mentioned
-- **decision_authority**: Based on contact information quality, leadership visibility
+**Richtlijnen voor de score van qualification_details (0-100):**
+- **financial_stability**: Gebaseerd op bedrijfsvolwassenheid, groei-indicatoren, financiële vermeldingen
+- **equipment_need**: Gebaseerd op expliciete apparatuurbehoeften, technologische tekortkomingen, uitbreidingsplannen  
+- **timing**: Gebaseerd op recente ontwikkelingen, uitbreidingsplannen, genoemde onmiddellijke behoeften
+- **decision_authority**: Gebaseerd op de kwaliteit van contactinformatie, zichtbaarheid van leiderschap
 
-If no relevant information is found for a field, use null. Be conservative with estimates.
+Gebruik null als er geen relevante informatie voor een veld wordt gevonden. Wees conservatief met schattingen.

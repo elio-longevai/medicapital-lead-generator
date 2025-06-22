@@ -1,0 +1,177 @@
+import { Globe, TrendingUp, Users, Building2 } from "lucide-react";
+
+export const icpMetadata = {
+    sustainability_supplier: {
+        name: "Duurzaamheid (Leveranciers)",
+        emoji: "🌱",
+        description: "Producenten & installateurs van groene technologie",
+        icon: Globe,
+        colors: {
+            text: "text-emerald-900",
+            bg: "bg-emerald-100",
+            border: "border-emerald-200 hover:border-emerald-300",
+            gradient: "from-emerald-50 to-green-50",
+            iconText: "text-emerald-600",
+            badgeText: "text-emerald-800",
+            badgeBg: "bg-emerald-100",
+            badgeBorder: "border-emerald-300",
+        },
+    },
+    sustainability_end_user: {
+        name: "Duurzaamheid (Eindgebruikers)",
+        emoji: "⚡️",
+        description: "MKB+ bedrijven met hoog energieverbruik",
+        icon: TrendingUp,
+        colors: {
+            text: "text-blue-900",
+            bg: "bg-blue-100",
+            border: "border-blue-200 hover:border-blue-300",
+            gradient: "from-blue-50 to-indigo-50",
+            iconText: "text-blue-600",
+            badgeText: "text-blue-800",
+            badgeBg: "bg-blue-100",
+            badgeBorder: "border-blue-300",
+        },
+    },
+    healthcare_end_user: {
+        name: "Zorgverlening (Eindgebruikers)",
+        emoji: "🏥",
+        description: "Klinieken, praktijken & zorgcentra",
+        icon: Users,
+        colors: {
+            text: "text-purple-900",
+            bg: "bg-purple-100",
+            border: "border-purple-200 hover:border-purple-300",
+            gradient: "from-purple-50 to-violet-50",
+            iconText: "text-purple-600",
+            badgeText: "text-purple-800",
+            badgeBg: "bg-purple-100",
+            badgeBorder: "border-purple-300",
+        },
+    },
+    "Healthcare": {
+        name: "Zorgverlening (Eindgebruikers)",
+        emoji: "🏥",
+        description: "Klinieken, praktijken & zorgcentra",
+        icon: Users,
+        colors: {
+            text: "text-purple-900",
+            bg: "bg-purple-100",
+            border: "border-purple-200 hover:border-purple-300",
+            gradient: "from-purple-50 to-violet-50",
+            iconText: "text-purple-600",
+            badgeText: "text-purple-800",
+            badgeBg: "bg-purple-100",
+            badgeBorder: "border-purple-300",
+        },
+    },
+    "Healthcare - Wellness": {
+        name: "Zorgverlening (Eindgebruikers)",
+        emoji: "✨",
+        description: "Wellness centra & beauty klinieken",
+        icon: Users,
+        colors: {
+            text: "text-pink-900",
+            bg: "bg-pink-100",
+            border: "border-pink-200 hover:border-pink-300",
+            gradient: "from-pink-50 to-rose-50",
+            iconText: "text-pink-600",
+            badgeText: "text-pink-800",
+            badgeBg: "bg-pink-100",
+            badgeBorder: "border-pink-300",
+        },
+    },
+    "Sustainability": {
+        name: "Duurzaamheid (Leveranciers)",
+        emoji: "🌱",
+        description: "Duurzame technologie leveranciers",
+        icon: Globe,
+        colors: {
+            text: "text-emerald-900",
+            bg: "bg-emerald-100",
+            border: "border-emerald-200 hover:border-emerald-300",
+            gradient: "from-emerald-50 to-green-50",
+            iconText: "text-emerald-600",
+            badgeText: "text-emerald-800",
+            badgeBg: "bg-emerald-100",
+            badgeBorder: "border-emerald-300",
+        },
+    },
+    "Sustainability - Energy": {
+        name: "Duurzaamheid (Eindgebruikers)",
+        emoji: "⚡️",
+        description: "Energie-intensieve bedrijven",
+        icon: TrendingUp,
+        colors: {
+            text: "text-blue-900",
+            bg: "bg-blue-100",
+            border: "border-blue-200 hover:border-blue-300",
+            gradient: "from-blue-50 to-indigo-50",
+            iconText: "text-blue-600",
+            badgeText: "text-blue-800",
+            badgeBg: "bg-blue-100",
+            badgeBorder: "border-blue-300",
+        },
+    },
+    "Gezondheidszorg": {
+        name: "Zorgverlening (Eindgebruikers)",
+        emoji: "🏥",
+        description: "Nederlandse zorginstellingen",
+        icon: Users,
+        colors: {
+            text: "text-purple-900",
+            bg: "bg-purple-100",
+            border: "border-purple-200 hover:border-purple-300",
+            gradient: "from-purple-50 to-violet-50",
+            iconText: "text-purple-600",
+            badgeText: "text-purple-800",
+            badgeBg: "bg-purple-100",
+            badgeBorder: "border-purple-300",
+        },
+    },
+    "Duurzaamheid": {
+        name: "Duurzaamheid (Leveranciers)",
+        emoji: "🌱",
+        description: "Duurzame technologie leveranciers",
+        icon: Globe,
+        colors: {
+            text: "text-emerald-900",
+            bg: "bg-emerald-100",
+            border: "border-emerald-200 hover:border-emerald-300",
+            gradient: "from-emerald-50 to-green-50",
+            iconText: "text-emerald-600",
+            badgeText: "text-emerald-800",
+            badgeBg: "bg-emerald-100",
+            badgeBorder: "border-emerald-300",
+        },
+    },
+    default: {
+        name: "Algemeen",
+        emoji: "🏢",
+        description: "Algemene lead",
+        icon: Building2,
+        colors: {
+            text: "text-slate-900",
+            bg: "bg-slate-100",
+            border: "border-slate-200 hover:border-slate-300",
+            gradient: "from-slate-50 to-gray-50",
+            iconText: "text-slate-600",
+            badgeText: "text-slate-800",
+            badgeBg: "bg-slate-100",
+            badgeBorder: "border-slate-300",
+        },
+    },
+};
+
+export const getIcpMetadata = (icpName?: string | null) => {
+    console.log('Looking for ICP metadata for:', icpName);
+    const result = (icpName && icpMetadata[icpName]) || icpMetadata.default;
+    console.log('Found metadata:', result.name);
+    return result;
+}
+
+export const icpList = [
+    { id: 'sustainability_supplier', name: 'Duurzaamheid (Leveranciers)', emoji: '🌱' },
+    { id: 'sustainability_end_user', name: 'Duurzaamheid (Eindgebruikers)', emoji: '⚡️' },
+    { id: 'healthcare_end_user', name: 'Zorgverlening (Eindgebruikers)', emoji: '🏥' },
+] 

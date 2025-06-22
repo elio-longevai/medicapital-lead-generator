@@ -90,7 +90,7 @@ install-frontend:
 
 run-frontend:
 	@echo "\n🚀 Starting frontend development server..."
-	@echo "--> Frontend will be available at http://localhost:5173"
+	@echo "--> Frontend will be available at http://localhost:8080"
 	@cd frontend && bun run dev
 
 frontend-build:

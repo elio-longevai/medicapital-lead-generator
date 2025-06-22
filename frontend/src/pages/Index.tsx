@@ -27,6 +27,7 @@ import { LeadDatabase } from "@/components/LeadDatabase";
 import { CompanyProfile } from "@/components/CompanyProfile";
 import { QualificationWorkflow } from "@/components/QualificationWorkflow";
 import { useDashboardStats, useCompanies } from "@/hooks/useCompanies";
+import { getIcpMetadata } from "@/lib/icp-utils";
 
 const Index = () => {
 	const [activeTab, setActiveTab] = useState("dashboard");
@@ -42,6 +43,10 @@ const Index = () => {
 
 	const recentLeads = recentLeadsData?.companies || [];
 
+	const topIcpNames = dashboardData?.topIndustries
+		?.map((icp) => getIcpMetadata(icp.industry).name)
+		.join(", ");
+
 	// Dynamic dashboard metrics based on real data
 	const dashboardMetrics = dashboardData
 		? [
@@ -51,12 +56,12 @@ const Index = () => {
 					change: `${dashboardData.qualificationRate.toFixed(1)}% gekwalificeerd`,
 					changeType: "positive",
 					icon: Users,
-					description: "Over alle doel-industrieën",
+					description: "Over alle doelgroepen",
 				},
 				{
-					title: "Doel Industrieën",
+					title: "Actieve Doelgroepen",
 					value: dashboardData.topIndustries.length.toString(),
-					change: dashboardData.topIndustries.map((i) => i.industry).join(", "),
+					change: topIcpNames,
 					changeType: "neutral",
 					icon: Target,
 					description: "Gedefinieerde ICP's met kwalificatiecriteria",
@@ -284,31 +289,25 @@ const Index = () => {
 											</div>
 										</div>
 										<div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-emerald-200/50">
-											<div className="grid grid-cols-3 gap-4 text-center">
-												<div>
-													<div className="text-lg font-bold text-emerald-600">
-														🌱
-													</div>
-													<div className="text-xs text-slate-600">
-														Duurzaamheid
-													</div>
-												</div>
-												<div>
-													<div className="text-lg font-bold text-blue-600">
-														⚡
-													</div>
-													<div className="text-xs text-slate-600">
-														Energie-intensief
-													</div>
-												</div>
-												<div>
-													<div className="text-lg font-bold text-purple-600">
-														🏥
-													</div>
-													<div className="text-xs text-slate-600">
-														Zorgverlening
-													</div>
-												</div>
+											<div
+												className="grid grid-cols-3 gap-4 text-center"
+												style={{
+													gridTemplateColumns: `repeat(${dashboardData?.topIndustries.length || 3}, minmax(0, 1fr))`,
+												}}
+											>
+												{dashboardData?.topIndustries.map((icp) => {
+													const metadata = getIcpMetadata(icp.industry);
+													return (
+														<div key={icp.industry}>
+															<div className="text-lg font-bold">
+																{metadata.emoji}
+															</div>
+															<div className="text-xs text-slate-600 truncate">
+																{metadata.name}
+															</div>
+														</div>
+													);
+												})}
 											</div>
 										</div>
 									</CardContent>
@@ -332,93 +331,117 @@ const Index = () => {
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="space-y-4">
-										<div className="grid grid-cols-1 gap-4">
-											<div className="group p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200 hover:border-emerald-300 transition-allduration-200">
-												<div className="flex items-center justify-between mb-3">
-													<div className="flex items-center">
-														<div className="p-2 bg-emerald-100 rounded-lg mr-3">
-															<Globe className="h-5 w-5 text-emerald-600" />
+										{dashboardData?.topIndustries &&
+										dashboardData.topIndustries.length > 0 ? (
+											<div className="grid grid-cols-1 gap-4">
+												{dashboardData.topIndustries.map(
+													({ industry: icpName }) => {
+														const metadata = getIcpMetadata(icpName);
+														const Icon = metadata.icon;
+														return (
+															<div
+																key={icpName}
+																className={`group p-4 bg-gradient-to-r ${metadata.colors.gradient} rounded-xl border ${metadata.colors.border} transition-all duration-200`}
+															>
+																<div className="flex items-center justify-between mb-3">
+																	<div className="flex items-center">
+																		<div
+																			className={`p-2 ${metadata.colors.bg} rounded-lg mr-3`}
+																		>
+																			<Icon
+																				className={`h-5 w-5 ${metadata.colors.iconText}`}
+																			/>
+																		</div>
+																		<div>
+																			<h4
+																				className={`font-semibold ${metadata.colors.text}`}
+																			>
+																				{metadata.name}
+																			</h4>
+																			<p
+																				className={`text-sm ${metadata.colors.text}`}
+																			>
+																				{metadata.description}
+																			</p>
+																		</div>
+																	</div>
+																	<Badge
+																		className={`${metadata.colors.badgeBg} ${metadata.colors.badgeText} ${metadata.colors.badgeBorder}`}
+																	>
+																		Actief
+																	</Badge>
+																</div>
+															</div>
+														);
+													},
+												)}
+											</div>
+										) : (
+											<div className="grid grid-cols-1 gap-4">
+												{/* Fallback campaigns when no data */}
+												<div className="group p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl border border-purple-200 hover:border-purple-300 transition-all duration-200">
+													<div className="flex items-center justify-between mb-3">
+														<div className="flex items-center">
+															<div className="p-2 bg-purple-100 rounded-lg mr-3">
+																<Users className="h-5 w-5 text-purple-600" />
+															</div>
+															<div>
+																<h4 className="font-semibold text-purple-900">
+																	Zorgverlening (Eindgebruikers)
+																</h4>
+																<p className="text-sm text-purple-700">
+																	Klinieken, praktijken & zorgcentra
+																</p>
+															</div>
 														</div>
-														<div>
-															<h4 className="font-semibold text-emerald-900">
-																Duurzaamheid (Leveranciers)
-															</h4>
-															<p className="text-sm text-emerald-700">
-																Producenten & installateurs van groene
-																technologie
-															</p>
-														</div>
+														<Badge className="bg-purple-100 text-purple-800 border-purple-300">
+															Actief
+														</Badge>
 													</div>
-													<Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
-														Actief
-													</Badge>
 												</div>
-												<div className="flex items-center justify-between text-sm">
-													<span className="text-emerald-700">
-														Leads vandaag:
-													</span>
-													<span className="font-bold text-emerald-900">
-														8 nieuwe
-													</span>
+												<div className="group p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200 hover:border-emerald-300 transition-all duration-200">
+													<div className="flex items-center justify-between mb-3">
+														<div className="flex items-center">
+															<div className="p-2 bg-emerald-100 rounded-lg mr-3">
+																<Globe className="h-5 w-5 text-emerald-600" />
+															</div>
+															<div>
+																<h4 className="font-semibold text-emerald-900">
+																	Duurzaamheid (Leveranciers)
+																</h4>
+																<p className="text-sm text-emerald-700">
+																	Producenten & installateurs van groene
+																	technologie
+																</p>
+															</div>
+														</div>
+														<Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
+															Actief
+														</Badge>
+													</div>
+												</div>
+												<div className="group p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-all duration-200">
+													<div className="flex items-center justify-between mb-3">
+														<div className="flex items-center">
+															<div className="p-2 bg-blue-100 rounded-lg mr-3">
+																<TrendingUp className="h-5 w-5 text-blue-600" />
+															</div>
+															<div>
+																<h4 className="font-semibold text-blue-900">
+																	Duurzaamheid (Eindgebruikers)
+																</h4>
+																<p className="text-sm text-blue-700">
+																	MKB+ bedrijven met hoog energieverbruik
+																</p>
+															</div>
+														</div>
+														<Badge className="bg-blue-100 text-blue-800 border-blue-300">
+															Actief
+														</Badge>
+													</div>
 												</div>
 											</div>
-
-											<div className="group p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-all duration-200">
-												<div className="flex items-center justify-between mb-3">
-													<div className="flex items-center">
-														<div className="p-2 bg-blue-100 rounded-lg mr-3">
-															<TrendingUp className="h-5 w-5 text-blue-600" />
-														</div>
-														<div>
-															<h4 className="font-semibold text-blue-900">
-																Energie-intensief (Eindgebruikers)
-															</h4>
-															<p className="text-sm text-blue-700">
-																MKB+ bedrijven met hoog energieverbruik
-															</p>
-														</div>
-													</div>
-													<Badge className="bg-blue-100 text-blue-800 border-blue-300">
-														Actief
-													</Badge>
-												</div>
-												<div className="flex items-center justify-between text-sm">
-													<span className="text-blue-700">Leads vandaag:</span>
-													<span className="font-bold text-blue-900">
-														12 nieuwe
-													</span>
-												</div>
-											</div>
-
-											<div className="group p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl border border-purple-200 hover:border-purple-300 transition-all duration-200">
-												<div className="flex items-center justify-between mb-3">
-													<div className="flex items-center">
-														<div className="p-2 bg-purple-100 rounded-lg mr-3">
-															<Users className="h-5 w-5 text-purple-600" />
-														</div>
-														<div>
-															<h4 className="font-semibold text-purple-900">
-																Zorgverlening (Eindgebruikers)
-															</h4>
-															<p className="text-sm text-purple-700">
-																Klinieken, praktijken & zorgcentra
-															</p>
-														</div>
-													</div>
-													<Badge className="bg-purple-100 text-purple-800 border-purple-300">
-														Actief
-													</Badge>
-												</div>
-												<div className="flex items-center justify-between text-sm">
-													<span className="text-purple-700">
-														Leads vandaag:
-													</span>
-													<span className="font-bold text-purple-900">
-														5 nieuwe
-													</span>
-												</div>
-											</div>
-										</div>
+										)}
 
 										<div className="pt-4 border-t border-slate-200 bg-slate-50 rounded-xl px-4 py-3">
 											<div className="grid grid-cols-2 gap-4 text-sm">

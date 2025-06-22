@@ -19,6 +19,9 @@
 
 The MediCapital Lead Generation Engine is a sophisticated AI-powered system that autonomously discovers, qualifies, and manages B2B leads for equipment leasing in the Netherlands and Belgium. Built with cutting-edge technologies like LangGraph and Google Gemini, it transforms unstructured market intelligence into actionable sales opportunities.
 
+![Application Dashboard](dashboard-screenshot.png)
+*Screenshot of the main application dashboard showing lead discovery and qualification interface*
+
 ### **🎪 Key Capabilities**
 
 | Feature | Description |
@@ -29,6 +32,19 @@ The MediCapital Lead Generation Engine is a sophisticated AI-powered system that
 | ⏰ **Automated Scheduling** | Runs continuously with configurable intervals and country rotation |
 | 📊 **Production-Ready** | SQLite for development, PostgreSQL for production with full observability |
 | 🚀 **High Performance** | Async operations for concurrent web searches and AI processing |
+
+---
+
+## 🧩 **Tech Stack**
+
+| Layer | Technologies |
+|-------|-------------|
+| **AI & LLM** | ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-AI-orange) ![LangChain](https://img.shields.io/badge/LangChain-framework-green) ![LangGraph](https://img.shields.io/badge/LangGraph-workflow-purple) |
+| **Backend** | ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-web%20framework-teal) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-ORM-red) |
+| **Frontend** | ![React](https://img.shields.io/badge/React-UI%20library-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-language-blue) ![Vite](https://img.shields.io/badge/Vite-build%20tool-purple) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-styling-cyan) |
+| **Database** | ![SQLite](https://img.shields.io/badge/SQLite-development-blue) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-production-blue) |
+| **APIs** | ![Brave Search](https://img.shields.io/badge/Brave%20Search-web%20search-orange) ![Firecrawl](https://img.shields.io/badge/Firecrawl-scraping-red) ![Tavily](https://img.shields.io/badge/Tavily-search-green) |
+| **Tooling** | ![UV](https://img.shields.io/badge/uv-package%20manager-blue) ![Bun](https://img.shields.io/badge/Bun-frontend%20tooling-yellow) ![Ruff](https://img.shields.io/badge/Ruff-linting%20%26%20formatting-red) |
 
 ---
 
@@ -71,7 +87,7 @@ graph TD
 3.  **🌐 Web Search** - Executes concurrent searches via Brave Search API.
 4.  **🤖 AI Triage** - An LLM evaluates each search result for B2B relevance and ICP fit.
 5.  ** scraping & Enrichment** - The official company website is scraped, and key data points (contact info, revenue, etc.) are extracted.
-6.  **🔎 Completeness Check & Refinement Loop** - The system checks if critical data is missing. If so, it generates and executes new, highly specific search queries to find the missing information, merging it with the existing lead data. This loop continues until the lead is sufficiently enriched.
+6.  **🔎 Completeness Check & Refinement Loop** - The system checks if critical data is missing. If so, it generates and executes new, highly specific search queries to find the missing information, merging it with the existing lead data. The loop specifically targets missing fields such as contact email, phone number, location details, employee count, equipment needs, and recent news to complete company profiles. This loop continues until the lead is sufficiently enriched.
 7.  **💾 Database Storage** - Saves unique, enriched leads to the database with smart deduplication.
 
 ---
@@ -127,7 +143,13 @@ medicapital_lead_engine/
 
 ---
 
-## 🚀 **Quick Start**
+## 🚀 **Getting Started**
+
+### **Prerequisites**
+
+- **Python 3.12+** - Download from [python.org](https://www.python.org/downloads/)
+- **Bun** - Install from [bun.sh](https://bun.sh/) (for frontend development)
+- **uv** - Install from [**astral**.sh/uv](https://astral.sh/uv) (for backend package management)
 
 ### **1. Environment Setup**
 
@@ -182,7 +204,24 @@ uv pip install -e .[dev]
 python -m app.main create-db
 ```
 
-### **4. Run Lead Generation**
+### **4. Running the Application**
+
+1. **Backend Setup & Execution:**
+   ```bash
+   cd backend
+   make setup              # Installs uv, creates venv, installs deps
+   make create-db          # Initialize database
+   make run-api           # Start API server at http://localhost:8000
+   ```
+
+2. **Frontend Setup & Execution:**
+   ```bash
+   cd frontend
+   bun install            # Install dependencies
+   bun run dev           # Start dev server at http://localhost:8080
+   ```
+
+### **5. Lead Generation Commands**
 
 ```bash
 # Single run for Netherlands
@@ -216,6 +255,38 @@ The system is designed for easy customization:
 - **📝 ICP Definition**: Edit `prompts/icp.txt` to modify target customer profile
 - **🎯 Search Strategy**: Modify `prompts/query_generation.txt` to adjust search patterns  
 - **🤖 Lead Qualification**: Update `prompts/lead_triage.txt` to change qualification criteria
+
+### **Ideal Customer Profiles (ICPs)**
+
+The system currently has **3 active ICPs** configured:
+
+- **sustainability_supplier** (Netherlands) - Sustainability equipment suppliers
+- **sustainability_end_user** (Netherlands) - End users of sustainability equipment  
+- **healthcare_end_user** (Netherlands) - Healthcare equipment end users
+
+To add a new ICP:
+
+1. Create a new `.txt` file in the `prompts/` directory with your ICP definition
+2. Add the new ICP to the `ICP_CONFIG` list in `backend/app/main.py`:
+   ```python
+   {
+       "name": "your_icp_name",
+       "country": "NL",  # or "BE"
+       "file": "your_icp_file.txt",
+   }
+   ```
+
+### **API Endpoints**
+
+The FastAPI backend provides the following endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/companies` | GET | List companies with filtering and pagination |
+| `/api/companies/{id}` | GET | Get details for a single company |
+| `/api/companies/{id}/status` | PATCH | Update company status |
+| `/api/dashboard/stats` | GET | Get dashboard statistics |
+| `/health` | GET | Health check endpoint |
 
 ---
 

@@ -32,10 +32,11 @@ import {
 } from "lucide-react";
 import { useCompanies } from "@/hooks/useCompanies";
 import type { Company } from "@/services/api";
+import { icpList, getIcpMetadata } from "@/lib/icp-utils";
 
 export const LeadDatabase = ({ onSelectCompany }) => {
 	const [searchTerm, setSearchTerm] = useState("");
-	const [industryFilter, setIndustryFilter] = useState("all");
+	const [icpFilter, setIcpFilter] = useState("all");
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [sortBy, setSortBy] = useState("score");
 
@@ -45,7 +46,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 		error,
 	} = useCompanies({
 		search: searchTerm || undefined,
-		industry: industryFilter !== "all" ? industryFilter : undefined,
+		icp_name: icpFilter !== "all" ? icpFilter : undefined,
 		status: statusFilter !== "all" ? statusFilter : undefined,
 		sort_by: sortBy,
 		// TODO: Make default limit configurable via app settings
@@ -83,20 +84,6 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 		if (score >= 85) return "text-emerald-600 bg-emerald-50";
 		if (score >= 70) return "text-amber-600 bg-amber-50";
 		return "text-red-600 bg-red-50";
-	};
-
-	const getIndustryIcon = (industry: string) => {
-		// TODO: Make industry icons configurable or use a proper icon mapping system
-		switch (industry) {
-			case "Healthcare":
-				return "🏥";
-			case "Beauty & Wellness":
-				return "✨";
-			case "Horeca":
-				return "🍽️";
-			default:
-				return "🏢";
-		}
 	};
 
 	if (error) {
@@ -140,17 +127,17 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 							</div>
 						</div>
 						<div className="flex gap-3">
-							<Select value={industryFilter} onValueChange={setIndustryFilter}>
+							<Select value={icpFilter} onValueChange={setIcpFilter}>
 								<SelectTrigger className="w-48 h-12 border-slate-200 focus:border-blue-400">
-									<SelectValue placeholder="Industrie" />
+									<SelectValue placeholder="Doelgroep" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="all">Alle Industrieën</SelectItem>
-									<SelectItem value="Healthcare">🏥 Healthcare</SelectItem>
-									<SelectItem value="Beauty & Wellness">
-										✨ Beauty & Wellness
-									</SelectItem>
-									<SelectItem value="Horeca">🍽️ Horeca</SelectItem>
+									<SelectItem value="all">Alle Doelgroepen</SelectItem>
+									{icpList.map((icp) => (
+										<SelectItem key={icp.id} value={icp.id}>
+											{icp.emoji} {icp.name}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 
@@ -264,7 +251,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 									<div className="flex-1">
 										<div className="flex items-center mb-2">
 											<span className="text-2xl mr-2">
-												{getIndustryIcon(lead.industry)}
+												{getIcpMetadata(lead.icpName).emoji}
 											</span>
 											<CardTitle className="text-xl group-hover:text-blue-900 transition-colors">
 												{lead.company}

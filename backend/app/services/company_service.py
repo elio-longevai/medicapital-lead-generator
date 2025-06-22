@@ -21,7 +21,7 @@ class CompanyService:
         self,
         skip: int,
         limit: int,
-        industry: Optional[str],
+        icp_name: Optional[str],
         status: Optional[str],
         country: Optional[str],
         search: Optional[str],
@@ -30,8 +30,8 @@ class CompanyService:
         query = self.db.query(Company)
 
         # Apply filters
-        if industry and industry != "all":
-            query = query.filter(Company.primary_industry == industry)
+        if icp_name and icp_name != "all":
+            query = query.filter(Company.icp_name == icp_name)
         if status and status != "all":
             query = query.filter(Company.status == status)
         elif not status or status == "all":
@@ -113,14 +113,13 @@ class CompanyService:
         avg_score_result = self.db.query(func.avg(Company.qualification_score)).scalar()
         avg_score = float(avg_score_result) if avg_score_result else 75.0
 
-        # Get top industries
-        top_industries = (
-            self.db.query(
-                Company.primary_industry, func.count(Company.id).label("count")
-            )
-            .group_by(Company.primary_industry)
+        # Get top ICPs
+        top_icps = (
+            self.db.query(Company.icp_name, func.count(Company.id).label("count"))
+            .filter(Company.icp_name.isnot(None))
+            .group_by(Company.icp_name)
             .order_by(desc("count"))
-            .limit(5)
+            .limit(3)
             .all()
         )
 
@@ -132,8 +131,7 @@ class CompanyService:
             qualificationRate=qualification_rate,
             avgScore=avg_score,
             topIndustries=[
-                {"industry": industry, "count": count}
-                for industry, count in top_industries
+                {"industry": icp_name, "count": count} for icp_name, count in top_icps
             ],
         )
 
@@ -191,15 +189,16 @@ class CompanyService:
     def _calculate_default_score(self, company: Company) -> int:
         # Base score calculation logic
         base_score = 70
-        if company.primary_industry in ["Healthcare", "Medical"]:
+        if company.primary_industry in ["Gezondheidszorg", "Medisch"]:
             base_score += 15
-        elif company.primary_industry in ["Beauty & Wellness"]:
+        elif company.primary_industry in ["Beauty & Wellness", "Wellness"]:
             base_score += 10
         return min(base_score, 95)
 
     def _infer_equipment_need(self, company: Company) -> str:
         industry_equipment = {
-            "Healthcare": "Medische apparatuur",
+            "Gezondheidszorg": "Medische apparatuur",
+            "Duurzaamheid": "Duurzame technologie",
             "Beauty & Wellness": "Beauty-apparatuur",
             "Horeca": "Keukenapparatuur",
         }

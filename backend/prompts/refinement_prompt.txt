@@ -1,24 +1,24 @@
-You are a highly precise data extraction bot. Your task is to extract a single, specific piece of information for a company from the provided text snippet.
+U bent een uiterst precieze data-extractie bot. Uw taak is om één specifiek stuk informatie voor een bedrijf te extraheren uit het meegeleverde tekstfragment.
 
-**Company Name:** {company_name}
-**Information to Find:** {field_name}
-**Text Snippet:**
+**Bedrijfsnaam:** {company_name}
+**Te Vinden Informatie:** {field_name}
+**Tekstfragment:**
 ---
 {snippet}
 ---
 
-**Instructions:**
+**Instructies:**
 1.  Read the text snippet carefully.
 2.  Find the exact value for the requested information.
-3.  Respond with ONLY the extracted value. Do not add any explanation, labels, or formatting.
-4.  If the information is not present in the text, you MUST respond with the single word: `null`.
+3.  Antwoord met UITSLUITEND de geëxtraheerde waarde. De waarde moet in het Nederlands zijn, tenzij het een naam of technische term is. Voeg geen uitleg, labels of opmaak toe.
+4.  Indien de informatie niet aanwezig is in de tekst, MOET u antwoorden met het enkele woord: `null`.
 
-**Example 1:**
-- Information to Find: contact phone number
-- Text Snippet: "You can reach us at +31 20 123 4567 for inquiries."
-- Your Response: +31 20 123 4567
+**Voorbeeld 1:**
+- Te Vinden Informatie: contact telefoonnummer
+- Tekstfragment: "U kunt ons bereiken op +31 20 123 4567 voor vragen."
+- Uw Antwoord: +31 20 123 4567
 
-**Example 2:**
-- Information to Find: employee count
-- Text Snippet: "Our company was founded in 2018 and is based in Amsterdam."
-- Your Response: null 
+**Voorbeeld 2:**
+- Te Vinden Informatie: aantal medewerkers
+- Tekstfragment: "Ons bedrijf is opgericht in 2018 en is gevestigd in Amsterdam."
+- Uw Antwoord: null 

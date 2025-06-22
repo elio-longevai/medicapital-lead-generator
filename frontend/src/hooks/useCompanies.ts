@@ -4,7 +4,7 @@ import { apiService, type CompanyListResponse, type Company } from '@/services/a
 export function useCompanies(params: {
   skip?: number;
   limit?: number;
-  industry?: string;
+  icp_name?: string;
   status?: string;
   search?: string;
   sort_by?: string;
@@ -42,7 +42,7 @@ export function useUpdateCompanyStatus() {
       // Invalidate queries to refetch data from the server
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      
+
       // Also update the specific company's data in the cache if it exists
       queryClient.setQueryData(['company', variables.id], data);
     },

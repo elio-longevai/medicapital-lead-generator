@@ -49,7 +49,7 @@ class ApiService {
   async getCompanies(params: {
     skip?: number;
     limit?: number;
-    industry?: string;
+    icp_name?: string;
     status?: string;
     country?: string;
     search?: string;
