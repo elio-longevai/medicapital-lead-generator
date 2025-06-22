@@ -148,11 +148,11 @@ class BraveSearchClient(BaseSearchClient, CountryMappingMixin):
     """A client for the Brave Search API."""
 
     BASE_URL = "https://api.search.brave.com/res/v1/web/search"
-    # Class-level limiter to ensure rate limit is shared across all instances.
-    limiter = AsyncLimiter(1, 1)  # 1 request per second.
 
     def __init__(self, api_key: str):
         super().__init__(api_key)
+        # Each instance gets its own limiter, bound to the current event loop.
+        self.limiter = AsyncLimiter(1, 1)
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
@@ -312,17 +312,84 @@ class CircuitBreaker:
 
 
 class MultiProviderSearchClient:
-    """Orchestrates searches across multiple providers based on a tier list."""
+    """Orchestrates searches across multiple providers."""
 
-    # Tier list from search.todo: Brave is highest quality
     PROVIDER_TIER = ["brave", "tavily", "serper", "firecrawl"]
 
-    def __init__(self, clients: dict, api_usage_service: ApiUsageService = None):
+    def __init__(self, clients: Dict[str, BaseSearchClient]):
         self.clients = clients
         self.circuit_breaker = CircuitBreaker()
-        # Semaphore to limit concurrent database access to a safe number
+        # Each instance gets its own semaphore, bound to the current event loop.
         self.db_semaphore = asyncio.Semaphore(10)
-        # api_usage_service is now optional - we'll create our own sessions
+
+    async def _try_provider(
+        self,
+        query: str,
+        country: str,
+        client: httpx.AsyncClient,
+        api_usage_service: ApiUsageService,
+        provider_name: str,
+    ) -> tuple[list[dict], str | None]:
+        """
+        Attempts to search using a single provider.
+        Returns the results and the name of the successful provider.
+        """
+        try:
+            # Check circuit breaker first
+            if self.circuit_breaker.is_disabled(provider_name):
+                logger.info(
+                    f"⏭️ Skipping {provider_name}: temporarily disabled by circuit breaker"
+                )
+                return [], None
+
+            # Check if the API can be used (daily limit)
+            can_use = await asyncio.to_thread(
+                api_usage_service.can_use_api, provider_name
+            )
+
+            if not can_use:
+                logger.warning(f"⚠️ Skipping {provider_name}: Daily limit reached.")
+                return [], None
+
+            search_client = self.clients.get(provider_name)
+            if not search_client:
+                logger.error(f"Misconfigured provider: {provider_name} not found.")
+                return [], None
+
+            try:
+                logger.info(f"➡️ Trying search provider: {provider_name}")
+                results = await search_client.search_async(query, country, client)
+
+                if results:
+                    logger.info(
+                        f"✅ Success! Got {len(results)} results from {provider_name}."
+                    )
+                    # Record success and increment usage count
+                    self.circuit_breaker.record_success(provider_name)
+                    await asyncio.to_thread(
+                        api_usage_service.increment_usage, provider_name
+                    )
+                    return results, provider_name
+                else:
+                    logger.info(f"    - No results from {provider_name}.")
+                    return [], None
+
+            except (RateLimitError, TimeoutError) as e:
+                # These are expected recoverable errors
+                logger.warning(f"⚠️ {provider_name} failed: {e}. Trying next provider.")
+                self.circuit_breaker.record_failure(provider_name)
+                return [], None
+            except Exception as e:
+                logger.error(
+                    f"❌ Unexpected error with {provider_name}: {e}",
+                    exc_info=True,
+                )
+                self.circuit_breaker.record_failure(provider_name)
+                # Don't increment usage on error, just try the next provider
+                return [], None
+        except Exception as e:
+            logger.error(f"❌ Critical error in search client: {e}", exc_info=True)
+            return [], None
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
@@ -341,64 +408,12 @@ class MultiProviderSearchClient:
                 api_usage_service = ApiUsageService(db=db_session)
 
                 for provider_name in self.PROVIDER_TIER:
-                    # Check circuit breaker first
-                    if self.circuit_breaker.is_disabled(provider_name):
-                        logger.info(
-                            f"⏭️ Skipping {provider_name}: temporarily disabled by circuit breaker"
-                        )
-                        continue
-
-                    # Check if the API can be used (daily limit)
-                    can_use = await asyncio.to_thread(
-                        api_usage_service.can_use_api, provider_name
+                    results, provider_name = await self._try_provider(
+                        query, country, client, api_usage_service, provider_name
                     )
 
-                    if not can_use:
-                        logger.warning(
-                            f"⚠️ Skipping {provider_name}: Daily limit reached."
-                        )
-                        continue
-
-                    search_client = self.clients.get(provider_name)
-                    if not search_client:
-                        logger.error(
-                            f"Misconfigured provider: {provider_name} not found."
-                        )
-                        continue
-
-                    try:
-                        logger.info(f"➡️ Trying search provider: {provider_name}")
-                        results = await search_client.search_async(
-                            query, country, client
-                        )
-
-                        if results:
-                            logger.info(
-                                f"✅ Success! Got {len(results)} results from {provider_name}."
-                            )
-                            # Record success and increment usage count
-                            self.circuit_breaker.record_success(provider_name)
-                            await asyncio.to_thread(
-                                api_usage_service.increment_usage, provider_name
-                            )
-                            return results, provider_name
-                        else:
-                            logger.info(f"    - No results from {provider_name}.")
-
-                    except (RateLimitError, TimeoutError) as e:
-                        # These are expected recoverable errors
-                        logger.warning(
-                            f"⚠️ {provider_name} failed: {e}. Trying next provider."
-                        )
-                        self.circuit_breaker.record_failure(provider_name)
-                        continue  # Try next provider
-                    except Exception as e:
-                        logger.error(
-                            f"❌ Unexpected error with {provider_name}: {e}",
-                            exc_info=True,
-                        )
-                        self.circuit_breaker.record_failure(provider_name)
-                        # Don't increment usage on error, just try the next provider
+                    if results:
+                        return results, provider_name
 
                 logger.warning("⚠️ All search providers failed or returned no results.")
                 return [], None
@@ -421,19 +436,19 @@ class MultiProviderSearchClient:
 # Instantiate clients for use in the graph
 llm_client = get_llm_client()
 
-# Individual search clients
-brave_client = BraveSearchClient(api_key=settings.BRAVE_API_KEY)
-serper_client = SerperClient(api_key=settings.SERPER_API_KEY)
-tavily_client = TavilyClient(api_key=settings.TAVILY_API_KEY)
-firecrawl_client = FirecrawlClient(api_key=settings.FIRECRAWL_API_KEY)
 
-# Multi-provider orchestrator - create api_usage_service per request
-multi_provider_search_client = MultiProviderSearchClient(
-    clients={
-        "brave": brave_client,
-        "serper": serper_client,
-        "tavily": tavily_client,
-        "firecrawl": firecrawl_client,
-    },
-    api_usage_service=None,  # Will be created per request
-)
+def create_multi_provider_search_client() -> MultiProviderSearchClient:
+    """Factory to create a new instance of the search client."""
+    return MultiProviderSearchClient(
+        clients={
+            "brave": BraveSearchClient(api_key=settings.BRAVE_API_KEY),
+            "serper": SerperClient(api_key=settings.SERPER_API_KEY),
+            "tavily": TavilyClient(api_key=settings.TAVILY_API_KEY),
+            "firecrawl": FirecrawlClient(api_key=settings.FIRECRAWL_API_KEY),
+        }
+    )
+
+
+# Default instance for convenience, but factory should be preferred
+# for operations running in different event loops.
+multi_provider_search_client = create_multi_provider_search_client()
