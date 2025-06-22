@@ -127,7 +127,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<div className="flex flex-col lg:flex-row gap-6">
+					<div className="flex flex-col lg:flex-row gap-6 mb-6">
 						<div className="flex-1">
 							<div className="relative">
 								<Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -179,6 +179,63 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 								</SelectContent>
 							</Select>
 						</div>
+					</div>
+
+					{/* Export Section */}
+					<div className="flex justify-between items-center pt-4 border-t border-slate-200">
+						<div className="text-sm text-slate-600">
+							{companies.length} resultaten gevonden
+						</div>
+						<Button
+							variant="outline"
+							onClick={() => {
+								const csvContent = [
+									[
+										"Bedrijf",
+										"Industrie",
+										"Score",
+										"Status",
+										"Locatie",
+										"Medewerkers",
+										"Apparatuurbehoefte",
+										"Email",
+										"Telefoon",
+									],
+									...companies.map((company) => [
+										company.company,
+										company.industry,
+										company.score,
+										company.status,
+										company.location,
+										company.employees,
+										company.equipmentNeed,
+										company.email || "",
+										company.phone || "",
+									]),
+								]
+									.map((row) => row.join(","))
+									.join("\n");
+
+								const blob = new Blob([csvContent], {
+									type: "text/csv;charset=utf-8;",
+								});
+								const link = document.createElement("a");
+								const url = URL.createObjectURL(blob);
+								link.setAttribute("href", url);
+								link.setAttribute(
+									"download",
+									`leads_export_${new Date().toISOString().split("T")[0]}.csv`,
+								);
+								link.style.visibility = "hidden";
+								document.body.appendChild(link);
+								link.click();
+								document.body.removeChild(link);
+							}}
+							className="flex items-center gap-2"
+						>
+							<Download className="h-4 w-4" />
+							Exporteer CSV
+						</Button>
 					</div>
 				</CardContent>
 			</Card>
