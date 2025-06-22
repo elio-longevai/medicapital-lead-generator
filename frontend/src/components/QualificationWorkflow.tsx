@@ -112,7 +112,7 @@ export const QualificationWorkflow = () => {
             <div>
               <CardTitle className="flex items-center">
                 <Target className="h-5 w-5 mr-2" />
-                AI Qualification Engine
+                AI Qualification Engine (future feature)
               </CardTitle>
               <CardDescription>
                 Automated lead qualification using AI-driven criteria analysis

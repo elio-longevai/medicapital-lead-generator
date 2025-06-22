@@ -118,16 +118,6 @@ const Index = () => {
                 MediCapital Solutions - Intelligent Prospecting System
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="lg" className="shadow-sm border-slate-200 hover:border-slate-300">
-                <Filter className="h-4 w-4 mr-2" />
-                Advanced Filters
-              </Button>
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg">
-                <Plus className="h-4 w-4 mr-2" />
-                New Campaign
-              </Button>
-            </div>
           </div>
         </div>
       </div>
