@@ -289,25 +289,44 @@ const Index = () => {
 											</div>
 										</div>
 										<div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-emerald-200/50">
-											<div
-												className="grid grid-cols-3 gap-4 text-center"
-												style={{
-													gridTemplateColumns: `repeat(${dashboardData?.topIndustries.length || 3}, minmax(0, 1fr))`,
-												}}
-											>
-												{dashboardData?.topIndustries.map((icp) => {
-													const metadata = getIcpMetadata(icp.industry);
-													return (
-														<div key={icp.industry}>
-															<div className="text-lg font-bold">
-																{metadata.emoji}
+											<div className="grid grid-cols-3 gap-4 text-center">
+												{dashboardData?.topIndustries &&
+												dashboardData.topIndustries.length > 0 ? (
+													dashboardData.topIndustries.map((icp) => {
+														const metadata = getIcpMetadata(icp.industry);
+														return (
+															<div key={icp.industry}>
+																<div className="text-lg font-bold">
+																	{metadata.emoji}
+																</div>
+																<div className="text-xs text-slate-600 truncate">
+																	{metadata.name}
+																</div>
 															</div>
+														);
+													})
+												) : (
+													<>
+														<div>
+															<div className="text-lg font-bold">🏥</div>
 															<div className="text-xs text-slate-600 truncate">
-																{metadata.name}
+																Zorgverlening
 															</div>
 														</div>
-													);
-												})}
+														<div>
+															<div className="text-lg font-bold">🌱</div>
+															<div className="text-xs text-slate-600 truncate">
+																Duurzaamheid
+															</div>
+														</div>
+														<div>
+															<div className="text-lg font-bold">⚡️</div>
+															<div className="text-xs text-slate-600 truncate">
+																Energie
+															</div>
+														</div>
+													</>
+												)}
 											</div>
 										</div>
 									</CardContent>
