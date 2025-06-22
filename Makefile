@@ -5,7 +5,7 @@
 #  To see all available commands, run `make help`.
 # ====================================================================================
 
-.PHONY: help install compile-requirements clean test run run-api lint format setup setup-pre-commit vulture create-db run-nl run-be start-scheduler frontend-install frontend-dev frontend-build frontend-lint
+.PHONY: help install install-backend install-frontend compile-requirements clean test run-backend run-api lint format setup setup-pre-commit vulture create-db start-scheduler run-frontend frontend-build frontend-lint
 
 # --- Variables ---
 # Customize these for your project
@@ -22,19 +22,18 @@ UV 					:= uv
 help:
 	@printf "\n\033[1m🚀 MediCapital Lead Generation Engine - Available Commands:\033[0m\n\n"
 	@printf "  \033[36m%-25s\033[0m %s\n" "make setup" "🛠️  Run this first! Installs uv, cleans, installs deps, and sets up git hooks."
-	@printf "\n\033[1m--- Development ---\033[0m\n"
-	@printf "  \033[36m%-25s\033[0m %s\n" "make install" "📦 Install all backend dependencies."
+	@printf "\n\033[1m--- Installation ---\033[0m\n"
+	@printf "  \033[36m%-25s\033[0m %s\n" "make install" "📦 Install all backend and frontend dependencies."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make install-backend" "📦 Install backend dependencies."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make install-frontend" "📦 Install frontend dependencies."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make compile-requirements" "📝 Lock new dependencies from requirements.in to requirements.txt."
-	@printf "  \033[36m%-25s\033[0m %s\n" "make create-db" "🗄️  Initialize the database tables."
-	@printf "\n\033[1m--- Frontend ---\033[0m\n"
-	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-install" "📦 Install frontend dependencies."
-	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-dev" "🚀 Start frontend development server."
-	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-build" "🏗️  Build frontend for production."
-	@printf "  \033[36m%-25s\033[0m %s\n" "make frontend-lint" "🔍 Lint frontend code."
-	@printf "\n\033[1m--- Lead Generation ---\033[0m\n"
-	@printf "  \033[36m%-25s\033[0m %s\n" "make run" "🚀 Run lead generation for Netherlands."
+	@printf "\n\033[1m--- Running the Application ---\033[0m\n"
+	@printf "  \033[36m%-25s\033[0m %s\n" "make run-backend" "🚀 Run lead generation for Netherlands."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make run-frontend" "🚀 Start frontend development server."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make run-api" "🌐 Start the FastAPI backend server."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make start-scheduler" "⏰ Start automated scheduler (4-hour intervals)."
+	@printf "\n\033[1m--- Database ---\033[0m\n"
+	@printf "  \033[36m%-25s\033[0m %s\n" "make create-db" "🗄️  Initialize the database tables."
 	@printf "\n\033[1m--- Code Quality ---\033[0m\n"
 	@printf "  \033[36m%-25s\033[0m %s\n" "make test" "🧪 Run the entire test suite with pytest."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make format" "✨ Automatically format code to match project style."
@@ -54,9 +53,11 @@ help:
 #  ⚙️ Setup & Installation
 # ====================================================================================
 
+install: install-backend install-frontend
+	@echo "\n✅ All backend and frontend dependencies are installed!"
 
-install:
-	@echo "\n📦 Installing all backend dependencies..."
+install-backend:
+	@echo "\n📦 Installing backend dependencies..."
 	@echo "--> Step 1: Creating a fresh virtual environment at '$(VENV)'..."
 	@$(UV) venv $(VENV) --seed
 	@echo "--> Step 2: Installing project dependencies from 'requirements.txt'..."
@@ -70,24 +71,24 @@ compile-requirements:
 	@$(UV) pip compile requirements.in -o requirements.txt
 	@echo "\n✅ 'requirements.txt' has been updated. Don't forget to commit it!"
 
-setup: clean install frontend-install setup-pre-commit
+setup: clean install setup-pre-commit
 	@echo "\n🎉 Hooray! Your development environment is ready to go! 🎉"
 	@echo "Next steps:"
 	@echo "  1. Copy .env.example to .env and add your API keys"
 	@echo "  2. Run 'make create-db' to initialize the database"
-	@echo "  3. Run 'make run' to test lead generation for Netherlands"
-	@echo "  4. Run 'make frontend-dev' to start the frontend development server"
+	@echo "  3. Run 'make run-backend' to test lead generation for Netherlands"
+	@echo "  4. Run 'make run-frontend' to start the frontend development server"
 
 # ====================================================================================
 #  🎨 Frontend Commands
 # ====================================================================================
 
-frontend-install:
+install-frontend:
 	@echo "\n📦 Installing frontend dependencies..."
 	@cd frontend && bun install
 	@echo "\n✅ Frontend dependencies installed successfully!"
 
-frontend-dev:
+run-frontend:
 	@echo "\n🚀 Starting frontend development server..."
 	@echo "--> Frontend will be available at http://localhost:5173"
 	@cd frontend && bun run dev
@@ -134,7 +135,7 @@ create-db:
 #  🚀 Lead Generation Operations
 # ====================================================================================
 
-run:
+run-backend:
 	@echo "\n🇳🇱 Running lead generation for Netherlands..."
 	@echo "--> This will discover and qualify B2B leads in the Netherlands"
 	@echo "--> Rate limited to 1 search per second to respect API limits"
