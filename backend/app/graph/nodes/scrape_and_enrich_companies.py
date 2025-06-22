@@ -7,53 +7,35 @@ from crawl4ai import (
     AsyncWebCrawler,
     BrowserConfig,
     CrawlerRunConfig,
-    LLMConfig,
     CacheMode,
 )
-from crawl4ai.extraction_strategy import LLMExtractionStrategy
 
-from app.core.settings import settings
+from app.core.clients import llm_client
 from app.graph.state import CandidateLead, GraphState
 
 logger = logging.getLogger(__name__)
 
 
-async def _scrape_company_website(lead: CandidateLead, enrichment_prompt: str) -> dict:
-    """Helper function to scrape a single company website using Crawl4AI."""
-
-    # Configure browser for headless operation
+async def _scrape_company_website(
+    lead: CandidateLead, enrichment_prompt: str
+) -> dict | None:
+    """
+    Scrapes a company website to get its text content, then uses an LLM to extract
+    structured information.
+    """
+    # 1. Configure crawler to only scrape content, not extract with an LLM yet.
     browser_config = BrowserConfig(headless=True, verbose=False)
-
-    # Prepare the instruction by replacing placeholders
-    instruction = enrichment_prompt.replace("{company_name}", lead.discovered_name)
-    instruction = instruction.replace("{industry}", lead.primary_industry)
-    instruction = instruction.replace("{country}", lead.country)
-    # Keep {website_content} for Crawl4AI to replace with actual content
-
-    # Configure the crawler
     run_config = CrawlerRunConfig(
         cache_mode=CacheMode.ENABLED,
-        word_count_threshold=50,  # Only process pages with substantial content
+        word_count_threshold=50,
         exclude_external_links=True,
-        extraction_strategy=LLMExtractionStrategy(
-            llm_config=LLMConfig(
-                provider="google/gemini-2.5-flash-preview-05-20",
-                api_token=settings.GOOGLE_API_KEY,
-            ),
-            schema=None,  # We'll use the prompt directly
-            extraction_type="block",
-            instruction=instruction,
-        ),
     )
 
-    # Try to scrape the source URL first, then look for official website
     urls_to_try = [lead.source_url]
-
-    # Try to find official website URL by looking for common patterns
+    # Try to find official website URL if the source URL is not a standard one
     if not any(
         domain in lead.source_url.lower() for domain in [".com", ".nl", ".be", ".org"]
     ):
-        # If source URL doesn't look like a company website, try to construct one
         company_domain = lead.discovered_name.lower().replace(" ", "").replace("-", "")
         urls_to_try.extend(
             [
@@ -63,53 +45,71 @@ async def _scrape_company_website(lead: CandidateLead, enrichment_prompt: str) -
             ]
         )
 
+    # 2. Scrape the website to get raw content
+    scraped_content = None
+    successful_url = None
     async with AsyncWebCrawler(config=browser_config) as crawler:
         for url in urls_to_try:
             try:
                 result = await crawler.arun(url=url, config=run_config)
-
-                if result.success and result.extracted_content:
-                    # Parse the JSON response from the LLM
-                    try:
-                        enriched_data = json.loads(result.extracted_content)
-                        # Add the successful URL to the data
-                        enriched_data["website_url"] = url
-                        return enriched_data
-                    except json.JSONDecodeError:
-                        # If JSON parsing fails, create a basic structure
-                        logger.warning(
-                            f"    - Could not parse JSON from LLM for {url}, using raw output."
-                        )
-                        return {
-                            "website_url": url,
-                            "enriched_data": result.extracted_content[
-                                :500
-                            ],  # Truncate if too long
-                            "contact_email": None,
-                            "contact_phone": None,
-                            "location_details": None,
-                            "employee_count": None,
-                            "estimated_revenue": None,
-                            "equipment_needs": None,
-                            "recent_news": None,
-                            "qualification_details": {
-                                "financial_stability": 75,
-                                "equipment_need": 70,
-                                "timing": 65,
-                                "decision_authority": 70,
-                            },
-                        }
-
+                # Use the markdown content which is cleaner for LLMs
+                if result.success and result.markdown and result.markdown.raw_markdown:
+                    scraped_content = result.markdown.raw_markdown
+                    successful_url = url
+                    logger.info(f"    ✓ Successfully scraped content from {url}")
+                    break  # Stop on first successful scrape
             except Exception as e:
-                logger.error(f"    - Failed to scrape {url}: {str(e)}")
+                logger.error(f"    - Failed during scraping of {url}: {str(e)}")
                 continue
 
-    # If all URLs failed, return None
-    return None
+    if not scraped_content:
+        logger.warning(f"    - Could not scrape any content for {lead.discovered_name}")
+        return None
+
+    # 3. Use LLM to extract structured data from the scraped content
+    logger.info(f"    > Extracting information for {lead.discovered_name} using LLM...")
+
+    # Prepare the prompt for the LLM
+    final_prompt = enrichment_prompt.replace("{company_name}", lead.discovered_name)
+    final_prompt = final_prompt.replace("{industry}", lead.primary_industry)
+    final_prompt = final_prompt.replace("{country}", lead.country)
+    # Truncate content to avoid exceeding LLM context window limits
+    final_prompt = final_prompt.replace("{website_content}", scraped_content[:15000])
+
+    try:
+        # Use asyncio.to_thread to run the synchronous 'invoke' method.
+        # This avoids event loop issues with the gRPC client used by the LLM.
+        response = await asyncio.to_thread(llm_client.invoke, final_prompt)
+        llm_output = response.content
+        parsed_json = json.loads(llm_output)
+
+        # The LLM might return a list with a single dictionary
+        if isinstance(parsed_json, list) and parsed_json:
+            enriched_data = parsed_json[0]
+        else:
+            enriched_data = parsed_json
+
+        if isinstance(enriched_data, dict):
+            enriched_data["website_url"] = successful_url
+            return enriched_data
+
+        logger.warning(
+            f"    - LLM did not return a valid dictionary for {lead.discovered_name}"
+        )
+        return None
+
+    except (json.JSONDecodeError, IndexError) as e:
+        logger.error(
+            f"    - Could not parse JSON from LLM for {lead.discovered_name}: {e}"
+        )
+        return None
+    except Exception as e:
+        logger.error(f"    - Failed LLM extraction for {lead.discovered_name}: {e}")
+        return None
 
 
 def scrape_and_enrich_companies(state: GraphState) -> dict:
-    """Scrapes company websites using Crawl4AI and enriches data with LLM analysis."""
+    """Scrapes company websites and enriches data with LLM analysis in parallel."""
     logger.info(
         f"---NODE: Scraping and Enriching {len(state.candidate_leads)} Companies---"
     )
@@ -123,31 +123,26 @@ def scrape_and_enrich_companies(state: GraphState) -> dict:
     try:
         enrichment_prompt = enrichment_prompt_path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        logger.warning(
-            "⚠️ Warning: company_enrichment.txt not found, skipping enrichment"
-        )
-        # Still return a valid structure for the graph to continue
+        logger.warning("⚠️ company_enrichment.txt not found, skipping enrichment")
         return {
             "enriched_companies": [
                 {"lead": lead, "enriched_data": None} for lead in state.candidate_leads
             ]
         }
 
-    enriched_companies = []
+    async def _run_enrichment():
+        # Create a list of async tasks to run concurrently
+        tasks = [
+            _scrape_company_website(lead, enrichment_prompt)
+            for lead in state.candidate_leads
+        ]
+        enriched_results = await asyncio.gather(*tasks)
 
-    # Process each candidate lead
-    for i, lead in enumerate(state.candidate_leads):
-        logger.info(
-            f"  > [{i + 1}/{len(state.candidate_leads)}] Scraping: {lead.discovered_name} ({lead.source_url})"
-        )
-
-        try:
-            # Run the async scraping in a sync context
-            enriched_data = asyncio.run(
-                _scrape_company_website(lead, enrichment_prompt)
-            )
-            enriched_companies.append({"lead": lead, "enriched_data": enriched_data})
-            if enriched_data:
+        # Pair original leads with their new, enriched data
+        final_enriched_companies = []
+        for lead, data in zip(state.candidate_leads, enriched_results):
+            final_enriched_companies.append({"lead": lead, "enriched_data": data})
+            if data:
                 logger.info(
                     f"    ✓ Successfully enriched data for {lead.discovered_name}"
                 )
@@ -155,14 +150,10 @@ def scrape_and_enrich_companies(state: GraphState) -> dict:
                 logger.warning(
                     f"    - No enrichment data returned for {lead.discovered_name}"
                 )
+        return final_enriched_companies
 
-        except Exception as e:
-            logger.error(
-                f"    ✗ Failed to scrape {lead.discovered_name}: {str(e)}",
-                exc_info=True,
-            )
-            # Add the lead without enrichment
-            enriched_companies.append({"lead": lead, "enriched_data": None})
+    # Run the entire async enrichment process
+    enriched_companies = asyncio.run(_run_enrichment())
 
     logger.info(
         f"  > Completed scraping. {len([c for c in enriched_companies if c['enriched_data']])} companies enriched."

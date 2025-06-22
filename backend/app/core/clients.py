@@ -30,8 +30,6 @@ class BaseSearchClient(ABC):
 
     def __init__(self, api_key: str):
         self.api_key = api_key
-        # Limiter is created per-request in async method to avoid event loop issues
-        # self.limiter = AsyncLimiter(1, 1) # Default: 1 request per second
 
     @abstractmethod
     def _prepare_request(
@@ -78,17 +76,16 @@ class BaseSearchClient(ABC):
         request_key = "params" if self.REQUEST_METHOD == "GET" else "json"
 
         try:
-            limiter = AsyncLimiter(1, 1)  # 1 req/sec; re-created for each call
-            async with limiter:
-                response = await client.request(
-                    self.REQUEST_METHOD,
-                    url,
-                    headers=headers,
-                    **{request_key: params_or_payload},
-                )
-                response.raise_for_status()
-                data = response.json()
-                return self._parse_response(data)
+            response = await client.request(
+                self.REQUEST_METHOD,
+                url,
+                headers=headers,
+                timeout=30.0,  # Add a 30-second timeout to all search requests
+                **{request_key: params_or_payload},
+            )
+            response.raise_for_status()
+            data = response.json()
+            return self._parse_response(data)
         except httpx.HTTPStatusError as e:
             logger.error(
                 f"❌ {self.__class__.__name__} API HTTP error: {e.response.status_code} - {e.response.text}"
@@ -105,6 +102,18 @@ class BraveSearchClient(BaseSearchClient):
     """A client for the Brave Search API."""
 
     BASE_URL = "https://api.search.brave.com/res/v1/web/search"
+    # Class-level limiter to ensure rate limit is shared across all instances.
+    limiter = AsyncLimiter(1, 1)  # 1 request per second.
+
+    def __init__(self, api_key: str):
+        super().__init__(api_key)
+
+    async def search_async(
+        self, query: str, country: str, client: httpx.AsyncClient
+    ) -> List[Dict[str, str]]:
+        """Performs an asynchronous web search with a shared rate limit."""
+        async with self.limiter:
+            return await super().search_async(query, country, client)
 
     def _prepare_request(self, query: str, country: str):
         headers = {**self.DEFAULT_HEADERS, "X-Subscription-Token": self.api_key}
