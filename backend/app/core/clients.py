@@ -267,8 +267,8 @@ class FirecrawlClient(BaseSearchClient):
 class MultiProviderSearchClient:
     """Orchestrates searches across multiple providers based on a tier list."""
 
-    # Tier list from search.todo: Firecrawl is highest quality
-    PROVIDER_TIER = ["firecrawl", "tavily", "brave", "serper"]
+    # Tier list from search.todo: Brave is highest quality
+    PROVIDER_TIER = ["brave", "tavily", "serper", "firecrawl"]
 
     def __init__(self, clients: dict, api_usage_service: ApiUsageService = None):
         self.clients = clients
