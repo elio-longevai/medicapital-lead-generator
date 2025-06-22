@@ -10,7 +10,12 @@ python-dotenv
 typer
 apscheduler
 httpx
-langsmith
+langsmith>=0.1
 fastapi
-uvicorn[standard]
+uvicorn
 crawl4ai
+aiolimiter
+beautifulsoup4
+pytest
+pytest-asyncio
+pytest-dotenv

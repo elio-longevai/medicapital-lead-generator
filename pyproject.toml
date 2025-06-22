@@ -29,3 +29,11 @@ dev = [
 
 [tool.uv.sources]
 pypi = { url = "https://pypi.org/simple" }
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "backend"
+]
+
+[tool.dotenv.ini_options]
+dotenv_files = ".env"

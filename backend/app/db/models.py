@@ -7,6 +7,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     JSON,
+    Date,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -55,3 +56,19 @@ class Company(Base):
 
     def __repr__(self):
         return f"<Company(name='{self.discovered_name}', status='{self.status}')>"
+
+
+class ApiUsage(Base):
+    __tablename__ = "api_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    api_name = Column(String, nullable=False, index=True)
+    date = Column(Date, default=datetime.date.today, nullable=False)
+    count = Column(Integer, default=1, nullable=False)
+
+    __table_args__ = (UniqueConstraint("api_name", "date", name="uq_api_date"),)
+
+    def __repr__(self):
+        return (
+            f"<ApiUsage(api='{self.api_name}', date='{self.date}', count={self.count})>"
+        )

@@ -29,6 +29,11 @@ class GraphState(BaseModel):
     candidate_leads: list[CandidateLead] = Field(default_factory=list)
     enriched_companies: list[dict] = Field(default_factory=list)
 
+    # For refinement loop
+    refinement_attempts: int = 0
+    refinement_queries: dict = Field(default_factory=dict)
+    refinement_results: dict = Field(default_factory=dict)
+
     # Final output
     newly_saved_leads_count: int = 0
     error_message: str | None = None

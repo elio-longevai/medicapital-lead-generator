@@ -1,5 +1,11 @@
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Build a path to the .env file
+# The settings.py file is in backend/app/core, and the .env file is in backend/
+# So we go up two levels from this file's directory.
+env_path = Path(__file__).parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -7,7 +13,7 @@ class Settings(BaseSettings):
 
     # Load from a .env file
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=env_path, env_file_encoding="utf-8", extra="ignore"
     )
 
     # LangSmith
@@ -19,6 +25,9 @@ class Settings(BaseSettings):
     # API Keys
     GOOGLE_API_KEY: str
     BRAVE_API_KEY: str
+    SERPER_API_KEY: str
+    TAVILY_API_KEY: str
+    FIRECRAWL_API_KEY: str
 
     # Database
     DATABASE_URL: str = "sqlite:///./medicapital.db"

@@ -1,9 +1,13 @@
 from typing import TypedDict
 from pathlib import Path
-from langchain_core.output_parsers import JsonOutputParser, PydanticOutputParser
+from langchain_core.output_parsers import (
+    JsonOutputParser,
+    PydanticOutputParser,
+    StrOutputParser,
+)
 from langchain_core.prompts import PromptTemplate
 
-from app.core.clients import llm_client, brave_client
+from app.core.clients import llm_client, brave_client, multi_provider_search_client
 from app.core.settings import settings
 from app.db.models import Company
 from app.db.session import SessionLocal
@@ -20,6 +24,7 @@ from crawl4ai import (
 from crawl4ai.extraction_strategy import LLMExtractionStrategy
 import json
 import asyncio
+import httpx
 
 
 class NodeResult(TypedDict):
@@ -316,3 +321,187 @@ async def _scrape_company_website(lead: CandidateLead, enrichment_prompt: str) -
 
     # If all URLs failed, return None
     return None
+
+
+# --- Refinement Loop Nodes ---
+
+ENRICHABLE_FIELDS = [
+    "contact_email",
+    "contact_phone",
+    "location_details",
+    "employee_count",
+    "estimated_revenue",
+    "equipment_needs",
+    "recent_news",
+]
+MAX_REFINEMENT_LOOPS = 2
+
+
+def check_enrichment_completeness(state: GraphState) -> str:
+    """Checks if any enriched company has missing data and routes accordingly."""
+    print("---🕵️ NODE: Checking Enrichment Completeness---")
+
+    if state.refinement_attempts >= MAX_REFINEMENT_LOOPS:
+        print(
+            f"  > ⚠️  Max refinement loops ({MAX_REFINEMENT_LOOPS}) reached. Proceeding to save."
+        )
+        return "save"
+
+    for company_data in state.enriched_companies:
+        enriched_data = company_data.get("enriched_data")
+        if not enriched_data:
+            # This is the critical fix: if enrichment failed, we must refine.
+            print(
+                "  > ❗️ Found company with no enrichment data. Routing to refinement loop."
+            )
+            return "refine"
+
+        # This part handles partially successful enrichment.
+        for field in ENRICHABLE_FIELDS:
+            if not enriched_data.get(field):
+                print(
+                    f"  > ❗️ Found company missing '{field}'. Routing to refinement loop."
+                )
+                return "refine"
+
+    print("  > ✅ All companies have complete data. Routing to save.")
+    return "save"
+
+
+def generate_refinement_queries(state: GraphState) -> dict:
+    """Generates targeted search queries for missing information."""
+    print("---🔍 NODE: Generating Refinement Queries---")
+    print(f"  > Refinement loop iteration: {state.refinement_attempts + 1}")
+    refinement_queries = {}
+    for i, company_data in enumerate(state.enriched_companies):
+        company_name = company_data["lead"].discovered_name
+        queries = []
+        enriched_data = company_data.get("enriched_data")
+
+        if not enriched_data:
+            # If no data exists, generate queries for all fields.
+            for field in ENRICHABLE_FIELDS:
+                query = f'"{company_name}" {field.replace("_", " ")}'
+                queries.append(query)
+            print(
+                f"  > 📝 Generated {len(queries)} queries for '{company_name}' (no initial data)."
+            )
+        else:
+            # If partial data exists, generate queries only for missing fields.
+            for field in ENRICHABLE_FIELDS:
+                if not enriched_data.get(field):
+                    query = f'"{company_name}" {field.replace("_", " ")}'
+                    queries.append(query)
+            if queries:
+                print(f"  > 📝 Generated {len(queries)} queries for '{company_name}'.")
+
+        if queries:
+            refinement_queries[i] = queries
+
+    return {
+        "refinement_queries": refinement_queries,
+        "refinement_attempts": state.refinement_attempts + 1,
+    }
+
+
+async def _execute_single_refinement_search(
+    queries: list[str], country: str
+) -> list[dict]:
+    """Helper to run searches for one company."""
+    all_results = []
+    async with httpx.AsyncClient() as client:
+        tasks = [
+            multi_provider_search_client.search_async(query, country, client)
+            for query in queries
+        ]
+        search_results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in search_results_list:
+            if isinstance(result, list):
+                all_results.extend(result)
+    return all_results
+
+
+def execute_refinement_search(state: GraphState) -> dict:
+    """Executes targeted web searches for missing data points."""
+    print("---🕸️ NODE: Executing Refinement Search---")
+    refinement_results = {}
+    country = state.target_country
+
+    # Process each company's queries sequentially to avoid async issues
+    for i, queries in state.refinement_queries.items():
+        if queries:
+            print(
+                f"  > ▶️  Searching for company index {i} with {len(queries)} queries..."
+            )
+            try:
+                # Run the async search in a sync context
+                results = asyncio.run(
+                    _execute_single_refinement_search(queries, country)
+                )
+                refinement_results[i] = results
+                print(f"    ✅ Found {len(results)} results for company index {i}")
+            except Exception as e:
+                print(f"    ❌ Error searching for company index {i}: {e}")
+                refinement_results[i] = []
+
+    return {"refinement_results": refinement_results}
+
+
+def extract_and_merge_missing_info(state: GraphState) -> dict:
+    """Uses an LLM to extract specific missing info and merge it back."""
+    print("---🧩 NODE: Extracting and Merging Missing Info---")
+    updated_enriched_companies = state.enriched_companies.copy()
+
+    parser = StrOutputParser()
+    prompt = PromptTemplate(
+        template=prompts.REFINEMENT_PROMPT,
+        input_variables=["company_name", "field_name", "snippet"],
+    )
+    chain = prompt | llm_client | parser
+
+    for i, company_data in enumerate(updated_enriched_companies):
+        if i in state.refinement_results:
+            company_name = company_data["lead"].discovered_name
+            search_results = state.refinement_results[i]
+
+            full_snippet = "\n\n".join(
+                [
+                    f"Title: {res['title']}\nDescription: {res.get('description', '')}"
+                    for res in search_results
+                    if res.get("description")
+                ]
+            )
+
+            if not full_snippet:
+                continue
+
+            print(f"  > 🔄 Refining data for '{company_name}'...")
+            if not company_data.get("enriched_data"):
+                updated_enriched_companies[i]["enriched_data"] = {}
+
+            for field in ENRICHABLE_FIELDS:
+                if not company_data["enriched_data"].get(field):
+                    try:
+                        extracted_value = chain.invoke(
+                            {
+                                "company_name": company_name,
+                                "field_name": field.replace("_", " "),
+                                "snippet": full_snippet,
+                            }
+                        )
+
+                        if extracted_value and extracted_value.lower().strip() not in [
+                            "null",
+                            "",
+                        ]:
+                            print(f"    ✅ Found {field}: {extracted_value[:50]}...")
+                            updated_enriched_companies[i]["enriched_data"][field] = (
+                                extracted_value
+                            )
+                        else:
+                            print(f"    ➖ No value found for {field}")
+
+                    except Exception as e:
+                        print(f"    ❌ Error extracting {field}: {e}")
+
+    return {"enriched_companies": updated_enriched_companies}

@@ -17,6 +17,7 @@ def load_prompt(filename: str) -> str:
 ICP_STRUCTURING_PROMPT = load_prompt("icp_structuring.txt")
 QUERY_GENERATION_PROMPT = load_prompt("query_generation.txt")
 LEAD_TRIAGE_PROMPT = load_prompt("lead_triage.txt")
+REFINEMENT_PROMPT = load_prompt("refinement_prompt.txt")
 
 
 class CandidateLead(BaseModel):
