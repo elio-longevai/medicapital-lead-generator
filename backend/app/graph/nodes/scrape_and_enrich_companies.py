@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 from pathlib import Path
 
@@ -12,6 +11,7 @@ from crawl4ai import (
 
 from app.core.clients import llm_client
 from app.graph.state import CandidateLead, GraphState
+from app.graph.nodes.schemas import EnrichedCompanyData
 
 logger = logging.getLogger(__name__)
 
@@ -78,11 +78,11 @@ async def _scrape_company_website(
 
     try:
         # Use a client configured for JSON mode to improve reliability
-        json_llm_client = llm_client.with_structured_output(method="json")
+        json_llm_client = llm_client.with_structured_output(EnrichedCompanyData)
         response = await asyncio.to_thread(json_llm_client.invoke, final_prompt)
 
         # The response should already be a dictionary when using structured_output
-        enriched_data = response
+        enriched_data = response.model_dump()
 
         if isinstance(enriched_data, dict):
             enriched_data["website_url"] = successful_url
@@ -93,15 +93,6 @@ async def _scrape_company_website(
         )
         return None
 
-    except json.JSONDecodeError as e:
-        logger.error(
-            f"    - Could not parse JSON from LLM for {lead.discovered_name}: {e}"
-        )
-        # It's helpful to see what the LLM returned instead of valid JSON
-        logger.debug(
-            f"    - Raw LLM Output: {response.content if 'response' in locals() else 'No response object'}"
-        )
-        return None
     except Exception as e:
         logger.error(f"    - Failed LLM extraction for {lead.discovered_name}: {e}")
         return None
