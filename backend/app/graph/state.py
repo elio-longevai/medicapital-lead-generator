@@ -22,6 +22,7 @@ class GraphState(BaseModel):
 
     raw_icp_text: str
     target_country: str  # 'NL' or 'BE'
+    search_query_limit: int | None = None
 
     structured_icp: dict = Field(default_factory=dict)
     search_queries: list[str] = Field(default_factory=list)

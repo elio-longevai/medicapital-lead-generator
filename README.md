@@ -34,31 +34,45 @@ The MediCapital Lead Generation Engine is a sophisticated AI-powered system that
 
 ## 🏗️ **System Architecture**
 
-The system follows a **LangGraph workflow** pattern, processing leads through a series of intelligent nodes:
+The system follows a **LangGraph workflow** pattern, processing leads through a series of intelligent nodes that include a refinement loop for comprehensive data enrichment.
 
 ```mermaid
 graph TD
-    A[📝 Raw ICP Text] --> B[🧠 Structure ICP]
-    B --> C[🔍 Generate Search Queries]
-    C --> D[🌐 Execute Web Search]
-    D --> E[🎯 Triage & Extract Leads]
-    E --> F[💾 Save to Database]
-    
+    A[📝 Raw ICP Text] --> B(🧠 structure_icp);
+    B --> C(🔍 generate_search_queries);
+    C --> D(🌐 execute_web_search);
+    D --> E(🎯 triage_and_extract_leads);
+    E --> F(🌐 scrape_and_enrich_companies);
+    F --> G{<br/>check_enrichment_completeness};
+    G -- "Data is Complete" --> K(💾 save_leads_to_db);
+    G -- "Data is Missing" --> H(🔍 generate_refinement_queries);
+    H --> I(🌐 execute_refinement_search);
+    I --> J(🧩 extract_and_merge_missing_info);
+    J --> G;
+    K --> L([🏁 END]);
+
     style A fill:#e1f5fe
     style B fill:#f3e5f5
     style C fill:#e8f5e8
     style D fill:#fff3e0
     style E fill:#fce4ec
-    style F fill:#f1f8e9
+    style F fill:#e0f7fa
+    style G fill:#f9fbe7
+    style H fill:#f3e5f5
+    style I fill:#fff3e0
+    style J fill:#fce4ec
+    style K fill:#f1f8e9
 ```
 
 ### **🔄 Workflow Stages**
 
-1. **📋 ICP Structuring** - Converts raw business requirements into structured JSON
-2. **🎯 Query Generation** - Creates 15-20 targeted Dutch search queries using strategic patterns
-3. **🌐 Web Search** - Executes concurrent searches via Brave Search API
-4. **🤖 AI Triage** - LLM evaluates each result for B2B relevance and ICP fit
-5. **💾 Database Storage** - Saves unique leads with smart deduplication
+1.  **📋 ICP Structuring** - Converts raw business requirements into structured JSON. *(Note: This is a candidate for optimization to run only once.)*
+2.  **🎯 Query Generation** - Creates targeted Dutch search queries using strategic patterns.
+3.  **🌐 Web Search** - Executes concurrent searches via Brave Search API.
+4.  **🤖 AI Triage** - An LLM evaluates each search result for B2B relevance and ICP fit.
+5.  ** scraping & Enrichment** - The official company website is scraped, and key data points (contact info, revenue, etc.) are extracted.
+6.  **🔎 Completeness Check & Refinement Loop** - The system checks if critical data is missing. If so, it generates and executes new, highly specific search queries to find the missing information, merging it with the existing lead data. This loop continues until the lead is sufficiently enriched.
+7.  **💾 Database Storage** - Saves unique, enriched leads to the database with smart deduplication.
 
 ---
 
@@ -199,11 +213,22 @@ The system is designed for easy customization:
 | `id` | Integer | Primary key |
 | `normalized_name` | String | Cleaned company name (unique) |
 | `discovered_name` | String | Original company name as found |
-| `source_url` | String | URL where company was discovered |
+| `source_url` | String | URL where company was first discovered |
+| `website_url` | String | The company's official website URL |
 | `country` | String(2) | Country code (NL/BE) |
 | `primary_industry` | String | Main industry classification |
-| `initial_reasoning` | Text | AI's justification for the lead |
+| `initial_reasoning` | Text | AI's initial justification for the lead |
 | `status` | String | Lead status (discovered, qualified, etc.) |
+| `contact_email` | String | Contact email address |
+| `contact_phone` | String | Contact phone number |
+| `employee_count` | String | Estimated number of employees |
+| `estimated_revenue`| String | Estimated annual revenue |
+| `equipment_needs` | Text | Notes on potential equipment needs |
+| `recent_news` | Text | Summary of recent company news |
+| `location_details`| String | Full location (city, country) |
+| `qualification_score` | Integer | AI-generated score (0-100) on ICP fit |
+| `qualification_details` | JSON | Detailed breakdown of qualification criteria |
+| `enriched_data` | Text | Raw enriched data blob from scraping |
 | `created_at` | DateTime | Discovery timestamp |
 | `updated_at` | DateTime | Last modification timestamp |
 
@@ -218,8 +243,11 @@ The system is designed for easy customization:
 ## 🧪 **Testing**
 
 ```bash
-# Run test suite
+# Run the full test suite
 pytest
+
+# Run a quick, 5-query test of the entire pipeline
+make run-test
 
 # Run with coverage
 pytest --cov=app

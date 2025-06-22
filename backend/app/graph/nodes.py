@@ -63,20 +63,27 @@ def generate_search_queries(state: GraphState) -> dict:
 
 def execute_web_search(state: GraphState) -> dict:
     """Executes web searches with rate limiting (1 query per second)."""
-    print(
-        f"---NODE: Executing Web Search for {len(state.search_queries)} queries (Rate Limited: 1/sec)---"
-    )
+    queries_to_run = state.search_queries
+    limit = state.get("search_query_limit")
+
+    if limit and limit > 0:
+        print(f"---NODE: Executing Web Search (LIMITED to {limit} queries)---")
+        queries_to_run = queries_to_run[:limit]
+    else:
+        print(
+            f"---NODE: Executing Web Search for {len(queries_to_run)} queries (Rate Limited: 1/sec)---"
+        )
 
     all_results = []
-    for i, query in enumerate(state.search_queries):
-        print(f"  > [{i + 1}/{len(state.search_queries)}] Searching: '{query}'")
+    for i, query in enumerate(queries_to_run):
+        print(f"  > [{i + 1}/{len(queries_to_run)}] Searching: '{query}'")
 
         # Execute search (synchronous)
         results = brave_client.search(query=query, country=state.target_country)
         all_results.extend(results)
 
         # Rate limiting: wait 1 second between requests (except for the last one)
-        if i < len(state.search_queries) - 1:
+        if i < len(queries_to_run) - 1:
             import time
 
             time.sleep(1.0)

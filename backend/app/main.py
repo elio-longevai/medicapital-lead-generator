@@ -33,14 +33,18 @@ def load_icp_text() -> str:
         raise typer.Exit(code=1)
 
 
-def run_lead_generation_for_country(country_code: str):
+def run_lead_generation_for_country(country_code: str, query_limit: int | None = None):
     """Executes the full lead generation workflow for a given country."""
     print(f"\n{'=' * 50}")
     print(f"🚀 STARTING LEAD GENERATION RUN FOR: {country_code.upper()} 🚀")
+    if query_limit:
+        print(f"⚠️  Query Limit: {query_limit} searches")
     print(f"{'=' * 50}\n")
 
     initial_state = GraphState(
-        raw_icp_text=load_icp_text(), target_country=country_code
+        raw_icp_text=load_icp_text(),
+        target_country=country_code,
+        search_query_limit=query_limit,
     )
 
     # The .stream() method is useful for observing the state at each step
@@ -60,12 +64,15 @@ def run_lead_generation_for_country(country_code: str):
 @cli.command()
 def run_once(
     country: str = typer.Option("NL", help="Country to target ('NL' or 'BE')."),
+    query_limit: int = typer.Option(
+        None, "--limit", help="Limit the number of search queries to run."
+    ),
 ):
     """Run the lead generation process one time for the specified country."""
     if country.upper() not in ["NL", "BE"]:
         print("Error: Country must be 'NL' or 'BE'.")
         raise typer.Exit()
-    run_lead_generation_for_country(country.upper())
+    run_lead_generation_for_country(country.upper(), query_limit)
 
 
 @cli.command()

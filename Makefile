@@ -140,6 +140,10 @@ run:
 	@echo "--> Rate limited to 1 search per second to respect API limits"
 	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main run-once --country NL
 
+run-test:
+	@echo "\n🧪 Running short test of lead generation pipeline (5 queries)..."
+	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main run-once --country NL --limit 5
+
 run-api:
 	@echo "\n🌐 Starting FastAPI backend server..."
 	@echo "--> API will be available at http://localhost:8000"
