@@ -3,15 +3,16 @@ import logging
 
 import httpx
 
+from app.core.clients import multi_provider_search_client
 from app.graph.state import GraphState
 from app.services.search_query_service import SearchQueryService
-from .utils.search_utils import execute_search_with_provider
+from .utils.search_utils import save_search_results
 
 logger = logging.getLogger(__name__)
 
 
 def execute_web_search(state: GraphState) -> dict:
-    """Executes web searches concurrently using distributed providers."""
+    """Executes web searches concurrently using the multi-provider client."""
     queries_to_run = state.search_queries
     limit = state.search_query_limit
 
@@ -29,46 +30,47 @@ def execute_web_search(state: GraphState) -> dict:
         """Internal async function to handle the concurrent searches."""
         all_results = []
         query_tracking_data = []  # Track queries for database storage
-        providers = [
-            "brave",
-            "serper",
-            "tavily",
-            "firecrawl",
-        ]  # Brave prioritized first
 
         async with httpx.AsyncClient() as client:
-            tasks = []
-
-            # Distribute queries across providers with Brave priority
-            for i, query in enumerate(queries_to_run):
-                provider = providers[i % len(providers)]
-                task = execute_search_with_provider(
-                    query, state.target_country, provider, client
+            tasks = [
+                multi_provider_search_client.search_async(
+                    query, state.target_country, client
                 )
-                tasks.append((query, provider, task))
+                for query in queries_to_run
+            ]
 
-            search_results_list = await asyncio.gather(
-                *[task for _, _, task in tasks], return_exceptions=True
-            )
+            search_results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for i, (query, provider, result) in enumerate(
-                zip([t[0] for t in tasks], [t[1] for t in tasks], search_results_list)
-            ):
+            for query, result in zip(queries_to_run, search_results_list):
                 if isinstance(result, Exception):
                     logger.error(
-                        f"❌ Search failed for query '{query[:50]}...' with provider {provider}: {result}"
+                        f"❌ Search failed for query '{query[:50]}...' after all retries: {result}"
                     )
                     query_tracking_data.append(
-                        (query, state.target_country, 0, [provider], False)
+                        (query, state.target_country, 0, [], False)
                     )
                 else:
-                    all_results.extend(result)
-                    query_tracking_data.append(
-                        (query, state.target_country, len(result), [provider], True)
-                    )
-                    logger.info(
-                        f"✅ Search completed for query '{query[:30]}...' via {provider}: {len(result)} results"
-                    )
+                    results, provider = result
+                    if provider and results:
+                        save_search_results(query, provider, results)
+                        all_results.extend(results)
+                        query_tracking_data.append(
+                            (
+                                query,
+                                state.target_country,
+                                len(results),
+                                [provider],
+                                True,
+                            )
+                        )
+                        logger.info(
+                            f"✅ Search completed for query '{query[:30]}...' via {provider}: {len(results)} results"
+                        )
+                    else:
+                        # This case happens if all providers fail without exceptions
+                        query_tracking_data.append(
+                            (query, state.target_country, 0, [], False)
+                        )
 
         # Save query usage to database
         with SearchQueryService() as query_service:

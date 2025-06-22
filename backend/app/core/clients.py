@@ -12,6 +12,12 @@ from app.services.api_usage_service import ApiUsageService
 logger = logging.getLogger(__name__)
 
 
+class RateLimitError(Exception):
+    """Custom exception for when a search provider API rate limit is hit."""
+
+    pass
+
+
 def get_llm_client() -> ChatGoogleGenerativeAI:
     """Returns a configured instance of the Gemini client."""
     return ChatGoogleGenerativeAI(
@@ -87,6 +93,11 @@ class BaseSearchClient(ABC):
             data = response.json()
             return self._parse_response(data)
         except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                logger.warning(f"⚠️ {self.__class__.__name__} API rate limit exceeded.")
+                raise RateLimitError(
+                    f"Rate limit hit for {self.__class__.__name__}"
+                ) from e
             logger.error(
                 f"❌ {self.__class__.__name__} API HTTP error: {e.response.status_code} - {e.response.text}"
             )
@@ -265,10 +276,11 @@ class MultiProviderSearchClient:
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
-    ) -> list[dict]:
+    ) -> tuple[list[dict], str | None]:
         """
         Attempts to search using providers in the tier order.
         Falls back to the next provider if a limit is reached or an error occurs.
+        Returns the results and the name of the successful provider.
         """
         # Create a new database session for this search operation
         db_session = SessionLocal()
@@ -276,22 +288,24 @@ class MultiProviderSearchClient:
 
         try:
             for provider_name in self.PROVIDER_TIER:
-                # Check if the API can be used (rate limit)
+                # Check if the API can be used (daily limit)
                 can_use = await asyncio.to_thread(
                     api_usage_service.can_use_api, provider_name
                 )
 
                 if not can_use:
-                    logger.warning(f"⚠️  Skipping {provider_name}: Daily limit reached.")
+                    logger.warning(f"⚠️ Skipping {provider_name}: Daily limit reached.")
                     continue
 
-                logger.info(f"➡️  Trying search provider: {provider_name}")
                 search_client = self.clients.get(provider_name)
                 if not search_client:
+                    logger.error(f"Misconfigured provider: {provider_name} not found.")
                     continue
 
                 try:
+                    logger.info(f"➡️ Trying search provider: {provider_name}")
                     results = await search_client.search_async(query, country, client)
+
                     if results:
                         logger.info(
                             f"✅ Success! Got {len(results)} results from {provider_name}."
@@ -300,15 +314,22 @@ class MultiProviderSearchClient:
                         await asyncio.to_thread(
                             api_usage_service.increment_usage, provider_name
                         )
-                        return results
+                        return results, provider_name
                     else:
                         logger.info(f"    - No results from {provider_name}.")
+
+                except RateLimitError:
+                    # Log the rate limit error and just try the next provider
+                    logger.warning(
+                        f"Encountered rate limit for {provider_name}. Trying next provider."
+                    )
+                    continue  # Try next provider
                 except Exception as e:
                     logger.error(f"❌ Error with {provider_name}: {e}", exc_info=True)
                     # Don't increment usage on error, just try the next provider
 
-            logger.warning("⚠️  All search providers failed or returned no results.")
-            return []
+            logger.warning("⚠️ All search providers failed or returned no results.")
+            return [], None
         finally:
             db_session.close()
 

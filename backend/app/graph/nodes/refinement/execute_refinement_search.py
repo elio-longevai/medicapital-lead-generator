@@ -3,8 +3,9 @@ import logging
 
 import httpx
 
+from app.core.clients import multi_provider_search_client
 from app.graph.state import GraphState
-from ..utils.search_utils import execute_search_with_provider
+from ..utils.search_utils import save_search_results
 
 logger = logging.getLogger(__name__)
 
@@ -12,33 +13,32 @@ logger = logging.getLogger(__name__)
 async def _execute_single_refinement_search(
     queries: list[str], country: str
 ) -> list[dict]:
-    """Helper to run searches for one company using distributed providers."""
+    """Helper to run searches for one company using the multi-provider client."""
     all_results = []
-    providers = ["brave", "serper", "tavily", "firecrawl"]
 
     async with httpx.AsyncClient() as client:
-        tasks = []
+        tasks = [
+            multi_provider_search_client.search_async(query, country, client)
+            for query in queries
+        ]
 
-        # Distribute queries across providers with Brave priority
-        for i, query in enumerate(queries):
-            provider = providers[i % len(providers)]
-            task = execute_search_with_provider(query, country, provider, client)
-            tasks.append((provider, task))  # Store provider name with task
+        search_results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
-        search_results_list = await asyncio.gather(
-            *[task for _, task in tasks], return_exceptions=True
-        )
-
-        # Process results with provider information
-        for (provider, _), result in zip(tasks, search_results_list):
+        for query, result in zip(queries, search_results_list):
             if isinstance(result, Exception):
-                logger.error(f"  > ❌ Refinement search task failed: {result}")
+                logger.error(
+                    f"  > ❌ Refinement search failed for query '{query}': {result}"
+                )
                 continue
 
-            # Add provider info to each search result
-            for res in result:
-                res["_provider"] = provider
-                all_results.append(res)
+            results, provider = result
+            if provider and results:
+                # Save results for debugging
+                save_search_results(query, provider, results)
+                # Add provider info to each search result
+                for res in results:
+                    res["_provider"] = provider
+                all_results.extend(results)
 
     return all_results
 
