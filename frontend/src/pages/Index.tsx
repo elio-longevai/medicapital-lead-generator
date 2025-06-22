@@ -36,8 +36,8 @@ const Index = () => {
 	const { data: dashboardData, isLoading: dashboardLoading } =
 		useDashboardStats();
 	const { data: recentLeadsData, isLoading: leadsLoading } = useCompanies({
-		limit: 3,
-		sort_by: "activity",
+		limit: 5,
+		sort_by: "score",
 	});
 
 	const recentLeads = recentLeadsData?.companies || [];
