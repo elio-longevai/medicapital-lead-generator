@@ -1,0 +1,194 @@
+{
+  "sectors": [
+    "Sustainability",
+    "Healthcare",
+    "Sport",
+    "Wellness & Beauty"
+  ],
+  "target_entities": [
+    "Suppliers",
+    "Manufacturers",
+    "End-users",
+    "Hospitals",
+    "Clinics",
+    "Laboratories",
+    "Nursing Homes",
+    "Sports Facilities",
+    "Gyms",
+    "Wellness Centers",
+    "Beauty Salons",
+    "Commercial & Industrial Businesses"
+  ],
+  "geo_focus": [
+    "Netherlands",
+    "Belgium"
+  ],
+  "key_products": {
+    "Sustainability": {
+      "Energy Generation": [
+        "Batteries (energy storage)",
+        "Solar panels (photovoltaic, thermal)",
+        "Wind turbines (small-scale installations)",
+        "Hydroelectric plants (small, local)",
+        "Biogas installations",
+        "Biomass installations"
+      ],
+      "Energy Management & Distribution": [
+        "Charging stations (electric vehicles, home charging points)",
+        "Smart meters",
+        "Energy management systems (EMS)",
+        "Transformers",
+        "Distribution boxes",
+        "High-voltage cables",
+        "Underground energy grids"
+      ],
+      "Efficiency & Comfort": [
+        "LED lighting (industrial, office, street lighting)",
+        "Infrared panels",
+        "Electrified construction equipment (electric excavators, cranes, bulldozers)",
+        "Efficient boilers (hybrid, heat pump controlled)",
+        "Heat pumps (air-water, ground-source, water-water)",
+        "Advanced air conditioning systems with energy recovery",
+        "Insulation materials (sustainable insulation, green roof systems)",
+        "Heat recovery systems (WTW)",
+        "Energy-efficient ventilation systems"
+      ],
+      "Other Sustainable": [
+        "Water purification plants",
+        "Rainwater harvesting and usage systems",
+        "Waste processing plants (recycling, incineration with energy recovery)"
+      ]
+    },
+    "Healthcare": {
+      "Diagnostics & Treatment": [
+        "Ultrasound equipment",
+        "Holters (cardiac monitoring)",
+        "ECG (electrocardiogram)",
+        "MRI scanners",
+        "CT scanners",
+        "X-ray systems",
+        "Digital radiography",
+        "Echography equipment",
+        "Blood analysis equipment (hematology, biochemistry)",
+        "Urine analysis equipment",
+        "Microscopes (optical, electronic)",
+        "Endoscopy equipment",
+        "Lasers (surgical, dermatological)",
+        "Dialysis equipment",
+        "Ventilators",
+        "Anesthesia machines"
+      ],
+      "Nursing & Patient Care": [
+        "Treatment tables (adjustable, hydraulic)",
+        "Examination chairs",
+        "Wheelchairs",
+        "Patient lifts",
+        "Hospital beds (electrically adjustable)",
+        "IV poles",
+        "Medication carts",
+        "Wound care materials",
+        "Sterilization equipment"
+      ],
+      "Laboratory & Research": [
+        "Centrifuges",
+        "PCR equipment",
+        "Incubators",
+        "CO2 incubators",
+        "Laboratory showcases",
+        "Scales (analytical, precision)",
+        "Pipettes (automatic, manual)",
+        "Test tubes",
+        "Petri dishes",
+        "Microscope slides",
+        "Chemical reagents",
+        "DNA sequencers",
+        "Chromatography equipment (HPLC, GC)"
+      ],
+      "Furnishing & Infrastructure": [
+        "Operating tables",
+        "Operating lights",
+        "Sterile operating room systems",
+        "Medical cabinets",
+        "Pharmacy cabinets",
+        "Lab cabinets",
+        "Waiting room furniture",
+        "Reception desks",
+        "Lab benches",
+        "Fume hoods (laboratory)"
+      ]
+    },
+    "Sport": {
+      "Fitness Equipment": [
+        "Treadmills",
+        "Cross-trainers",
+        "Exercise bikes",
+        "Rowing machines",
+        "Weight benches",
+        "Weights (dumbbells, barbells)",
+        "Fitness machines (multi-stations, leg press, chest press)",
+        "Kettlebells"
+      ],
+      "Sport Infrastructure": [
+        "Sport flooring (artificial turf, rubber granules, wooden floors)",
+        "Sport lighting",
+        "Grandstand seating",
+        "Sport goals",
+        "Scoreboards",
+        "Heating systems for sports accommodations"
+      ],
+      "Specific Sport Equipment": [
+        "Bicycles (race, mountain, indoor)",
+        "Skis",
+        "Snowboards",
+        "Tennis rackets",
+        "Golf clubs",
+        "Swimming equipment",
+        "Athletics equipment"
+      ]
+    },
+    "Wellness & Beauty": {
+      "Spa & Relaxation": [
+        "Massage tables",
+        "Treatment chairs (facial, pedicure)",
+        "Infrared cabins",
+        "Saunas (traditional, infrared)",
+        "Jacuzzis",
+        "Baths (bathtub, plunge pool)",
+        "Aromatherapy equipment",
+        "Massage devices"
+      ],
+      "Beauty Equipment": [
+        "Facial cleansing devices",
+        "Skin analyzers",
+        "IPL/laser equipment (hair removal, skin rejuvenation)",
+        "Microneedling equipment",
+        "Permanent makeup equipment",
+        "Nail salon equipment",
+        "Hair salon equipment"
+      ],
+      "Fitness & Health (Wellness)": [
+        "Yoga and Pilates mats",
+        "Foam rollers",
+        "Resistance bands",
+        "Massage balls",
+        "Kettles (for tea)",
+        "Humidifiers",
+        "Air purifiers"
+      ]
+    }
+  },
+  "financial_criteria": {
+    "minimum_operating_history": "1.5 years",
+    "revenue_to_investment_ratio": "3x",
+    "profitability": "Profitable",
+    "balance_sheet": "Positive equity and working capital"
+  },
+  "scale_indicators": {
+    "small_businesses": "< 10 employees",
+    "larger_companies": "Implied (not explicitly defined by number of employees, but larger than small businesses)"
+  },
+  "investment_range": {
+    "minimum_per_unit": "€2,500",
+    "optimal_range": "€35,000 - €125,000"
+  }
+}

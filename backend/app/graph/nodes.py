@@ -36,8 +36,21 @@ class NodeResult(TypedDict):
 
 
 def structure_icp(state: GraphState) -> dict:
-    """Parses the raw ICP text into a structured dictionary."""
+    """Parses the raw ICP text into a structured dictionary. Caches result to a file."""
     logger.info("---NODE: Structuring ICP---")
+
+    # Define cache path
+    cache_path = Path(__file__).parent.parent.parent / "prompts" / "structured_icp.json"
+
+    # Check if cached file exists
+    if cache_path.exists():
+        logger.info(f"  > Found cached structured ICP at {cache_path}")
+        with open(cache_path, "r", encoding="utf-8") as f:
+            structured_icp = json.load(f)
+        return {"structured_icp": structured_icp}
+
+    # If not cached, generate it
+    logger.info("  > No cache found. Generating structured ICP from raw text...")
     parser = JsonOutputParser()
     prompt = PromptTemplate(
         template=prompts.ICP_STRUCTURING_PROMPT,
@@ -46,6 +59,12 @@ def structure_icp(state: GraphState) -> dict:
     )
     chain = prompt | llm_client | parser
     structured_icp = chain.invoke({"raw_icp_text": state.raw_icp_text})
+
+    # Save to cache
+    with open(cache_path, "w", encoding="utf-8") as f:
+        json.dump(structured_icp, f, indent=2, ensure_ascii=False)
+    logger.info(f"  > Saved new structured ICP to {cache_path}")
+
     return {"structured_icp": structured_icp}
 
 
@@ -60,8 +79,11 @@ def generate_search_queries(state: GraphState) -> dict:
     )
     chain = prompt | llm_client | parser
     queries_result = chain.invoke({"structured_icp": state.structured_icp})
-    # The parser returns a dict like {'queries': ['query1', ...]}
-    return {"search_queries": queries_result.get("queries", [])}
+
+    # The parser may return a dict {'queries': [...]} or a direct list [...]
+    if hasattr(queries_result, "get"):
+        return {"search_queries": queries_result.get("queries", [])}
+    return {"search_queries": queries_result}
 
 
 async def _execute_search_for_query(
