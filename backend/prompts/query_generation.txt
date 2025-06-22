@@ -2,9 +2,16 @@ You are a strategic marketing expert for MediCapital, a company specializing in 
 
 The goal is to find both **suppliers/manufacturers** of equipment and **end-user businesses** that would need to acquire such equipment. The queries should be in Dutch.
 
+**Extra info:** The current year is 2025. When searching for recent business activities, use 2024 and 2025 instead of older years like 2023.
+
 **Structured ICP:**
 ```json
 {structured_icp}
+```
+
+**Previously Used Queries (Avoid Generating These):**
+```json
+{used_queries}
 ```
 
 **Query Generation Strategies:**
@@ -12,9 +19,10 @@ The goal is to find both **suppliers/manufacturers** of equipment and **end-user
     *   Example: "groothandel medische laserapparatuur Nederland"
 2.  **Installer/Service Provider Search:** Find companies that install or service the equipment.
     *   Example: "erkende installateurs zonnepanelen B2B België"
-3.  **New Business/Expansion Search:** Find news of new companies or locations opening, which implies a need for new equipment. Use recent years in the query.
-    *   Example: "nieuwe privékliniek geopend 2024 Amsterdam"
-    *   Example: "restaurant verbouwing aankondiging Utrecht"
+3.  **New Business/Expansion Search:** Find news of new companies or locations opening, which implies a need for new equipment. Use 2024-2025 in the query.
+    *   Example: "nieuwe privékliniek geopend 2024 2025 Amsterdam"
+    *   Example: "restaurant verbouwing aankondiging 2024 Utrecht"
+    *   Example: "uitbreiding sportcentrum 2025 België"
 4.  **Industry-Specific Need Search:** Target niche communities or business types.
     *   Example: "vereniging van huidtherapeuten ledenlijst"
     *   Example: "leveranciers voor professionele keukens horeca"

@@ -6,13 +6,20 @@ from langchain_core.output_parsers import (
 )
 from langchain_core.prompts import PromptTemplate
 
-from app.core.clients import llm_client, multi_provider_search_client
+from app.core.clients import (
+    llm_client,
+    brave_client,
+    serper_client,
+    tavily_client,
+    firecrawl_client,
+)
 from app.core.settings import settings
 from app.db.models import Company
 from app.db.session import SessionLocal
 from app.graph.state import GraphState, CandidateLead
 from app.graph import prompts
 from app.services.company_name_normalizer import normalize_name
+from app.services.search_query_service import SearchQueryService
 from crawl4ai import (
     AsyncWebCrawler,
     BrowserConfig,
@@ -25,6 +32,7 @@ import json
 import asyncio
 import httpx
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -68,17 +76,32 @@ def structure_icp(state: GraphState) -> dict:
     return {"structured_icp": structured_icp}
 
 
+def get_used_queries(state: GraphState) -> dict:
+    """Fetches all previously used search queries from the database."""
+    logger.info("---NODE: Fetching Used Queries---")
+    country = state.target_country
+    with SearchQueryService() as query_service:
+        used_queries = query_service.get_all_used_queries(country)
+        logger.info(
+            f"  > Found {len(used_queries)} used queries for country '{country}'."
+        )
+        # Format for display in prompt
+        formatted_queries = json.dumps(used_queries, indent=2)
+        return {"used_queries": formatted_queries}
+
+
 def generate_search_queries(state: GraphState) -> dict:
     """Generates strategic search queries based on the structured ICP."""
     logger.info("---NODE: Generating Search Queries---")
     parser = JsonOutputParser()
     prompt = PromptTemplate(
         template=prompts.QUERY_GENERATION_PROMPT,
-        input_variables=["structured_icp"],
-        partial_variables={"parser_instructions": parser.get_format_instructions()},
+        input_variables=["structured_icp", "used_queries"],
     )
     chain = prompt | llm_client | parser
-    queries_result = chain.invoke({"structured_icp": state.structured_icp})
+    queries_result = chain.invoke(
+        {"structured_icp": state.structured_icp, "used_queries": state.used_queries}
+    )
 
     # The parser may return a dict {'queries': [...]} or a direct list [...]
     if hasattr(queries_result, "get"):
@@ -86,50 +109,151 @@ def generate_search_queries(state: GraphState) -> dict:
     return {"search_queries": queries_result}
 
 
-async def _execute_search_for_query(
-    query: str, country: str, client: httpx.AsyncClient
+def _save_search_results(query: str, provider: str, results: list[dict]):
+    """Save search results to a file for debugging purposes."""
+    try:
+        # Ensure directory exists
+        results_dir = Path(__file__).parent.parent.parent / "search_results"
+        results_dir.mkdir(exist_ok=True)
+
+        # Create filename with timestamp and truncated query
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        clean_query = "".join(c for c in query if c.isalnum() or c in " -_")[:50]
+        clean_query = clean_query.replace(" ", "_")
+        filename = f"{provider}_{timestamp}_{clean_query}.txt"
+
+        filepath = results_dir / filename
+
+        # Format results for saving
+        content = f"Query: {query}\nProvider: {provider.upper()}\nTimestamp: {timestamp}\nResults: {len(results)}\n\n"
+
+        for i, result in enumerate(results, 1):
+            content += f"Result {i}:\n"
+            content += f"Title: {result.get('title', 'N/A')}\n"
+            content += f"URL: {result.get('url', 'N/A')}\n"
+            content += f"Description: {result.get('description', 'N/A')[:200]}...\n"
+            content += "-" * 80 + "\n"
+
+        # Write to file
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        logger.info(f"💾 Saved {len(results)} results to {filename}")
+
+    except Exception as e:
+        logger.error(f"❌ Failed to save search results: {e}")
+
+
+async def _execute_search_with_provider(
+    query: str, country: str, provider: str, client: httpx.AsyncClient
 ) -> list[dict]:
-    """Helper to run a single search query with the multi-provider client."""
-    return await multi_provider_search_client.search_async(query, country, client)
+    """Execute search with a specific provider and save results."""
+    provider_clients = {
+        "brave": brave_client,
+        "serper": serper_client,
+        "tavily": tavily_client,
+        "firecrawl": firecrawl_client,
+    }
+
+    search_client = provider_clients.get(provider)
+    if not search_client:
+        logger.error(f"❌ Unknown provider: {provider}")
+        return []
+
+    try:
+        # Add delay between requests for Brave to respect rate limits
+        if provider == "brave":
+            await asyncio.sleep(1)  # Ensure 1 second between Brave requests
+
+        logger.info(f"🔍 Searching with {provider.upper()}: {query}")
+        results = await search_client.search_async(query, country, client)
+
+        # Save results to file for debugging
+        _save_search_results(query, provider, results)
+
+        logger.info(f"✅ {provider.upper()} returned {len(results)} results")
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ Error with {provider}: {e}")
+        return []
 
 
 def execute_web_search(state: GraphState) -> dict:
-    """Executes web searches concurrently using a multi-provider strategy."""
+    """Executes web searches concurrently using distributed providers."""
     queries_to_run = state.search_queries
     limit = state.search_query_limit
+
+    if not queries_to_run:
+        logger.warning("⚠️ No search queries were generated. Skipping web search.")
+        return {"search_results": []}
 
     if limit and limit > 0:
         logger.info(f"---NODE: Executing Web Search (LIMITED to {limit} queries)---")
         queries_to_run = queries_to_run[:limit]
     else:
-        logger.info(
-            f"---NODE: Executing Web Search for {len(queries_to_run)} queries (Concurrent)---"
-        )
+        logger.info(f"---NODE: Executing Web Search ({len(queries_to_run)} queries)---")
 
-    async def run_searches():
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            tasks = [
-                _execute_search_for_query(query, state.target_country, client)
-                for query in queries_to_run
-            ]
-            results_list = await asyncio.gather(*tasks, return_exceptions=True)
+    async def _run_searches():
+        """Internal async function to handle the concurrent searches."""
+        all_results = []
+        query_tracking_data = []  # Track queries for database storage
+        providers = [
+            "brave",
+            "serper",
+            "tavily",
+            "firecrawl",
+        ]  # Brave prioritized first
 
-            # Flatten list and filter out exceptions/empty results
-            all_results = []
-            for i, res in enumerate(results_list):
-                if isinstance(res, Exception):
+        async with httpx.AsyncClient() as client:
+            tasks = []
+
+            # Distribute queries across providers with Brave priority
+            for i, query in enumerate(queries_to_run):
+                provider = providers[i % len(providers)]
+                task = _execute_search_with_provider(
+                    query, state.target_country, provider, client
+                )
+                tasks.append((query, provider, task))
+
+            search_results_list = await asyncio.gather(
+                *[task for _, _, task in tasks], return_exceptions=True
+            )
+
+            for i, (query, provider, result) in enumerate(
+                zip([t[0] for t in tasks], [t[1] for t in tasks], search_results_list)
+            ):
+                if isinstance(result, Exception):
                     logger.error(
-                        f"  > ❌ Error searching for '{queries_to_run[i]}': {res}"
+                        f"❌ Search failed for query '{query[:50]}...' with provider {provider}: {result}"
                     )
-                elif res:
-                    all_results.extend(res)
-            return all_results
+                    query_tracking_data.append(
+                        (query, state.target_country, 0, [provider], False)
+                    )
+                else:
+                    all_results.extend(result)
+                    query_tracking_data.append(
+                        (query, state.target_country, len(result), [provider], True)
+                    )
+                    logger.info(
+                        f"✅ Search completed for query '{query[:30]}...' via {provider}: {len(result)} results"
+                    )
 
-    # Run the async function
-    all_results = asyncio.run(run_searches())
+        # Save query usage to database
+        with SearchQueryService() as query_service:
+            query_service.mark_queries_as_used_batch(query_tracking_data)
+            stats = query_service.get_query_stats()
+            logger.info(
+                f"📈 Query stats: {stats['total_queries']} total, {stats['successful_queries']} successful"
+            )
 
-    logger.info(f"  > Found {len(all_results)} total results from all queries.")
-    return {"search_results": all_results}
+        return all_results
+
+    # Run the async searches
+    search_results = asyncio.run(_run_searches())
+
+    logger.info(f"🎯 Total search results collected: {len(search_results)}")
+    return {"search_results": search_results}
 
 
 def triage_and_extract_leads(state: GraphState) -> dict:
@@ -311,6 +435,12 @@ async def _scrape_company_website(lead: CandidateLead, enrichment_prompt: str) -
     # Configure browser for headless operation
     browser_config = BrowserConfig(headless=True, verbose=False)
 
+    # Prepare the instruction by replacing placeholders
+    instruction = enrichment_prompt.replace("{company_name}", lead.discovered_name)
+    instruction = instruction.replace("{industry}", lead.primary_industry)
+    instruction = instruction.replace("{country}", lead.country)
+    # Keep {website_content} for Crawl4AI to replace with actual content
+
     # Configure the crawler
     run_config = CrawlerRunConfig(
         cache_mode=CacheMode.ENABLED,
@@ -323,12 +453,7 @@ async def _scrape_company_website(lead: CandidateLead, enrichment_prompt: str) -
             ),
             schema=None,  # We'll use the prompt directly
             extraction_type="block",
-            instruction=enrichment_prompt.format(
-                website_content="{content}",  # This will be filled by Crawl4AI
-                company_name=lead.discovered_name,
-                industry=lead.primary_industry,
-                country=lead.country,
-            ),
+            instruction=instruction,
         ),
     )
 
@@ -491,17 +616,34 @@ def generate_refinement_queries(state: GraphState) -> dict:
 async def _execute_single_refinement_search(
     queries: list[str], country: str
 ) -> list[dict]:
-    """Helper to run searches for one company."""
+    """Helper to run searches for one company using distributed providers."""
     all_results = []
+    providers = ["brave", "serper", "tavily", "firecrawl"]
+
     async with httpx.AsyncClient() as client:
-        tasks = [
-            multi_provider_search_client.search_async(query, country, client)
-            for query in queries
-        ]
-        search_results_list = await asyncio.gather(*tasks, return_exceptions=True)
-        for result in search_results_list:
-            if isinstance(result, list):
-                all_results.extend(result)
+        tasks = []
+
+        # Distribute queries across providers with Brave priority
+        for i, query in enumerate(queries):
+            provider = providers[i % len(providers)]
+            task = _execute_search_with_provider(query, country, provider, client)
+            tasks.append((provider, task))  # Store provider name with task
+
+        search_results_list = await asyncio.gather(
+            *[task for _, task in tasks], return_exceptions=True
+        )
+
+        # Process results with provider information
+        for (provider, _), result in zip(tasks, search_results_list):
+            if isinstance(result, Exception):
+                logger.error(f"  > ❌ Refinement search task failed: {result}")
+                continue
+
+            # Add provider info to each search result
+            for res in result:
+                res["_provider"] = provider
+                all_results.append(res)
+
     return all_results
 
 

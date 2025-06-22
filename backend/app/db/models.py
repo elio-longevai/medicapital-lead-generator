@@ -8,6 +8,7 @@ from sqlalchemy import (
     UniqueConstraint,
     JSON,
     Date,
+    Boolean,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -72,3 +73,25 @@ class ApiUsage(Base):
         return (
             f"<ApiUsage(api='{self.api_name}', date='{self.date}', count={self.count})>"
         )
+
+
+class SearchQuery(Base):
+    __tablename__ = "search_queries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    query_text = Column(String, nullable=False, index=True)
+    country = Column(String(2), nullable=False)
+    query_hash = Column(
+        String, nullable=False, unique=True, index=True
+    )  # MD5 hash of query+country
+    used_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    results_count = Column(Integer, default=0, nullable=False)
+    providers_used = Column(
+        JSON, nullable=True
+    )  # List of providers that executed this query
+    success = Column(Boolean, default=True, nullable=False)
+
+    __table_args__ = (UniqueConstraint("query_hash", name="uq_query_hash"),)
+
+    def __repr__(self):
+        return f"<SearchQuery(query='{self.query_text[:50]}...', country='{self.country}', used_at='{self.used_at}')>"

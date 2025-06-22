@@ -26,6 +26,7 @@ class GraphState(BaseModel):
 
     structured_icp: dict = Field(default_factory=dict)
     search_queries: list[str] = Field(default_factory=list)
+    used_queries: list[str] = Field(default_factory=list)
     search_results: list[dict] = Field(default_factory=list)
     candidate_leads: list[CandidateLead] = Field(default_factory=list)
     enriched_companies: list[dict] = Field(default_factory=list)

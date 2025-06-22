@@ -9,6 +9,7 @@ def build_workflow():
 
     # Add nodes
     workflow.add_node("structure_icp", nodes.structure_icp)
+    workflow.add_node("get_used_queries", nodes.get_used_queries)
     workflow.add_node("generate_search_queries", nodes.generate_search_queries)
     workflow.add_node("execute_web_search", nodes.execute_web_search)
     workflow.add_node("triage_and_extract_leads", nodes.triage_and_extract_leads)
@@ -25,7 +26,8 @@ def build_workflow():
 
     # Define edges
     workflow.set_entry_point("structure_icp")
-    workflow.add_edge("structure_icp", "generate_search_queries")
+    workflow.add_edge("structure_icp", "get_used_queries")
+    workflow.add_edge("get_used_queries", "generate_search_queries")
     workflow.add_edge("generate_search_queries", "execute_web_search")
     workflow.add_edge("execute_web_search", "triage_and_extract_leads")
     workflow.add_edge("triage_and_extract_leads", "scrape_and_enrich_companies")
