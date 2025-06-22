@@ -178,15 +178,6 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 									<SelectItem value="activity">Activiteit</SelectItem>
 								</SelectContent>
 							</Select>
-
-							<Button
-								variant="outline"
-								size="lg"
-								className="border-slate-200 hover:border-slate-300 shadow-sm"
-							>
-								<Download className="h-4 w-4 mr-2" />
-								Exporteer
-							</Button>
 						</div>
 					</div>
 				</CardContent>
