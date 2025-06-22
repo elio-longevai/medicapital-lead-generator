@@ -117,59 +117,74 @@ const Index = () => {
 
 	if (selectedCompany) {
 		return (
-			<CompanyProfile
-				company={selectedCompany}
-				onBack={() => setSelectedCompany(null)}
-			/>
+			<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+				<CompanyProfile
+					company={selectedCompany}
+					onBack={() => setSelectedCompany(null)}
+				/>
+			</div>
 		);
 	}
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-			{/* Header */}
-			<div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
+			{/* Header with integrated navigation */}
+			<div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/60 shadow-sm">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="flex justify-between items-center py-8">
-						<div>
-							<h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
+					<div className="flex flex-col lg:flex-row lg:justify-between lg:items-center py-6 lg:py-8 space-y-6 lg:space-y-0">
+						{/* Brand section */}
+						<div className="flex-1">
+							<h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
 								AI Leadgeneratie Engine
 							</h1>
-							<p className="text-slate-600 mt-2 text-lg">
+							<p className="text-slate-600 mt-1 lg:mt-2 text-base lg:text-lg">
 								MediCapital Solutions - Intelligent Prospectie Systeem
 							</p>
+						</div>
+
+						{/* Navigation tabs integrated in header */}
+						<div className="flex-shrink-0">
+							<Tabs
+								value={activeTab}
+								onValueChange={setActiveTab}
+								className="w-full lg:w-auto"
+							>
+								<TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3 bg-white/90 backdrop-blur-sm border border-slate-200/80 shadow-lg rounded-xl p-1 h-12">
+									<TabsTrigger
+										value="dashboard"
+										className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-700 hover:text-slate-900 font-medium transition-all duration-200 rounded-lg px-4 py-2"
+									>
+										<TrendingUp className="h-4 w-4 mr-2 lg:inline hidden" />
+										Overzicht
+									</TabsTrigger>
+									<TabsTrigger
+										value="leads"
+										className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-700 hover:text-slate-900 font-medium transition-all duration-200 rounded-lg px-4 py-2"
+									>
+										<Users className="h-4 w-4 mr-2 lg:inline hidden" />
+										Lead Database
+									</TabsTrigger>
+									<TabsTrigger
+										value="qualification"
+										className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-700 hover:text-slate-900 font-medium transition-all duration-200 rounded-lg px-4 py-2"
+									>
+										<Target className="h-4 w-4 mr-2 lg:inline hidden" />
+										Kwalificatie
+									</TabsTrigger>
+								</TabsList>
+							</Tabs>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-				<Tabs
-					value={activeTab}
-					onValueChange={setActiveTab}
-					className="space-y-8"
-				>
-					<TabsList className="grid w-full grid-cols-3 lg:w-fit bg-white/60 backdrop-blur-sm border border-slate-200/60 shadow-lg">
-						<TabsTrigger
-							value="dashboard"
-							className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-						>
-							Overzicht
-						</TabsTrigger>
-						<TabsTrigger
-							value="leads"
-							className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-						>
-							Lead Database
-						</TabsTrigger>
-						<TabsTrigger
-							value="qualification"
-							className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-						>
-							Kwalificatie
-						</TabsTrigger>
-					</TabsList>
-
-					<TabsContent value="dashboard" className="space-y-8">
+			{/* Main content area - now with more space */}
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+				<Tabs value={activeTab} onValueChange={setActiveTab}>
+					<TabsContent
+						value="dashboard"
+						className="space-y-6 lg:space-y-8 mt-0"
+					>
 						{/* Hero Metrics Section - Redesigned for 2 cards */}
 						{dashboardLoading ? (
 							<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -566,11 +581,11 @@ const Index = () => {
 						</div>
 					</TabsContent>
 
-					<TabsContent value="leads">
+					<TabsContent value="leads" className="mt-0">
 						<LeadDatabase onSelectCompany={setSelectedCompany} />
 					</TabsContent>
 
-					<TabsContent value="qualification">
+					<TabsContent value="qualification" className="mt-0">
 						<QualificationWorkflow />
 					</TabsContent>
 				</Tabs>
