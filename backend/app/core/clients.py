@@ -1,10 +1,13 @@
 import httpx
 import asyncio
+import logging
 from aiolimiter import AsyncLimiter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.core.settings import settings
 from app.db.session import SessionLocal
 from app.services.api_usage_service import ApiUsageService
+
+logger = logging.getLogger(__name__)
 
 
 def get_llm_client() -> ChatGoogleGenerativeAI:
@@ -41,12 +44,12 @@ class BraveSearchClient:
                 data = response.json()
                 return data.get("web", {}).get("results", [])
         except httpx.HTTPStatusError as e:
-            print(
-                f"Brave Search API error: {e.response.status_code} - {e.response.text}"
+            logger.error(
+                f"❌ Brave Search API error: {e.response.status_code} - {e.response.text}"
             )
             return []
         except Exception as e:
-            print(f"An unexpected error occurred during Brave Search: {e}")
+            logger.error(f"❌ An unexpected error occurred during Brave Search: {e}")
             return []
 
     async def search_async(
@@ -69,12 +72,12 @@ class BraveSearchClient:
             # Standardize the output
             return data.get("web", {}).get("results", [])
         except httpx.HTTPStatusError as e:
-            print(
-                f"Brave Search API error: {e.response.status_code} - {e.response.text}"
+            logger.error(
+                f"❌ Brave Search API error: {e.response.status_code} - {e.response.text}"
             )
             return []
         except Exception as e:
-            print(f"An unexpected error occurred during Brave Search: {e}")
+            logger.error(f"❌ An unexpected error occurred during Brave Search: {e}")
             return []
 
 
@@ -103,10 +106,12 @@ class SerperClient:
                 for item in data.get("organic", [])
             ]
         except httpx.HTTPStatusError as e:
-            print(f"Serper API error: {e.response.status_code} - {e.response.text}")
+            logger.error(
+                f"❌ Serper API error: {e.response.status_code} - {e.response.text}"
+            )
             return []
         except Exception as e:
-            print(f"An unexpected error occurred during Serper Search: {e}")
+            logger.error(f"❌ An unexpected error occurred during Serper Search: {e}")
             return []
 
 
@@ -141,10 +146,12 @@ class TavilyClient:
                 for item in data.get("results", [])
             ]
         except httpx.HTTPStatusError as e:
-            print(f"Tavily API error: {e.response.status_code} - {e.response.text}")
+            logger.error(
+                f"❌ Tavily API error: {e.response.status_code} - {e.response.text}"
+            )
             return []
         except Exception as e:
-            print(f"An unexpected error occurred during Tavily Search: {e}")
+            logger.error(f"❌ An unexpected error occurred during Tavily Search: {e}")
             return []
 
 
@@ -185,10 +192,14 @@ class FirecrawlClient:
                 if item.get("markdown")  # Ensure we have content
             ]
         except httpx.HTTPStatusError as e:
-            print(f"Firecrawl API error: {e.response.status_code} - {e.response.text}")
+            logger.error(
+                f"❌ Firecrawl API error: {e.response.status_code} - {e.response.text}"
+            )
             return []
         except Exception as e:
-            print(f"An unexpected error occurred during Firecrawl Search: {e}")
+            logger.error(
+                f"❌ An unexpected error occurred during Firecrawl Search: {e}"
+            )
             return []
 
 
@@ -216,10 +227,10 @@ class MultiProviderSearchClient:
             )
 
             if not can_use:
-                print(f"  > Skipping {provider_name}: Daily limit reached.")
+                logger.warning(f"⚠️  Skipping {provider_name}: Daily limit reached.")
                 continue
 
-            print(f"  > Trying search provider: {provider_name}")
+            logger.info(f"➡️  Trying search provider: {provider_name}")
             search_client = self.clients.get(provider_name)
             if not search_client:
                 continue
@@ -227,8 +238,8 @@ class MultiProviderSearchClient:
             try:
                 results = await search_client.search_async(query, country, client)
                 if results:
-                    print(
-                        f"    ✓ Success! Got {len(results)} results from {provider_name}."
+                    logger.info(
+                        f"✅ Success! Got {len(results)} results from {provider_name}."
                     )
                     # Increment usage count on success
                     await asyncio.to_thread(
@@ -236,29 +247,30 @@ class MultiProviderSearchClient:
                     )
                     return results
                 else:
-                    print(f"    - No results from {provider_name}.")
+                    logger.info(f"    - No results from {provider_name}.")
             except Exception as e:
-                print(f"    ✗ Error with {provider_name}: {e}")
+                logger.error(f"❌ Error with {provider_name}: {e}", exc_info=True)
                 # Don't increment usage on error, just try the next provider
 
-        print("  > ⚠️ All search providers failed or returned no results.")
+        logger.warning("⚠️  All search providers failed or returned no results.")
         return []
 
 
 # Instantiate clients for use in the graph
-brave_client = BraveSearchClient(api_key=settings.BRAVE_API_KEY)
 llm_client = get_llm_client()
+
+# Note: For a long-running app, a scoped session or per-request session is better.
+# Given the script-like nature of the graph execution, we create a new session here.
+db_session = SessionLocal()
+api_usage_service = ApiUsageService(db=db_session)
+
+# Individual search clients
+brave_client = BraveSearchClient(api_key=settings.BRAVE_API_KEY)
 serper_client = SerperClient(api_key=settings.SERPER_API_KEY)
 tavily_client = TavilyClient(api_key=settings.TAVILY_API_KEY)
 firecrawl_client = FirecrawlClient(api_key=settings.FIRECRAWL_API_KEY)
 
-
-# Note: This creates a single session for the service.
-# For a long-running app, a scoped session or per-request session is better.
-# Given the script-like nature of the graph execution, this is acceptable for now.
-db_session = SessionLocal()
-api_usage_service = ApiUsageService(db=db_session)
-
+# Multi-provider orchestrator
 multi_provider_search_client = MultiProviderSearchClient(
     clients={
         "brave": brave_client,

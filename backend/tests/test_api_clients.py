@@ -1,6 +1,7 @@
 import pytest
 import httpx
 import asyncio
+import logging
 from pytest_asyncio import fixture as async_fixture
 
 from app.core.clients import (
@@ -41,7 +42,7 @@ async def test_search_client(client_name, client_instance, http_client):
     Tests that each search client can successfully perform a search.
     This confirms the API key is valid and the basic request/response works.
     """
-    print(f"\n--- Testing {client_name} ---")
+    logging.info(f"--- Testing {client_name} ---")
     query = "medical equipment suppliers netherlands"
     try:
         results = await client_instance.search_async(
@@ -50,7 +51,7 @@ async def test_search_client(client_name, client_instance, http_client):
         assert isinstance(results, list)
         # We expect some results, but allow for none if the API is flaky
         # The main goal is to ensure the API call doesn't raise an exception
-        print(f"✅ {client_name}: SUCCESS! Found {len(results)} results.")
+        logging.info(f"✅ {client_name}: SUCCESS! Found {len(results)} results.")
 
     except Exception as e:
         pytest.fail(f"❌ {client_name}: FAILED with error: {e}")

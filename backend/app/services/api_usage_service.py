@@ -1,4 +1,5 @@
 import datetime
+import logging
 from sqlalchemy.orm import Session
 from app.db.models import ApiUsage
 
@@ -9,6 +10,8 @@ API_DAILY_LIMITS = {
     "tavily": 33,
     "firecrawl": 16,
 }
+
+logger = logging.getLogger(__name__)
 
 
 class ApiUsageService:
@@ -54,4 +57,4 @@ class ApiUsageService:
             self.db.commit()
         except Exception as e:
             self.db.rollback()
-            print(f"Error incrementing API usage: {e}")
+            logger.error(f"❌ Error incrementing API usage: {e}", exc_info=True)

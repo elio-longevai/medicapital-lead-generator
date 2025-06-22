@@ -6,20 +6,22 @@ Run this to update your existing database with the new fields.
 
 import sqlite3
 from pathlib import Path
+import logging
 
 
 def migrate_database():
     """Add new columns to the companies table if they don't exist."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     # Find the database file - check both locations
     db_path = Path("medicapital.db")  # Project root from backend dir
     if not db_path.exists():
-        db_path = Path("medicapital.db")  # Current directory
+        db_path = Path("backend/medicapital.db")  # Current directory
         if not db_path.exists():
-            print("Database file not found. Creating new database...")
+            logging.error("❌ Database file not found at expected locations.")
             return
 
-    print(f"Using database: {db_path}")
+    logging.info(f"💾 Using database: {db_path}")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -40,7 +42,7 @@ def migrate_database():
         ("location_details", "TEXT"),
     ]
 
-    print(f"Found {len(existing_columns)} existing columns")
+    logging.info(f"🧐 Found {len(existing_columns)} existing columns")
 
     # Add missing columns
     for column_name, column_type in new_columns:
@@ -49,15 +51,15 @@ def migrate_database():
                 cursor.execute(
                     f"ALTER TABLE companies ADD COLUMN {column_name} {column_type}"
                 )
-                print(f"✅ Added column: {column_name}")
+                logging.info(f"✅ Added column: {column_name}")
             except sqlite3.Error as e:
-                print(f"❌ Error adding {column_name}: {e}")
+                logging.error(f"❌ Error adding {column_name}: {e}")
         else:
-            print(f"⏭️  Column {column_name} already exists")
+            logging.info(f"⏭️  Column {column_name} already exists")
 
     conn.commit()
     conn.close()
-    print("\n🎉 Database migration completed!")
+    logging.info("\n🎉 Database migration completed!")
 
 
 if __name__ == "__main__":

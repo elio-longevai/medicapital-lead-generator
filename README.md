@@ -131,22 +131,37 @@ medicapital_lead_engine/
 
 ### **1. Environment Setup**
 
-```bash
-# Clone and navigate to project
-cd medicapital_lead_engine
+First, create a `.env` file in the `backend/` directory of the project. You can do this by copying the example values below.
 
-# Create environment file
-cp .env.example .env
-
-# Edit .env with your API keys
-nano .env
-```
-
-**Required API Keys:**
+**Required API Keys & Configuration:**
 ```env
-GOOGLE_API_KEY=your_gemini_api_key_here
-BRAVE_API_KEY=your_brave_search_api_key_here
-LANGCHAIN_API_KEY=your_langsmith_api_key_here
+# LangSmith - For observability and debugging
+# Get your key from https://smith.langchain.com/
+LANGCHAIN_TRACING_V2="true"
+LANGCHAIN_ENDPOINT="https://eu.api.smith.langchain.com"
+LANGCHAIN_API_KEY="your_langsmith_key_here"
+LANGCHAIN_PROJECT="MediCapital Lead Engine"
+
+# LLM Provider
+# Get your key from https://aistudio.google.com/app/apikey
+GOOGLE_API_KEY="your_gemini_key_here"
+
+# Search Providers
+# The system uses a tiered approach (Firecrawl > Tavily > Brave > Serper).
+# Provide keys for as many as you can to increase reliability.
+# At least one key is required for the system to run.
+FIRECRAWL_API_KEY="your_firecrawl_key_here"
+TAVILY_API_KEY="your_tavily_key_here"
+BRAVE_API_KEY="your_brave_search_key_here"
+SERPER_API_KEY="your_serper_key_here"
+
+# Database URL
+# Default is a local SQLite file.
+# For production, use a PostgreSQL connection string.
+DATABASE_URL="sqlite:///./medicapital.db"
+
+# Log Level
+LOG_LEVEL="INFO"
 ```
 
 ### **2. Installation**

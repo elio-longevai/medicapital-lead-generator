@@ -3,11 +3,10 @@ from pathlib import Path
 from langchain_core.output_parsers import (
     JsonOutputParser,
     PydanticOutputParser,
-    StrOutputParser,
 )
 from langchain_core.prompts import PromptTemplate
 
-from app.core.clients import llm_client, brave_client, multi_provider_search_client
+from app.core.clients import llm_client, multi_provider_search_client
 from app.core.settings import settings
 from app.db.models import Company
 from app.db.session import SessionLocal
@@ -25,6 +24,9 @@ from crawl4ai.extraction_strategy import LLMExtractionStrategy
 import json
 import asyncio
 import httpx
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class NodeResult(TypedDict):
@@ -35,7 +37,7 @@ class NodeResult(TypedDict):
 
 def structure_icp(state: GraphState) -> dict:
     """Parses the raw ICP text into a structured dictionary."""
-    print("---NODE: Structuring ICP---")
+    logger.info("---NODE: Structuring ICP---")
     parser = JsonOutputParser()
     prompt = PromptTemplate(
         template=prompts.ICP_STRUCTURING_PROMPT,
@@ -49,7 +51,7 @@ def structure_icp(state: GraphState) -> dict:
 
 def generate_search_queries(state: GraphState) -> dict:
     """Generates strategic search queries based on the structured ICP."""
-    print("---NODE: Generating Search Queries---")
+    logger.info("---NODE: Generating Search Queries---")
     parser = JsonOutputParser()
     prompt = PromptTemplate(
         template=prompts.QUERY_GENERATION_PROMPT,
@@ -57,44 +59,60 @@ def generate_search_queries(state: GraphState) -> dict:
         partial_variables={"parser_instructions": parser.get_format_instructions()},
     )
     chain = prompt | llm_client | parser
-    queries = chain.invoke({"structured_icp": state.structured_icp})
-    return {"search_queries": queries}
+    queries_result = chain.invoke({"structured_icp": state.structured_icp})
+    # The parser returns a dict like {'queries': ['query1', ...]}
+    return {"search_queries": queries_result.get("queries", [])}
+
+
+async def _execute_search_for_query(
+    query: str, country: str, client: httpx.AsyncClient
+) -> list[dict]:
+    """Helper to run a single search query with the multi-provider client."""
+    return await multi_provider_search_client.search_async(query, country, client)
 
 
 def execute_web_search(state: GraphState) -> dict:
-    """Executes web searches with rate limiting (1 query per second)."""
+    """Executes web searches concurrently using a multi-provider strategy."""
     queries_to_run = state.search_queries
     limit = state.get("search_query_limit")
 
     if limit and limit > 0:
-        print(f"---NODE: Executing Web Search (LIMITED to {limit} queries)---")
+        logger.info(f"---NODE: Executing Web Search (LIMITED to {limit} queries)---")
         queries_to_run = queries_to_run[:limit]
     else:
-        print(
-            f"---NODE: Executing Web Search for {len(queries_to_run)} queries (Rate Limited: 1/sec)---"
+        logger.info(
+            f"---NODE: Executing Web Search for {len(queries_to_run)} queries (Concurrent)---"
         )
 
-    all_results = []
-    for i, query in enumerate(queries_to_run):
-        print(f"  > [{i + 1}/{len(queries_to_run)}] Searching: '{query}'")
+    async def run_searches():
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            tasks = [
+                _execute_search_for_query(query, state.target_country, client)
+                for query in queries_to_run
+            ]
+            results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Execute search (synchronous)
-        results = brave_client.search(query=query, country=state.target_country)
-        all_results.extend(results)
+            # Flatten list and filter out exceptions/empty results
+            all_results = []
+            for i, res in enumerate(results_list):
+                if isinstance(res, Exception):
+                    logger.error(
+                        f"  > ❌ Error searching for '{queries_to_run[i]}': {res}"
+                    )
+                elif res:
+                    all_results.extend(res)
+            return all_results
 
-        # Rate limiting: wait 1 second between requests (except for the last one)
-        if i < len(queries_to_run) - 1:
-            import time
+    # Run the async function
+    all_results = asyncio.run(run_searches())
 
-            time.sleep(1.0)
-
-    print(f"  > Found {len(all_results)} total results.")
+    logger.info(f"  > Found {len(all_results)} total results from all queries.")
     return {"search_results": all_results}
 
 
 def triage_and_extract_leads(state: GraphState) -> dict:
     """Uses an LLM to triage search results."""
-    print(f"---NODE: Triaging {len(state.search_results)} Search Results---")
+    logger.info(f"---NODE: Triaging {len(state.search_results)} Search Results---")
     parser = PydanticOutputParser(pydantic_object=CandidateLead)
     prompt = PromptTemplate(
         template=prompts.LEAD_TRIAGE_PROMPT,
@@ -115,26 +133,28 @@ def triage_and_extract_leads(state: GraphState) -> dict:
                     "country": state.target_country,
                 }
             )
-            print(
+            logger.info(
                 f"  > [Result {i + 1}] PASS: Found potential lead '{candidate.discovered_name}'"
             )
             candidate_leads.append(candidate)
         except Exception:
             # Pydantic parser will raise an exception if the output is not valid JSON
             # or if the LLM outputs `null`, which we treat as a rejection.
-            print(f"  > [Result {i + 1}] REJECTED: Not a B2B lead.")
+            logger.info(f"  > [Result {i + 1}] REJECTED: Not a B2B lead.")
 
-    print(f"  > Completed triage. {len(candidate_leads)} potential leads identified.")
+    logger.info(
+        f"  > Completed triage. {len(candidate_leads)} potential leads identified."
+    )
     return {"candidate_leads": candidate_leads}
 
 
 def save_leads_to_db(state: GraphState) -> dict:
     """Saves unique, new leads to the database with enriched data."""
-    leads_to_save = getattr(state, "enriched_companies", None) or [
+    leads_to_save = state.get("enriched_companies", []) or [
         {"lead": lead, "enriched_data": None} for lead in state.candidate_leads
     ]
 
-    print(
+    logger.info(
         f"---NODE: Saving {len(leads_to_save)} Candidate Leads to DB (with enrichment)---"
     )
     db = SessionLocal()
@@ -149,7 +169,7 @@ def save_leads_to_db(state: GraphState) -> dict:
 
             norm_name = normalize_name(lead.discovered_name)
             if not norm_name or norm_name in existing_names:
-                print(f"  > SKIPPING Duplicate: '{lead.discovered_name}'")
+                logger.info(f"  > ⏭️  SKIPPING Duplicate: '{lead.discovered_name}'")
                 continue
 
             # Create new company with enriched data
@@ -187,15 +207,15 @@ def save_leads_to_db(state: GraphState) -> dict:
             db.add(new_company)
             existing_names.add(norm_name)  # Add to set to handle intra-batch duplicates
             saved_count += 1
-            print(
-                f"  > ADDING New Lead: '{lead.discovered_name}' {'(enriched)' if enriched_data else ''}"
+            logger.info(
+                f"  > ✅ ADDING New Lead: '{lead.discovered_name}' {'(enriched)' if enriched_data else ''}"
             )
 
         db.commit()
-        print(f"  > Successfully saved {saved_count} new leads to database.")
+        logger.info(f"  > Successfully saved {saved_count} new leads to database.")
     except Exception as e:
         db.rollback()
-        print(f"  > Database error: {e}")
+        logger.error(f"  > ❌ Database error: {e}", exc_info=True)
         return {"error_message": str(e)}
     finally:
         db.close()
@@ -205,7 +225,9 @@ def save_leads_to_db(state: GraphState) -> dict:
 
 def scrape_and_enrich_companies(state: GraphState) -> dict:
     """Scrapes company websites using Crawl4AI and enriches data with LLM analysis."""
-    print(f"---NODE: Scraping and Enriching {len(state.candidate_leads)} Companies---")
+    logger.info(
+        f"---NODE: Scraping and Enriching {len(state.candidate_leads)} Companies---"
+    )
 
     # Load the enrichment prompt
     enrichment_prompt_path = (
@@ -214,15 +236,22 @@ def scrape_and_enrich_companies(state: GraphState) -> dict:
     try:
         enrichment_prompt = enrichment_prompt_path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        print("Warning: company_enrichment.txt not found, skipping enrichment")
-        return {"enriched_companies": []}
+        logger.warning(
+            "⚠️ Warning: company_enrichment.txt not found, skipping enrichment"
+        )
+        # Still return a valid structure for the graph to continue
+        return {
+            "enriched_companies": [
+                {"lead": lead, "enriched_data": None} for lead in state.candidate_leads
+            ]
+        }
 
     enriched_companies = []
 
     # Process each candidate lead
     for i, lead in enumerate(state.candidate_leads):
-        print(
-            f"  > [{i + 1}/{len(state.candidate_leads)}] Scraping: {lead.discovered_name}"
+        logger.info(
+            f"  > [{i + 1}/{len(state.candidate_leads)}] Scraping: {lead.discovered_name} ({lead.source_url})"
         )
 
         try:
@@ -231,14 +260,24 @@ def scrape_and_enrich_companies(state: GraphState) -> dict:
                 _scrape_company_website(lead, enrichment_prompt)
             )
             enriched_companies.append({"lead": lead, "enriched_data": enriched_data})
-            print(f"    ✓ Successfully enriched data for {lead.discovered_name}")
+            if enriched_data:
+                logger.info(
+                    f"    ✓ Successfully enriched data for {lead.discovered_name}"
+                )
+            else:
+                logger.warning(
+                    f"    - No enrichment data returned for {lead.discovered_name}"
+                )
 
         except Exception as e:
-            print(f"    ✗ Failed to scrape {lead.discovered_name}: {str(e)}")
+            logger.error(
+                f"    ✗ Failed to scrape {lead.discovered_name}: {str(e)}",
+                exc_info=True,
+            )
             # Add the lead without enrichment
             enriched_companies.append({"lead": lead, "enriched_data": None})
 
-    print(
+    logger.info(
         f"  > Completed scraping. {len([c for c in enriched_companies if c['enriched_data']])} companies enriched."
     )
     return {"enriched_companies": enriched_companies}
@@ -302,6 +341,9 @@ async def _scrape_company_website(lead: CandidateLead, enrichment_prompt: str) -
                         return enriched_data
                     except json.JSONDecodeError:
                         # If JSON parsing fails, create a basic structure
+                        logger.warning(
+                            f"    - Could not parse JSON from LLM for {url}, using raw output."
+                        )
                         return {
                             "website_url": url,
                             "enriched_data": result.extracted_content[
@@ -323,7 +365,7 @@ async def _scrape_company_website(lead: CandidateLead, enrichment_prompt: str) -
                         }
 
             except Exception as e:
-                print(f"    Failed to scrape {url}: {str(e)}")
+                logger.error(f"    - Failed to scrape {url}: {str(e)}")
                 continue
 
     # If all URLs failed, return None
@@ -346,41 +388,52 @@ MAX_REFINEMENT_LOOPS = 2
 
 def check_enrichment_completeness(state: GraphState) -> str:
     """Checks if any enriched company has missing data and routes accordingly."""
-    print("---🕵️ NODE: Checking Enrichment Completeness---")
+    logger.info("---🕵️ NODE: Checking Enrichment Completeness---")
+    logger.info(
+        f"  > Loop attempt {state.get('refinement_attempts', 0) + 1} of {MAX_REFINEMENT_LOOPS + 1}"
+    )
 
-    if state.refinement_attempts >= MAX_REFINEMENT_LOOPS:
-        print(
+    if state.get("refinement_attempts", 0) > MAX_REFINEMENT_LOOPS:
+        logger.warning(
             f"  > ⚠️  Max refinement loops ({MAX_REFINEMENT_LOOPS}) reached. Proceeding to save."
         )
         return "save"
 
-    for company_data in state.enriched_companies:
+    all_companies_complete = True
+    for company_data in state.get("enriched_companies", []):
         enriched_data = company_data.get("enriched_data")
         if not enriched_data:
-            # This is the critical fix: if enrichment failed, we must refine.
-            print(
+            logger.info(
                 "  > ❗️ Found company with no enrichment data. Routing to refinement loop."
             )
-            return "refine"
+            all_companies_complete = False
+            break
 
         # This part handles partially successful enrichment.
         for field in ENRICHABLE_FIELDS:
             if not enriched_data.get(field):
-                print(
-                    f"  > ❗️ Found company missing '{field}'. Routing to refinement loop."
+                logger.info(
+                    f"  > ❗️ Company '{company_data['lead'].discovered_name}' missing '{field}'. Routing to refinement loop."
                 )
-                return "refine"
+                all_companies_complete = False
+                break
+        if not all_companies_complete:
+            break
 
-    print("  > ✅ All companies have complete data. Routing to save.")
-    return "save"
+    if all_companies_complete:
+        logger.info("  > ✅ All companies have complete data. Routing to save.")
+        return "save"
+    else:
+        return "refine"
 
 
 def generate_refinement_queries(state: GraphState) -> dict:
     """Generates targeted search queries for missing information."""
-    print("---🔍 NODE: Generating Refinement Queries---")
-    print(f"  > Refinement loop iteration: {state.refinement_attempts + 1}")
+    logger.info("---🔍 NODE: Generating Refinement Queries---")
+    current_attempt = state.get("refinement_attempts", 0)
+    logger.info(f"  > Refinement loop iteration: {current_attempt + 1}")
     refinement_queries = {}
-    for i, company_data in enumerate(state.enriched_companies):
+    for i, company_data in enumerate(state.get("enriched_companies", [])):
         company_name = company_data["lead"].discovered_name
         queries = []
         enriched_data = company_data.get("enriched_data")
@@ -390,7 +443,7 @@ def generate_refinement_queries(state: GraphState) -> dict:
             for field in ENRICHABLE_FIELDS:
                 query = f'"{company_name}" {field.replace("_", " ")}'
                 queries.append(query)
-            print(
+            logger.info(
                 f"  > 📝 Generated {len(queries)} queries for '{company_name}' (no initial data)."
             )
         else:
@@ -400,14 +453,16 @@ def generate_refinement_queries(state: GraphState) -> dict:
                     query = f'"{company_name}" {field.replace("_", " ")}'
                     queries.append(query)
             if queries:
-                print(f"  > 📝 Generated {len(queries)} queries for '{company_name}'.")
+                logger.info(
+                    f"  > 📝 Generated {len(queries)} queries for '{company_name}'."
+                )
 
         if queries:
             refinement_queries[i] = queries
 
     return {
         "refinement_queries": refinement_queries,
-        "refinement_attempts": state.refinement_attempts + 1,
+        "refinement_attempts": current_attempt + 1,
     }
 
 
@@ -430,85 +485,107 @@ async def _execute_single_refinement_search(
 
 def execute_refinement_search(state: GraphState) -> dict:
     """Executes targeted web searches for missing data points."""
-    print("---🕸️ NODE: Executing Refinement Search---")
+    logger.info("---🕸️ NODE: Executing Refinement Search---")
     refinement_results = {}
     country = state.target_country
 
-    # Process each company's queries sequentially to avoid async issues
-    for i, queries in state.refinement_queries.items():
-        if queries:
-            print(
-                f"  > ▶️  Searching for company index {i} with {len(queries)} queries..."
+    async def run_refinement_searches():
+        tasks = []
+        for index, queries in state.get("refinement_queries", {}).items():
+            company_name = state.enriched_companies[index]["lead"].discovered_name
+            logger.info(f"  > Executing {len(queries)} searches for '{company_name}'")
+            # Create a task for each company's search coroutine
+            task = asyncio.create_task(
+                _execute_single_refinement_search(queries, country)
             )
-            try:
-                # Run the async search in a sync context
-                results = asyncio.run(
-                    _execute_single_refinement_search(queries, country)
-                )
-                refinement_results[i] = results
-                print(f"    ✅ Found {len(results)} results for company index {i}")
-            except Exception as e:
-                print(f"    ❌ Error searching for company index {i}: {e}")
-                refinement_results[i] = []
+            tasks.append((index, task))
 
+        # Wait for all tasks to complete
+        results = await asyncio.gather(*[task for _, task in tasks])
+
+        # Map results back to company index
+        for (index, _), result_list in zip(tasks, results):
+            if result_list:
+                refinement_results[index] = result_list
+
+    # Run the async orchestration
+    asyncio.run(run_refinement_searches())
+
+    logger.info(
+        f"  > Refinement search complete. Found new data for {len(refinement_results)} companies."
+    )
     return {"refinement_results": refinement_results}
 
 
 def extract_and_merge_missing_info(state: GraphState) -> dict:
-    """Uses an LLM to extract specific missing info and merge it back."""
-    print("---🧩 NODE: Extracting and Merging Missing Info---")
-    updated_enriched_companies = state.enriched_companies.copy()
+    """Uses an LLM to extract specific missing fields and merge them."""
+    logger.info("---🔄 NODE: Extracting and Merging Refined Info---")
+    updated_enriched_companies = state.get("enriched_companies", [])
+    refinement_results = state.get("refinement_results", {})
 
-    parser = StrOutputParser()
-    prompt = PromptTemplate(
-        template=prompts.REFINEMENT_PROMPT,
-        input_variables=["company_name", "field_name", "snippet"],
-    )
-    chain = prompt | llm_client | parser
+    parser = JsonOutputParser()
 
-    for i, company_data in enumerate(updated_enriched_companies):
-        if i in state.refinement_results:
-            company_name = company_data["lead"].discovered_name
-            search_results = state.refinement_results[i]
+    for index, results in refinement_results.items():
+        company_data = updated_enriched_companies[index]
+        company_name = company_data["lead"].discovered_name
+        enriched_data = company_data.get("enriched_data", {})
+        if not enriched_data:  # Ensure there's a dictionary to update
+            enriched_data = {}
+            company_data["enriched_data"] = enriched_data
 
-            full_snippet = "\n\n".join(
-                [
-                    f"Title: {res['title']}\nDescription: {res.get('description', '')}"
-                    for res in search_results
-                    if res.get("description")
-                ]
+        missing_fields = [
+            field for field in ENRICHABLE_FIELDS if not enriched_data.get(field)
+        ]
+        if not missing_fields:
+            continue
+
+        logger.info(
+            f"  > Refining '{company_name}' for fields: {', '.join(missing_fields)}"
+        )
+
+        prompt = PromptTemplate(
+            template=prompts.REFINEMENT_EXTRACTION_PROMPT,
+            input_variables=["company_name", "search_results", "missing_fields"],
+            partial_variables={"parser_instructions": parser.get_format_instructions()},
+        )
+
+        chain = prompt | llm_client | parser
+        combined_results = "\n".join(
+            [
+                f"Title: {r.get('title', '')}\n{r.get('description', '')}"
+                for r in results
+            ]
+        )
+
+        try:
+            extracted_info = chain.invoke(
+                {
+                    "company_name": company_name,
+                    "search_results": combined_results,
+                    "missing_fields": ", ".join(missing_fields),
+                }
             )
 
-            if not full_snippet:
-                continue
+            # Merge the newly extracted info
+            for field, value in extracted_info.items():
+                if value and not enriched_data.get(field):
+                    enriched_data[field] = value
+                    logger.info(f"    + Merged new data for '{field}'")
 
-            print(f"  > 🔄 Refining data for '{company_name}'...")
-            if not company_data.get("enriched_data"):
-                updated_enriched_companies[i]["enriched_data"] = {}
+            # Update qualification details if they were missing or incomplete
+            if "qualification_details" in extracted_info:
+                qual_details = enriched_data.get("qualification_details", {})
+                qual_details.update(extracted_info["qualification_details"])
+                enriched_data["qualification_details"] = qual_details
 
-            for field in ENRICHABLE_FIELDS:
-                if not company_data["enriched_data"].get(field):
-                    try:
-                        extracted_value = chain.invoke(
-                            {
-                                "company_name": company_name,
-                                "field_name": field.replace("_", " "),
-                                "snippet": full_snippet,
-                            }
-                        )
+                # Recalculate score
+                avg_score = sum(qual_details.values()) / len(qual_details)
+                enriched_data["qualification_score"] = int(avg_score)
+                logger.info(f"    + Updated qualification score to {int(avg_score)}")
 
-                        if extracted_value and extracted_value.lower().strip() not in [
-                            "null",
-                            "",
-                        ]:
-                            print(f"    ✅ Found {field}: {extracted_value[:50]}...")
-                            updated_enriched_companies[i]["enriched_data"][field] = (
-                                extracted_value
-                            )
-                        else:
-                            print(f"    ➖ No value found for {field}")
-
-                    except Exception as e:
-                        print(f"    ❌ Error extracting {field}: {e}")
+        except Exception as e:
+            logger.error(
+                f"    - Error extracting refined info for '{company_name}': {e}"
+            )
 
     return {"enriched_companies": updated_enriched_companies}

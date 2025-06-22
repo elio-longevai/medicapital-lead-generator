@@ -2,11 +2,22 @@ import datetime
 import typer
 from pathlib import Path
 from apscheduler.schedulers.blocking import BlockingScheduler
+import logging
+
 from app.db.models import Base
 from app.db.session import engine, SessionLocal
 from app.db.models import Company
 from app.graph.workflow import main_workflow
 from app.graph.state import GraphState
+
+# --- Logging Setup ---
+# Using basicConfig for simplicity, but with a custom format for clean, emoji-enhanced output.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[logging.StreamHandler()],
+)
+# ---
 
 # This is the raw text from the provided documents
 # In a real app, this might be loaded from a file or a database
@@ -29,17 +40,17 @@ def load_icp_text() -> str:
     try:
         return icp_path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        print("FATAL: icp.txt not found in prompts/ directory.")
+        logging.critical("❌ FATAL: icp.txt not found in prompts/ directory.")
         raise typer.Exit(code=1)
 
 
 def run_lead_generation_for_country(country_code: str, query_limit: int | None = None):
     """Executes the full lead generation workflow for a given country."""
-    print(f"\n{'=' * 50}")
-    print(f"🚀 STARTING LEAD GENERATION RUN FOR: {country_code.upper()} 🚀")
+    logging.info(f"\n{'=' * 50}")
+    logging.info(f"🚀 STARTING LEAD GENERATION RUN FOR: {country_code.upper()} 🚀")
     if query_limit:
-        print(f"⚠️  Query Limit: {query_limit} searches")
-    print(f"{'=' * 50}\n")
+        logging.warning(f"⚠️  Query Limit: {query_limit} searches")
+    logging.info(f"{'=' * 50}\n")
 
     initial_state = GraphState(
         raw_icp_text=load_icp_text(),
@@ -52,13 +63,13 @@ def run_lead_generation_for_country(country_code: str, query_limit: int | None =
     for event in main_workflow.stream(initial_state):
         state_key = list(event.keys())[0]
         final_state = event[state_key]
-        print(f"\n--- Just finished {state_key} ---")
+        logging.info(f"--- Just finished {state_key} ---")
 
-    print(f"\n{'=' * 50}")
-    print(f"🏁 LEAD GENERATION RUN FOR {country_code.upper()} COMPLETE 🏁")
+    logging.info(f"\n{'=' * 50}")
+    logging.info(f"🏁 LEAD GENERATION RUN FOR {country_code.upper()} COMPLETE 🏁")
     saved = final_state.get("newly_saved_leads_count", 0)
-    print(f"✅ New Leads Saved: {saved}")
-    print(f"{'=' * 50}\n")
+    logging.info(f"✅ New Leads Saved: {saved}")
+    logging.info(f"{'=' * 50}\n")
 
 
 @cli.command()
@@ -70,7 +81,7 @@ def run_once(
 ):
     """Run the lead generation process one time for the specified country."""
     if country.upper() not in ["NL", "BE"]:
-        print("Error: Country must be 'NL' or 'BE'.")
+        logging.error("❌ Error: Country must be 'NL' or 'BE'.")
         raise typer.Exit()
     run_lead_generation_for_country(country.upper(), query_limit)
 
@@ -106,23 +117,23 @@ def start_scheduler(
         + datetime.timedelta(hours=interval_hours / 2),
     )
 
-    print(
+    logging.info(
         f"📅 Scheduler started. Running every {interval_hours} hours for NL and BE (offset)."
     )
-    print("Press Ctrl+C to exit.")
+    logging.info("ℹ️ Press Ctrl+C to exit.")
 
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
-        print("\nScheduler stopped.")
+        logging.info("\n✅ Scheduler stopped.")
 
 
 @cli.command()
 def create_db():
     """Creates the database tables based on the models."""
-    print("Creating database tables...")
+    logging.info("⚙️  Creating database tables...")
     Base.metadata.create_all(bind=engine)
-    print("Done.")
+    logging.info("✅ Done.")
 
 
 @cli.command()
@@ -132,24 +143,24 @@ def view_leads():
     try:
         leads = db.query(Company).order_by(Company.created_at.desc()).all()
         if not leads:
-            print("No leads found in database.")
+            logging.info("🤷 No leads found in database.")
             return
 
-        print(f"\n{'=' * 80}")
-        print(f"📊 FOUND {len(leads)} LEADS IN DATABASE")
-        print(f"{'=' * 80}")
+        logging.info(f"\n{'=' * 80}")
+        logging.info(f"📊 FOUND {len(leads)} LEADS IN DATABASE")
+        logging.info(f"{'=' * 80}")
 
         for i, lead in enumerate(leads, 1):
-            print(f"\n[{i}] {lead.discovered_name}")
-            print(f"    Country: {lead.country}")
-            print(f"    Industry: {lead.primary_industry}")
-            print(f"    Status: {lead.status}")
-            print(f"    Source: {lead.source_url}")
-            print(f"    Reasoning: {lead.initial_reasoning}")
-            print(f"    Created: {lead.created_at}")
+            logging.info(f"\n[{i}] {lead.discovered_name}")
+            logging.info(f"    Country: {lead.country}")
+            logging.info(f"    Industry: {lead.primary_industry}")
+            logging.info(f"    Status: {lead.status}")
+            logging.info(f"    Source: {lead.source_url}")
+            logging.info(f"    Reasoning: {lead.initial_reasoning}")
+            logging.info(f"    Created: {lead.created_at}")
 
     except Exception as e:
-        print(f"Error querying database: {e}")
+        logging.error(f"❌ Error querying database: {e}")
     finally:
         db.close()
 
