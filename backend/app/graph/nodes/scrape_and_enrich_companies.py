@@ -77,17 +77,12 @@ async def _scrape_company_website(
     final_prompt = final_prompt.replace("{website_content}", scraped_content[:15000])
 
     try:
-        # Use asyncio.to_thread to run the synchronous 'invoke' method.
-        # This avoids event loop issues with the gRPC client used by the LLM.
-        response = await asyncio.to_thread(llm_client.invoke, final_prompt)
-        llm_output = response.content
-        parsed_json = json.loads(llm_output)
+        # Use a client configured for JSON mode to improve reliability
+        json_llm_client = llm_client.with_structured_output(method="json")
+        response = await asyncio.to_thread(json_llm_client.invoke, final_prompt)
 
-        # The LLM might return a list with a single dictionary
-        if isinstance(parsed_json, list) and parsed_json:
-            enriched_data = parsed_json[0]
-        else:
-            enriched_data = parsed_json
+        # The response should already be a dictionary when using structured_output
+        enriched_data = response
 
         if isinstance(enriched_data, dict):
             enriched_data["website_url"] = successful_url
@@ -98,9 +93,13 @@ async def _scrape_company_website(
         )
         return None
 
-    except (json.JSONDecodeError, IndexError) as e:
+    except json.JSONDecodeError as e:
         logger.error(
             f"    - Could not parse JSON from LLM for {lead.discovered_name}: {e}"
+        )
+        # It's helpful to see what the LLM returned instead of valid JSON
+        logger.debug(
+            f"    - Raw LLM Output: {response.content if 'response' in locals() else 'No response object'}"
         )
         return None
     except Exception as e:
