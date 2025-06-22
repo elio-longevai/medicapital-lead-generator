@@ -6,11 +6,11 @@ from app.graph.nodes.refinement.execute_refinement_search import (
 
 
 @patch(
-    "app.graph.nodes.refinement.execute_refinement_search.multi_provider_search_client"
+    "app.graph.nodes.refinement.execute_refinement_search.create_multi_provider_search_client"
 )
 @patch("app.graph.nodes.refinement.execute_refinement_search.asyncio.run")
 def test_execute_refinement_search_for_one_company(
-    mock_asyncio_run, mock_search_client, mock_graph_state, mock_candidate_lead
+    mock_asyncio_run, mock_search_client_factory, mock_graph_state, mock_candidate_lead
 ):
     """
     Tests executing a refinement search for a single company.
@@ -25,9 +25,13 @@ def test_execute_refinement_search_for_one_company(
     mock_results = [{"title": "Contact Us", "url": "https://test.com/contact"}]
     mock_provider = "tavily"
 
+    # Mock the search client instance
+    mock_search_client = AsyncMock()
     mock_search_client.search_async = AsyncMock(
         return_value=(mock_results, mock_provider)
     )
+    mock_search_client_factory.return_value = mock_search_client
+
     mock_asyncio_run.side_effect = (
         lambda coro: asyncio.get_event_loop().run_until_complete(coro)
     )

@@ -3,7 +3,7 @@ import logging
 
 import httpx
 
-from app.core.clients import multi_provider_search_client
+from app.core.clients import create_multi_provider_search_client
 from app.graph.state import GraphState
 from app.services.search_query_service import SearchQueryService
 from .utils.search_utils import save_search_results
@@ -28,14 +28,14 @@ def execute_web_search(state: GraphState) -> dict:
 
     async def _run_searches():
         """Internal async function to handle the concurrent searches."""
+        # Create a fresh search client instance for this event loop
+        search_client = create_multi_provider_search_client()
         all_results = []
         query_tracking_data = []  # Track queries for database storage
 
         async with httpx.AsyncClient() as client:
             tasks = [
-                multi_provider_search_client.search_async(
-                    query, state.target_country, client
-                )
+                search_client.search_async(query, state.target_country, client)
                 for query in queries_to_run
             ]
 

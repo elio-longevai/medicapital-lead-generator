@@ -151,8 +151,15 @@ class BraveSearchClient(BaseSearchClient, CountryMappingMixin):
 
     def __init__(self, api_key: str):
         super().__init__(api_key)
-        # Each instance gets its own limiter, bound to the current event loop.
-        self.limiter = AsyncLimiter(1, 1)
+        # Limiter will be created lazily to avoid event loop binding
+        self._limiter = None
+
+    @property
+    def limiter(self):
+        """Lazy initialization of limiter to ensure it's bound to the current event loop."""
+        if self._limiter is None:
+            self._limiter = AsyncLimiter(1, 1)
+        return self._limiter
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
@@ -319,8 +326,15 @@ class MultiProviderSearchClient:
     def __init__(self, clients: Dict[str, BaseSearchClient]):
         self.clients = clients
         self.circuit_breaker = CircuitBreaker()
-        # Each instance gets its own semaphore, bound to the current event loop.
-        self.db_semaphore = asyncio.Semaphore(10)
+        # Semaphore will be created lazily to avoid event loop binding
+        self._db_semaphore = None
+
+    @property
+    def db_semaphore(self):
+        """Lazy initialization of semaphore to ensure it's bound to the current event loop."""
+        if self._db_semaphore is None:
+            self._db_semaphore = asyncio.Semaphore(10)
+        return self._db_semaphore
 
     async def _try_provider(
         self,

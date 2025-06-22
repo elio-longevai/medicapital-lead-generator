@@ -3,7 +3,7 @@ import logging
 
 import httpx
 
-from app.core.clients import multi_provider_search_client
+from app.core.clients import create_multi_provider_search_client
 from app.graph.state import GraphState
 from ..utils.search_utils import save_search_results
 
@@ -11,15 +11,14 @@ logger = logging.getLogger(__name__)
 
 
 async def _execute_single_refinement_search(
-    queries: list[str], country: str
+    queries: list[str], country: str, search_client
 ) -> list[dict]:
     """Helper to run searches for one company using the multi-provider client."""
     all_results = []
 
     async with httpx.AsyncClient() as client:
         tasks = [
-            multi_provider_search_client.search_async(query, country, client)
-            for query in queries
+            search_client.search_async(query, country, client) for query in queries
         ]
 
         search_results_list = await asyncio.gather(*tasks, return_exceptions=True)
@@ -50,13 +49,15 @@ def execute_refinement_search(state: GraphState) -> dict:
     country = state.target_country
 
     async def run_refinement_searches():
+        # Create a fresh search client instance for this event loop
+        search_client = create_multi_provider_search_client()
         tasks = []
         for index, queries in state.refinement_queries.items():
             company_name = state.enriched_companies[index]["lead"].discovered_name
             logger.info(f"  > Executing {len(queries)} searches for '{company_name}'")
             # Create a task for each company's search coroutine
             task = asyncio.create_task(
-                _execute_single_refinement_search(queries, country)
+                _execute_single_refinement_search(queries, country, search_client)
             )
             tasks.append((index, task))
 
