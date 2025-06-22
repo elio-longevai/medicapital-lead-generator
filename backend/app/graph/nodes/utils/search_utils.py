@@ -39,7 +39,7 @@ def save_search_results(query: str, provider: str, results: list[dict]):
             content += f"Result {i}:\n"
             content += f"Title: {result.get('title', 'N/A')}\n"
             content += f"URL: {result.get('url', 'N/A')}\n"
-            content += f"Description: {result.get('description', 'N/A', '')}...\n"
+            content += f"Description: {result.get('description') or ''}...\n"
             content += "-" * 80 + "\n"
 
         # Write to file
