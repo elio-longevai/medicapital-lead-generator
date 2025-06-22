@@ -71,11 +71,13 @@ const Index = () => {
     }
   ] : [];
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status: string) => {
     const variants = {
       "qualified": "bg-emerald-100 text-emerald-800 border-emerald-200",
       "in_review": "bg-amber-100 text-amber-800 border-amber-200",
-      "discovered": "bg-slate-100 text-slate-800 border-slate-200"
+      "discovered": "bg-slate-100 text-slate-800 border-slate-200",
+      "contacted": "bg-blue-100 text-blue-800 border-blue-200",
+      "rejected": "bg-rose-100 text-rose-800 border-rose-200"
     };
     
     // Handle both frontend display format and backend API format

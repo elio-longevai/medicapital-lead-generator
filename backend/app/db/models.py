@@ -1,4 +1,5 @@
 import datetime
+import json
 from sqlalchemy import (
     Column,
     Integer,
@@ -11,6 +12,25 @@ from sqlalchemy import (
     Boolean,
 )
 from sqlalchemy.orm import declarative_base, Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
+
+
+class SafeJSON(TypeDecorator):
+    """Prevents JSONDecodeError for invalid JSON in columns."""
+
+    impl = JSON
+    cache_ok = True
+
+    def process_result_value(self, value, dialect):
+        if value == "" or value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return value
+
 
 Base = declarative_base()
 
@@ -31,7 +51,7 @@ class Company(Base):
     # For Sprint 2+
     website_url = Column(String, nullable=True)
     enriched_data: Mapped[dict] = mapped_column(
-        JSON, nullable=True
+        SafeJSON, nullable=True
     )  # For storing the raw enrichment JSON
 
     # For Sprint 3+
@@ -47,7 +67,7 @@ class Company(Base):
     estimated_deal_value = Column(String, nullable=True)  # e.g., "€35,000-€125,000"
     recent_news = Column(Text, nullable=True)  # Latest company news/developments
     qualification_details = Column(
-        JSON, nullable=True
+        SafeJSON, nullable=True
     )  # Detailed qualification breakdown
     location_details = Column(String, nullable=True)  # Full location (city, country)
 

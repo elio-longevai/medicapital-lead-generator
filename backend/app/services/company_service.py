@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, asc
 from ..db.models import Company
@@ -8,6 +9,8 @@ from ..api.models import (
     QualificationScore,
 )
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 class CompanyService:
@@ -31,6 +34,9 @@ class CompanyService:
             query = query.filter(Company.primary_industry == industry)
         if status and status != "all":
             query = query.filter(Company.status == status)
+        elif not status or status == "all":
+            # By default, do not show rejected leads
+            query = query.filter(Company.status != "rejected")
         if country:
             query = query.filter(Company.country == country)
         if search:
@@ -61,6 +67,30 @@ class CompanyService:
         company = self.db.query(Company).filter(Company.id == company_id).first()
         if not company:
             return None
+        return self._transform_company(company)
+
+    def update_company_status(
+        self, company_id: int, new_status: str
+    ) -> Optional[CompanyResponse]:
+        """Updates the status of a single company and returns the transformed response."""
+        valid_statuses = [
+            "discovered",
+            "in_review",
+            "qualified",
+            "contacted",
+            "rejected",
+        ]
+        if new_status not in valid_statuses:
+            return None  # Invalid status, handled in API layer
+
+        company = self.db.query(Company).filter(Company.id == company_id).first()
+        if not company:
+            return None
+
+        company.status = new_status
+        # updated_at is handled by SQLAlchemy's onupdate trigger, so no manual setting needed.
+        self.db.commit()
+        self.db.refresh(company)
         return self._transform_company(company)
 
     def get_dashboard_statistics(self) -> DashboardStats:
@@ -111,7 +141,7 @@ class CompanyService:
         # Calculate overall score
         score = company.qualification_score or self._calculate_default_score(company)
 
-        # Parse qualification details
+        # Parse qualification details safely
         qual_details = company.qualification_details or {}
         qualification_score = QualificationScore(
             financialStability=qual_details.get("financial_stability", 75),
@@ -125,7 +155,9 @@ class CompanyService:
 
         # Format last activity
         last_activity = (
-            company.created_at.strftime("%Y-%m-%d") if company.created_at else "Unknown"
+            company.updated_at.strftime("%b %d, %Y")
+            if company.updated_at
+            else "Unknown"
         )
 
         return CompanyResponse(
@@ -169,7 +201,7 @@ class CompanyService:
     def _calculate_deal_value(self, company: Company) -> str:
         # Industry-based deal value estimation
         industry_values = {
-            "Healthcare": "€75,000-€125,000 (voorbeeld)",
+            "Healthcare": "€75,000-€125,000",
             "Beauty & Wellness": "€35,000-€65,000",
             "Horeca": "€25,000-€45,000",
         }

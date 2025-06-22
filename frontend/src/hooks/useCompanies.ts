@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiService, type CompanyListResponse } from '@/services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService, type CompanyListResponse, type Company } from '@/services/api';
 
 export function useCompanies(params: {
   skip?: number;
@@ -31,5 +31,20 @@ export function useDashboardStats() {
     queryFn: () => apiService.getDashboardStats(),
     // TODO: Make cache time configurable via app settings
     staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+export function useUpdateCompanyStatus() {
+  const queryClient = useQueryClient();
+  return useMutation<Company, Error, { id: number; status: 'contacted' | 'rejected' }>({
+    mutationFn: ({ id, status }) => apiService.updateCompanyStatus(id, status),
+    onSuccess: (data, variables) => {
+      // Invalidate queries to refetch data from the server
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      
+      // Also update the specific company's data in the cache if it exists
+      queryClient.setQueryData(['company', variables.id], data);
+    },
   });
 }

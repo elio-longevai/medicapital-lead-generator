@@ -2,6 +2,10 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 
+class CompanyStatusUpdate(BaseModel):
+    status: str
+
+
 class QualificationScore(BaseModel):
     financialStability: int
     equipmentNeed: int

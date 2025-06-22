@@ -1,4 +1,4 @@
-
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,19 +21,47 @@ import {
   Target,
   Euro,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Check,
+  Trash2,
 } from "lucide-react";
+import { useUpdateCompanyStatus } from "@/hooks/useCompanies";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const CompanyProfile = ({ company, onBack }) => {
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const updateStatusMutation = useUpdateCompanyStatus();
+
   if (!company) return null;
 
   const getStatusBadge = (status) => {
     const variants = {
-      "Qualified": "bg-green-100 text-green-800",
-      "In Review": "bg-yellow-100 text-yellow-800",
-      "Discovered": "bg-gray-100 text-gray-800"
+      "qualified": "bg-green-100 text-green-800 border-green-200",
+      "in_review": "bg-yellow-100 text-yellow-800",
+      "discovered": "bg-gray-100 text-gray-800 border-gray-200",
+      "contacted": "bg-blue-100 text-blue-800 border-blue-200",
+      "rejected": "bg-red-100 text-red-800 border-red-200",
     };
-    return <Badge className={variants[status]}>{status}</Badge>;
+
+    const normalizedStatus = status.toLowerCase().replace(/\s+/g, '_');
+    const displayStatus = status.includes('_')
+      ? status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+      : status.replace(/\b\w/g, l => l.toUpperCase());
+      
+    return (
+      <Badge className={`${variants[normalizedStatus] || variants.discovered} border font-medium`}>{displayStatus}</Badge>
+    );
   };
 
   const getScoreColor = (score) => {
@@ -95,6 +123,40 @@ export const CompanyProfile = ({ company, onBack }) => {
       color: "text-yellow-600"
     }
   ];
+
+  const handleContacted = () => {
+    if (!company) return;
+    updateStatusMutation.mutate(
+      { id: company.id, status: "contacted" },
+      {
+        onSuccess: () => {
+          toast.success(`${company.company} marked as contacted.`);
+          onBack();
+        },
+        onError: (error) => {
+          toast.error(`Failed to update status: ${error.message}`);
+        },
+      }
+    );
+  };
+
+  const handleReject = () => {
+    if (!company) return;
+    updateStatusMutation.mutate(
+      { id: company.id, status: "rejected" },
+      {
+        onSuccess: () => {
+          toast.success(`${company.company} has been rejected.`);
+          setIsRejectDialogOpen(false);
+          onBack();
+        },
+        onError: (error) => {
+          toast.error(`Failed to reject lead: ${error.message}`);
+          setIsRejectDialogOpen(false);
+        },
+      }
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -175,15 +237,19 @@ export const CompanyProfile = ({ company, onBack }) => {
                         <div>
                           <label className="text-sm font-medium text-gray-500">Website</label>
                           <div className="mt-1 flex items-center">
-                            <a 
-                              href={`${company.website}`} 
+                            <a
+                              href={
+                                company.website && !company.website.startsWith('http')
+                                ? `https://${company.website}`
+                                : company.website
+                              }
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:text-blue-800 flex items-center"
                             >
                               {company.website}
                               <ExternalLink className="h-4 w-4 ml-1" />
-                            </a>
+                            </a> 
                           </div>
                         </div>
                       </div>
@@ -196,156 +262,54 @@ export const CompanyProfile = ({ company, onBack }) => {
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <TrendingUp className="h-5 w-5 mr-2" />
-                      Recent News & Insights
+                      Recent News & Activity
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <h4 className="font-medium text-blue-900 mb-2">Latest Update</h4>
-                        <p className="text-blue-800">{company.recentNews}</p>
-                        <p className="text-sm text-blue-600 mt-2">Source: Company website • {company.lastActivity}</p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Analysis Notes</h4>
-                        <p className="text-gray-700">{company.notes}</p>
-                      </div>
-                    </div>
+                    <ul className="space-y-4">
+                      {activities.map((activity, index) => (
+                        <li key={index} className="flex space-x-3">
+                          <div className={`mt-1 h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full ${activity.color} bg-opacity-10`}>
+                            <activity.icon className={`h-3 w-3 ${activity.color}`} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                            <p className="text-sm text-gray-500">{activity.description}</p>
+                            <p className="text-xs text-gray-400 mt-1">{activity.timestamp}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="qualification" className="space-y-6">
+              <TabsContent value="qualification">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
-                      <Target className="h-5 w-5 mr-2" />
-                      Qualification Assessment
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      Qualification Breakdown
                     </CardTitle>
                     <CardDescription>
-                      AI-driven qualification across key criteria
+                      Scores are from 0-100, based on our internal qualification model.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
-                      {qualificationAreas.map((area, index) => (
-                        <div key={index}>
+                      {qualificationAreas.map(area => (
+                        <div key={area.name}>
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center">
-                              <area.icon className="h-4 w-4 mr-2 text-gray-600" />
-                              <span className="font-medium text-gray-900">{area.name}</span>
+                              <area.icon className="h-5 w-5 mr-2 text-gray-500" />
+                              <span className="font-medium">{area.name}</span>
                             </div>
-                            <span className={`font-bold ${getScoreColor(area.score)}`}>
-                              {area.score}%
-                            </span>
+                            <span className="font-bold text-lg">{area.score}</span>
                           </div>
-                          <Progress value={area.score} className="h-2 mb-2" />
-                          <p className="text-sm text-gray-600">{area.description}</p>
+                          <Progress value={area.score} className="h-2" />
+                          <p className="text-sm text-gray-500 mt-2">{area.description}</p>
                         </div>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Qualification Summary</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                        <p className="font-medium text-green-900">Strengths</p>
-                        <p className="text-sm text-green-700">Strong financial position, clear equipment need</p>
-                      </div>
-                      <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                        <AlertCircle className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-                        <p className="font-medium text-yellow-900">Considerations</p>
-                        <p className="text-sm text-yellow-700">Timing may need validation</p>
-                      </div>
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <Target className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                        <p className="font-medium text-blue-900">Recommendation</p>
-                        <p className="text-sm text-blue-700">Proceed with qualified outreach</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="research" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <FileText className="h-5 w-5 mr-2" />
-                      Research & Intelligence
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Market Position</h4>
-                        <p className="text-gray-700">
-                          Leading player in their sector with strong growth trajectory. 
-                          Company shows consistent investment in modernization and expansion.
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Financial Indicators</h4>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                          <li>Revenue growth of 15% year-over-year</li>
-                          <li>Recent funding rounds indicate healthy cash flow</li>
-                          <li>Active investment in new equipment and facilities</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Competitive Landscape</h4>
-                        <p className="text-gray-700">
-                          Operating in a competitive but growing market. Equipment modernization 
-                          is a key differentiator for maintaining market position.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="outreach" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <MessageSquare className="h-5 w-5 mr-2" />
-                      Outreach Strategy
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="p-4 border border-gray-200 rounded-lg">
-                        <h4 className="font-medium text-gray-900 mb-2">Recommended Approach</h4>
-                        <p className="text-gray-700 mb-3">
-                          Focus on equipment modernization benefits and financial flexibility. 
-                          Highlight successful implementations in similar healthcare facilities.
-                        </p>
-                        <div className="flex space-x-2">
-                          <Button size="sm">
-                            <Mail className="h-4 w-4 mr-2" />
-                            Generate Email
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Phone className="h-4 w-4 mr-2" />
-                            Schedule Call
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Key Messaging Points</h4>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1">
-                          <li>Financial flexibility through leasing vs. capital expenditure</li>
-                          <li>Complete service package including maintenance and support</li>
-                          <li>Proven track record in healthcare equipment leasing</li>
-                          <li>Alignment with their expansion and modernization goals</li>
-                        </ul>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -355,80 +319,32 @@ export const CompanyProfile = ({ company, onBack }) => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Contact Information */}
             <Card>
               <CardHeader>
                 <CardTitle>Contact Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center">
-                  <Mail className="h-4 w-4 mr-3 text-gray-400" />
-                  <a 
-                    href={`mailto:${company.email}`}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    {company.email}
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-3 text-gray-400" />
-                  <a 
-                    href={`tel:${company.phone}`}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    {company.phone}
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <ExternalLink className="h-4 w-4 mr-3 text-gray-400" />
-                  <a 
-                    href={`https://${company.website}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    Visit Website
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Activity Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Activity Timeline</CardTitle>
-              </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {activities.map((activity, index) => (
-                    <div key={index} className="flex items-start">
-                      <activity.icon className={`h-4 w-4 mt-1 mr-3 ${activity.color}`} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {activity.title}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {activity.description}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {activity.timestamp}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-3 text-gray-500" />
+                    <span className="text-gray-900">{company.contactEmail || "Not available"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Phone className="h-4 w-4 mr-3 text-gray-500" />
+                    <span className="text-gray-900">{company.contactPhone || "Not available"}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full" size="sm">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
+                <Button className="w-full" size="sm" onClick={handleContacted} disabled={updateStatusMutation.isPending}>
+                  <Check className="h-4 w-4 mr-2" />
+                  Mark as Contacted
                 </Button>
                 <Button variant="outline" className="w-full" size="sm">
                   <Phone className="h-4 w-4 mr-2" />
@@ -438,10 +354,28 @@ export const CompanyProfile = ({ company, onBack }) => {
                   <FileText className="h-4 w-4 mr-2" />
                   Add Note
                 </Button>
-                <Button variant="outline" className="w-full" size="sm">
-                  <Star className="h-4 w-4 mr-2" />
-                  Mark as Priority
-                </Button>
+                <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full" size="sm">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Reject Lead
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will mark "{company.company}" as rejected and remove it from active lead lists. This action cannot be easily undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleReject} disabled={updateStatusMutation.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        {updateStatusMutation.isPending ? "Rejecting..." : "Yes, Reject Lead"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardContent>
             </Card>
           </div>

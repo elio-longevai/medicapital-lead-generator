@@ -39,11 +39,12 @@ export const LeadDatabase = ({ onSelectCompany }) => {
   const companies = companiesData?.companies || [];
 
   const getStatusBadge = (status: string) => {
-    // TODO: Make status colors configurable via theme settings
     const colors = {
       "qualified": "bg-emerald-100 text-emerald-800 border-emerald-200",
       "in_review": "bg-amber-100 text-amber-800 border-amber-200", 
-      "discovered": "bg-slate-100 text-slate-800 border-slate-200"
+      "discovered": "bg-slate-100 text-slate-800 border-slate-200",
+      "contacted": "bg-blue-100 text-blue-800 border-blue-200",
+      "rejected": "bg-rose-100 text-rose-800 border-rose-200"
     };
     
     // Handle both frontend display format and backend API format
@@ -135,10 +136,12 @@ export const LeadDatabase = ({ onSelectCompany }) => {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="qualified">Qualified</SelectItem>
                   <SelectItem value="in_review">In Review</SelectItem>
                   <SelectItem value="discovered">Discovered</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
 

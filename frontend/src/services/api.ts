@@ -70,6 +70,21 @@ class ApiService {
     return response.json();
   }
 
+  async updateCompanyStatus(id: number, status: 'contacted' | 'rejected'): Promise<Company> {
+    const response = await fetch(`${API_BASE_URL}/api/companies/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Failed to update company status to ${status}`);
+    }
+    return response.json();
+  }
+
   async getDashboardStats(): Promise<DashboardStats> {
     const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`);
     if (!response.ok) throw new Error('Failed to fetch dashboard stats');
