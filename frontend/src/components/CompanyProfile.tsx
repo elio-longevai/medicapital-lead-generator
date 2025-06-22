@@ -200,8 +200,8 @@ export const CompanyProfile = ({ company, onBack }) => {
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="qualification">Qualification</TabsTrigger>
-                <TabsTrigger value="research">Research</TabsTrigger>
-                <TabsTrigger value="outreach">Outreach</TabsTrigger>
+                <TabsTrigger value="research" disabled className="opacity-50 cursor-not-allowed">Research</TabsTrigger>
+                <TabsTrigger value="outreach" disabled className="opacity-50 cursor-not-allowed">Outreach</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
@@ -289,7 +289,7 @@ export const CompanyProfile = ({ company, onBack }) => {
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <CheckCircle className="h-5 w-5 mr-2" />
-                      Qualification Breakdown
+                      Qualification Breakdown (future feature)
                     </CardTitle>
                     <CardDescription>
                       Scores are from 0-100, based on our internal qualification model.
@@ -327,11 +327,11 @@ export const CompanyProfile = ({ company, onBack }) => {
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 mr-3 text-gray-500" />
-                    <span className="text-gray-900">{company.contactEmail || "Not available"}</span>
+                    <span className="text-gray-900">{company.email || "Not available"}</span>
                   </div>
                   <div className="flex items-center">
                     <Phone className="h-4 w-4 mr-3 text-gray-500" />
-                    <span className="text-gray-900">{company.contactPhone || "Not available"}</span>
+                    <span className="text-gray-900">{company.phone || "Not available"}</span>
                   </div>
                 </div>
               </CardContent>
@@ -345,14 +345,6 @@ export const CompanyProfile = ({ company, onBack }) => {
                 <Button className="w-full" size="sm" onClick={handleContacted} disabled={updateStatusMutation.isPending}>
                   <Check className="h-4 w-4 mr-2" />
                   Mark as Contacted
-                </Button>
-                <Button variant="outline" className="w-full" size="sm">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Schedule Call
-                </Button>
-                <Button variant="outline" className="w-full" size="sm">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Add Note
                 </Button>
                 <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
                   <AlertDialogTrigger asChild>
