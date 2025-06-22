@@ -96,7 +96,7 @@ async def _execute_search_for_query(
 def execute_web_search(state: GraphState) -> dict:
     """Executes web searches concurrently using a multi-provider strategy."""
     queries_to_run = state.search_queries
-    limit = state.get("search_query_limit")
+    limit = state.search_query_limit
 
     if limit and limit > 0:
         logger.info(f"---NODE: Executing Web Search (LIMITED to {limit} queries)---")
@@ -172,7 +172,7 @@ def triage_and_extract_leads(state: GraphState) -> dict:
 
 def save_leads_to_db(state: GraphState) -> dict:
     """Saves unique, new leads to the database with enriched data."""
-    leads_to_save = state.get("enriched_companies", []) or [
+    leads_to_save = state.enriched_companies or [
         {"lead": lead, "enriched_data": None} for lead in state.candidate_leads
     ]
 
@@ -412,17 +412,17 @@ def check_enrichment_completeness(state: GraphState) -> str:
     """Checks if any enriched company has missing data and routes accordingly."""
     logger.info("---🕵️ NODE: Checking Enrichment Completeness---")
     logger.info(
-        f"  > Loop attempt {state.get('refinement_attempts', 0) + 1} of {MAX_REFINEMENT_LOOPS + 1}"
+        f"  > Loop attempt {state.refinement_attempts + 1} of {MAX_REFINEMENT_LOOPS + 1}"
     )
 
-    if state.get("refinement_attempts", 0) > MAX_REFINEMENT_LOOPS:
+    if state.refinement_attempts > MAX_REFINEMENT_LOOPS:
         logger.warning(
             f"  > ⚠️  Max refinement loops ({MAX_REFINEMENT_LOOPS}) reached. Proceeding to save."
         )
         return "save"
 
     all_companies_complete = True
-    for company_data in state.get("enriched_companies", []):
+    for company_data in state.enriched_companies:
         enriched_data = company_data.get("enriched_data")
         if not enriched_data:
             logger.info(
@@ -452,10 +452,10 @@ def check_enrichment_completeness(state: GraphState) -> str:
 def generate_refinement_queries(state: GraphState) -> dict:
     """Generates targeted search queries for missing information."""
     logger.info("---🔍 NODE: Generating Refinement Queries---")
-    current_attempt = state.get("refinement_attempts", 0)
+    current_attempt = state.refinement_attempts
     logger.info(f"  > Refinement loop iteration: {current_attempt + 1}")
     refinement_queries = {}
-    for i, company_data in enumerate(state.get("enriched_companies", [])):
+    for i, company_data in enumerate(state.enriched_companies):
         company_name = company_data["lead"].discovered_name
         queries = []
         enriched_data = company_data.get("enriched_data")
@@ -513,7 +513,7 @@ def execute_refinement_search(state: GraphState) -> dict:
 
     async def run_refinement_searches():
         tasks = []
-        for index, queries in state.get("refinement_queries", {}).items():
+        for index, queries in state.refinement_queries.items():
             company_name = state.enriched_companies[index]["lead"].discovered_name
             logger.info(f"  > Executing {len(queries)} searches for '{company_name}'")
             # Create a task for each company's search coroutine
@@ -542,8 +542,8 @@ def execute_refinement_search(state: GraphState) -> dict:
 def extract_and_merge_missing_info(state: GraphState) -> dict:
     """Uses an LLM to extract specific missing fields and merge them."""
     logger.info("---🔄 NODE: Extracting and Merging Refined Info---")
-    updated_enriched_companies = state.get("enriched_companies", [])
-    refinement_results = state.get("refinement_results", {})
+    updated_enriched_companies = state.enriched_companies
+    refinement_results = state.refinement_results
 
     parser = JsonOutputParser()
 
