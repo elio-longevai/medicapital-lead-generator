@@ -324,113 +324,70 @@ class MultiProviderSearchClient:
 
     async def _try_provider(
         self,
+        provider_name: str,
         query: str,
         country: str,
         client: httpx.AsyncClient,
         api_usage_service: ApiUsageService,
-        provider_name: str,
-    ) -> tuple[list[dict], str | None]:
-        """
-        Attempts to search using a single provider.
-        Returns the results and the name of the successful provider.
-        """
+    ) -> List[Dict[str, str]] | None:
+        """Attempt a search with a single provider, handling errors."""
+        if self.circuit_breaker.is_disabled(provider_name):
+            logger.info(f"⏭️ Skipping {provider_name}: temporarily disabled")
+            return None
+
+        if not await asyncio.to_thread(api_usage_service.can_use_api, provider_name):
+            logger.warning(f"⚠️ Skipping {provider_name}: Daily limit reached.")
+            return None
+
+        search_client = self.clients.get(provider_name)
+        if not search_client:
+            logger.error(f"Misconfigured provider: {provider_name} not found.")
+            return None
+
         try:
-            # Check circuit breaker first
-            if self.circuit_breaker.is_disabled(provider_name):
+            logger.info(f"➡️ Trying search provider: {provider_name}")
+            if results := await search_client.search_async(query, country, client):
                 logger.info(
-                    f"⏭️ Skipping {provider_name}: temporarily disabled by circuit breaker"
+                    f"✅ Success! Got {len(results)} results from {provider_name}."
                 )
-                return [], None
-
-            # Check if the API can be used (daily limit)
-            can_use = await asyncio.to_thread(
-                api_usage_service.can_use_api, provider_name
-            )
-
-            if not can_use:
-                logger.warning(f"⚠️ Skipping {provider_name}: Daily limit reached.")
-                return [], None
-
-            search_client = self.clients.get(provider_name)
-            if not search_client:
-                logger.error(f"Misconfigured provider: {provider_name} not found.")
-                return [], None
-
-            try:
-                logger.info(f"➡️ Trying search provider: {provider_name}")
-                results = await search_client.search_async(query, country, client)
-
-                if results:
-                    logger.info(
-                        f"✅ Success! Got {len(results)} results from {provider_name}."
-                    )
-                    # Record success and increment usage count
-                    self.circuit_breaker.record_success(provider_name)
-                    await asyncio.to_thread(
-                        api_usage_service.increment_usage, provider_name
-                    )
-                    return results, provider_name
-                else:
-                    logger.info(f"    - No results from {provider_name}.")
-                    return [], None
-
-            except (RateLimitError, TimeoutError) as e:
-                # These are expected recoverable errors
-                logger.warning(f"⚠️ {provider_name} failed: {e}. Trying next provider.")
-                self.circuit_breaker.record_failure(provider_name)
-                return [], None
-            except Exception as e:
-                logger.error(
-                    f"❌ Unexpected error with {provider_name}: {e}",
-                    exc_info=True,
+                self.circuit_breaker.record_success(provider_name)
+                await asyncio.to_thread(
+                    api_usage_service.increment_usage, provider_name
                 )
-                self.circuit_breaker.record_failure(provider_name)
-                # Don't increment usage on error, just try the next provider
-                return [], None
+                return results
+            logger.info(f"    - No results from {provider_name}.")
+        except (RateLimitError, TimeoutError) as e:
+            logger.warning(f"⚠️ {provider_name} failed: {e}. Trying next.")
+            self.circuit_breaker.record_failure(provider_name)
         except Exception as e:
-            logger.error(f"❌ Critical error in search client: {e}", exc_info=True)
-            return [], None
+            logger.error(
+                f"❌ Unexpected error with {provider_name}: {e}", exc_info=True
+            )
+            self.circuit_breaker.record_failure(provider_name)
+        return None
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
     ) -> tuple[list[dict], str | None]:
         """
-        Attempts to search using providers in the tier order.
-        Falls back to the next provider if a limit is reached or an error occurs.
-        Returns the results and the name of the successful provider.
+        Attempts searches using providers in tier order, with concurrency limits.
         """
-        # Acquire semaphore to limit concurrent executions and thus DB connections
         async with self.db_semaphore:
-            db_session = None
+            db_session = SessionLocal()
             try:
-                # Create a new database session for this search operation
-                db_session = SessionLocal()
                 api_usage_service = ApiUsageService(db=db_session)
-
                 for provider_name in self.PROVIDER_TIER:
-                    results, provider_name = await self._try_provider(
-                        query, country, client, api_usage_service, provider_name
-                    )
-
-                    if results:
+                    if results := await self._try_provider(
+                        provider_name, query, country, client, api_usage_service
+                    ):
                         return results, provider_name
-
                 logger.warning("⚠️ All search providers failed or returned no results.")
                 return [], None
-
             except Exception as e:
-                logger.error(
-                    f"❌ Critical error in MultiProviderSearchClient: {e}",
-                    exc_info=True,
-                )
+                logger.error(f"❌ Critical error in search client: {e}", exc_info=True)
                 return [], None
             finally:
-                # Ensure database session is always closed
-                if db_session:
-                    try:
-                        db_session.close()
-                    except Exception as e:
-                        logger.error(f"❌ Error closing database session: {e}")
+                db_session.close()
 
 
 # Instantiate clients for use in the graph
