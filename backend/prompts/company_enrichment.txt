@@ -38,6 +38,7 @@ Reageer met een schoon JSON-object dat overeenkomt met deze structuur:
   "recent_news": "laatste ontwikkelingen, nieuws of updates in het Nederlands of null",
   "website_url": "official website URL or null",
   "enriched_data": "korte samenvatting van belangrijke bedrijfsinformatie in het Nederlands",
+  "estimated_revenue": "geschatte jaaromzet bereik (bijv. '€1M-€5M', '€5M-€25M', '€25M+') of null",
   "qualification_details": {
     "financial_stability": 75,
     "equipment_need": 80,

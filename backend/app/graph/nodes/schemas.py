@@ -3,53 +3,57 @@ from pydantic import BaseModel, Field
 
 
 class QualificationDetails(BaseModel):
-    """Represents the qualification scores for a lead."""
+    """Vertegenwoordigt de kwalificatiescores voor een lead."""
 
     financial_stability: int = Field(
-        description="Score (0-100) based on company maturity, growth indicators, financial mentions",
+        description="Score (0-100) gebaseerd op bedrijfsvolwassenheid, groei-indicatoren, financiële vermeldingen",
         default=0,
     )
     equipment_need: int = Field(
-        description="Score (0-100) based on explicit equipment needs, technology gaps, expansion plans",
+        description="Score (0-100) gebaseerd op expliciete apparatuurbehoeften, technologische tekortkomingen, uitbreidingsplannen",
         default=0,
     )
     timing: int = Field(
-        description="Score (0-100) based on recent developments, expansion plans, immediate needs mentioned",
+        description="Score (0-100) gebaseerd op recente ontwikkelingen, uitbreidingsplannen, genoemde onmiddellijke behoeften",
         default=0,
     )
     decision_authority: int = Field(
-        description="Score (0-100) based on contact information quality, leadership visibility",
+        description="Score (0-100) gebaseerd op de kwaliteit van contactinformatie, zichtbaarheid van leiderschap",
         default=0,
     )
 
 
 class EnrichedCompanyData(BaseModel):
-    """Represents the structured data extracted from a company's website."""
+    """Vertegenwoordigt de gestructureerde gegevens geëxtraheerd van de website van een bedrijf."""
 
     contact_email: Optional[str] = Field(
-        description="Primary contact email or null", default=None
+        description="Primair contact e-mailadres of null", default=None
     )
     contact_phone: Optional[str] = Field(
-        description="Primary phone number or null", default=None
+        description="Primair telefoonnummer of null", default=None
     )
     location_details: Optional[str] = Field(
-        description="Full address/location or null", default=None
+        description="Volledig adres/locatie of null", default=None
     )
     employee_count: Optional[str] = Field(
-        description="Employee range (e.g., '10-50') or null", default=None
+        description="Medewerkersaantal bereik (bijv. '10-50') of null", default=None
     )
     equipment_needs: Optional[str] = Field(
-        description="Specific equipment/technology needs mentioned or null",
+        description="Specifieke genoemde apparatuur/technologiebehoeften of null",
         default=None,
     )
     recent_news: Optional[str] = Field(
-        description="Latest developments, news, or updates or null", default=None
+        description="Laatste ontwikkelingen, nieuws of updates of null", default=None
     )
     website_url: Optional[str] = Field(
-        description="Official website URL or null", default=None
+        description="Officiële website URL of null", default=None
     )
     enriched_data: Optional[str] = Field(
-        description="Brief summary of key business information", default=None
+        description="Korte samenvatting van belangrijke bedrijfsinformatie",
+        default=None,
+    )
+    estimated_revenue: Optional[str] = Field(
+        description="Geschat jaaromzet bereik (bijv. '€1M-€5M') of null", default=None
     )
     qualification_details: QualificationDetails = Field(
         default_factory=QualificationDetails

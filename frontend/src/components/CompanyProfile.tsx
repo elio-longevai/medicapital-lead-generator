@@ -303,6 +303,14 @@ export const CompanyProfile = ({ company, onBack }) => {
 												</div>
 												<div>
 													<span className="text-sm font-medium text-gray-500">
+														Geschatte Omzet
+													</span>
+													<p className="mt-1 text-gray-900">
+														{company.estimatedRevenue || "Niet beschikbaar"}
+													</p>
+												</div>
+												<div>
+													<span className="text-sm font-medium text-gray-500">
 														Apparatuurbehoefte
 													</span>
 													<p className="mt-1 text-gray-900">
@@ -342,6 +350,23 @@ export const CompanyProfile = ({ company, onBack }) => {
 										</div>
 									</CardContent>
 								</Card>
+
+								{/* Company Description */}
+								{company.description && (
+									<Card>
+										<CardHeader>
+											<CardTitle className="flex items-center">
+												<FileText className="h-5 w-5 mr-2" />
+												Beschrijving
+											</CardTitle>
+										</CardHeader>
+										<CardContent>
+											<p className="text-gray-900 leading-relaxed">
+												{company.description}
+											</p>
+										</CardContent>
+									</Card>
+								)}
 
 								{/* Recent News & Activity */}
 								{activities.length > 0 && (
@@ -472,7 +497,7 @@ export const CompanyProfile = ({ company, onBack }) => {
 									disabled={updateStatusMutation.isPending}
 								>
 									<Check className="h-4 w-4 mr-2" />
-									Markeer als Gecontacteerd
+									Markeer als gecontacteerd
 								</Button>
 								<AlertDialog
 									open={isRejectDialogOpen}
@@ -481,7 +506,7 @@ export const CompanyProfile = ({ company, onBack }) => {
 									<AlertDialogTrigger asChild>
 										<Button variant="destructive" className="w-full" size="sm">
 											<Trash2 className="h-4 w-4 mr-2" />
-											Wijs Lead af
+											Lead afwijzen
 										</Button>
 									</AlertDialogTrigger>
 									<AlertDialogContent>
@@ -502,7 +527,7 @@ export const CompanyProfile = ({ company, onBack }) => {
 											>
 												{updateStatusMutation.isPending
 													? "Bezig met afwijzen..."
-													: "Ja, Wijs Lead af"}
+													: "Ja, Lead afwijzen"}
 											</AlertDialogAction>
 										</AlertDialogFooter>
 									</AlertDialogContent>

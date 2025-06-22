@@ -163,6 +163,12 @@ class CompanyService:
             else "Onbekend"
         )
 
+        # Extract description from enriched_data
+        description = None
+        if company.enriched_data and isinstance(company.enriched_data, dict):
+            # The description is stored in the "enriched_data" field within the enriched_data JSON
+            description = company.enriched_data.get("enriched_data")
+
         return CompanyResponse(
             id=company.id,
             company=company.discovered_name,
@@ -184,6 +190,8 @@ class CompanyService:
             qualificationScore=qualification_score,
             icpName=company.icp_name,
             qualificationReasoning=company.qualification_reasoning,
+            estimatedRevenue=company.estimated_revenue,
+            description=description,
         )
 
     def _calculate_default_score(self, company: Company) -> int:

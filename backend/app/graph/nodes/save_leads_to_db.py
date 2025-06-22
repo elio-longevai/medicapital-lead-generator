@@ -54,7 +54,10 @@ def save_leads_to_db(state: GraphState) -> dict:
                 new_company.employee_count = enriched_data.get("employee_count")
                 new_company.equipment_needs = enriched_data.get("equipment_needs")
                 new_company.recent_news = enriched_data.get("recent_news")
-                new_company.enriched_data = enriched_data.get("enriched_data")
+                new_company.enriched_data = (
+                    enriched_data  # Store the entire enriched data dictionary
+                )
+                new_company.estimated_revenue = enriched_data.get("estimated_revenue")
                 new_company.qualification_details = enriched_data.get(
                     "qualification_details"
                 )

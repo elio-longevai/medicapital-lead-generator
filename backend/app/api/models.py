@@ -33,6 +33,8 @@ class CompanyResponse(BaseModel):
     qualificationScore: QualificationScore
     icpName: Optional[str] = None
     qualificationReasoning: Optional[str] = None
+    estimatedRevenue: Optional[str] = None  # estimated_revenue
+    description: Optional[str] = None  # enriched_data description
 
     class Config:
         from_attributes = True

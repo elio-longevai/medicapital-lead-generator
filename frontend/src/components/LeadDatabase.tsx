@@ -167,63 +167,6 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 							</Select>
 						</div>
 					</div>
-
-					{/* Export Section */}
-					<div className="flex justify-between items-center pt-4 border-t border-slate-200">
-						<div className="text-sm text-slate-600">
-							{companies.length} resultaten gevonden
-						</div>
-						<Button
-							variant="outline"
-							onClick={() => {
-								const csvContent = [
-									[
-										"Bedrijf",
-										"Industrie",
-										"Score",
-										"Status",
-										"Locatie",
-										"Medewerkers",
-										"Apparatuurbehoefte",
-										"Email",
-										"Telefoon",
-									],
-									...companies.map((company) => [
-										company.company,
-										company.industry,
-										company.score,
-										company.status,
-										company.location,
-										company.employees,
-										company.equipmentNeed,
-										company.email || "",
-										company.phone || "",
-									]),
-								]
-									.map((row) => row.join(","))
-									.join("\n");
-
-								const blob = new Blob([csvContent], {
-									type: "text/csv;charset=utf-8;",
-								});
-								const link = document.createElement("a");
-								const url = URL.createObjectURL(blob);
-								link.setAttribute("href", url);
-								link.setAttribute(
-									"download",
-									`leads_export_${new Date().toISOString().split("T")[0]}.csv`,
-								);
-								link.style.visibility = "hidden";
-								document.body.appendChild(link);
-								link.click();
-								document.body.removeChild(link);
-							}}
-							className="flex items-center gap-2"
-						>
-							<Download className="h-4 w-4" />
-							Exporteer CSV
-						</Button>
-					</div>
 				</CardContent>
 			</Card>
 
@@ -290,6 +233,17 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 												{lead.employees}
 											</span>
 										</div>
+										<div>
+											<span className="text-slate-600 block">
+												Geschatte Omzet
+											</span>
+											<span className="font-semibold text-slate-900">
+												{lead.estimatedRevenue || "Niet bekend"}
+											</span>
+										</div>
+									</div>
+
+									<div className="grid grid-cols-1 gap-4 text-sm mt-4">
 										<div>
 											<span className="text-slate-600 block">Industrie</span>
 											<span className="font-semibold text-slate-900">

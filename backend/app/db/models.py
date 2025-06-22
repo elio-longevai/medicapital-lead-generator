@@ -68,6 +68,7 @@ class Company(Base):
         SafeJSON, nullable=True
     )  # Detailed qualification breakdown
     location_details = Column(String, nullable=True)  # Full location (city, country)
+    estimated_revenue = Column(String, nullable=True)  # Estimated annual revenue
 
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(

@@ -26,6 +26,8 @@ export interface Company {
   };
   icpName?: string;
   qualificationReasoning?: string;
+  estimatedRevenue?: string;
+  description?: string;
 }
 
 export interface CompanyListResponse {
