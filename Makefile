@@ -139,7 +139,7 @@ run-backend:
 	@echo "\n🇳🇱 Running lead generation for Netherlands..."
 	@echo "--> This will discover and qualify B2B leads in the Netherlands"
 	@echo "--> Rate limited to 1 search per second to respect API limits"
-	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main run-once --country NL
+	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main run-once
 
 run-test:
 	@echo "\n🧪 Running short test of lead generation pipeline (5 queries)..."
