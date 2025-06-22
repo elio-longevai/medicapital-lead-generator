@@ -38,9 +38,6 @@ class EnrichedCompanyData(BaseModel):
     employee_count: Optional[str] = Field(
         description="Employee range (e.g., '10-50') or null", default=None
     )
-    estimated_revenue: Optional[str] = Field(
-        description="Revenue estimate (e.g., '€1M-5M') or null", default=None
-    )
     equipment_needs: Optional[str] = Field(
         description="Specific equipment/technology needs mentioned or null",
         default=None,

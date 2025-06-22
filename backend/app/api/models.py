@@ -20,16 +20,19 @@ class CompanyResponse(BaseModel):
     location: str  # formatted location
     score: int  # calculated from qualification_score
     status: str
-    lastActivity: str  # formatted created_at
+    lastActivity: str  # formatted updated_at
+    createdAt: str  # formatted created_at
     equipmentNeed: str
-    estimatedValue: str  # estimated_deal_value
     employees: str  # employee_count
     website: str  # website_url or source_url
+    sourceUrl: str
     email: Optional[str] = None  # contact_email
     phone: Optional[str] = None  # contact_phone
     notes: str  # initial_reasoning
     recentNews: Optional[str] = None  # recent_news
     qualificationScore: QualificationScore
+    icpName: Optional[str] = None
+    qualificationReasoning: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -62,9 +62,7 @@ class Company(Base):
     contact_email = Column(String, nullable=True)
     contact_phone = Column(String, nullable=True)
     employee_count = Column(String, nullable=True)  # e.g., "10-50", "100-250"
-    estimated_revenue = Column(String, nullable=True)  # e.g., "€1M-5M"
     equipment_needs = Column(Text, nullable=True)  # Specific equipment requirements
-    estimated_deal_value = Column(String, nullable=True)  # e.g., "€35,000-€125,000"
     recent_news = Column(Text, nullable=True)  # Latest company news/developments
     qualification_details = Column(
         SafeJSON, nullable=True

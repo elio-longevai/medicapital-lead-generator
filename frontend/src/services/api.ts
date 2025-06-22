@@ -9,10 +9,11 @@ export interface Company {
   score: number;
   status: string;
   lastActivity: string;
+  createdAt: string;
   equipmentNeed: string;
-  estimatedValue: string;
   employees: string;
   website: string;
+  sourceUrl: string;
   email?: string;
   phone?: string;
   notes: string;
@@ -23,6 +24,8 @@ export interface Company {
     timing: number;
     decisionAuthority: number;
   };
+  icpName?: string;
+  qualificationReasoning?: string;
 }
 
 export interface CompanyListResponse {
@@ -39,7 +42,7 @@ export interface DashboardStats {
   discoveredLeads: number;
   qualificationRate: number;
   avgScore: number;
-  topIndustries: Array<{industry: string; count: number}>;
+  topIndustries: Array<{ industry: string; count: number }>;
 }
 
 class ApiService {
@@ -53,12 +56,12 @@ class ApiService {
     sort_by?: string;
   } = {}): Promise<CompanyListResponse> {
     const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
         searchParams.append(key, value.toString());
       }
-    });
-    
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/companies?${searchParams}`);
     if (!response.ok) throw new Error('Failed to fetch companies');
     return response.json();
@@ -72,15 +75,15 @@ class ApiService {
 
   async updateCompanyStatus(id: number, status: 'contacted' | 'rejected'): Promise<Company> {
     const response = await fetch(`${API_BASE_URL}/api/companies/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
     });
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `Failed to update company status to ${status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `Failed to update company status to ${status}`);
     }
     return response.json();
   }

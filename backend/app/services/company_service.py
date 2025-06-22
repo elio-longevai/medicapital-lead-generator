@@ -151,34 +151,41 @@ class CompanyService:
         )
 
         # Format location
-        location = f"{company.location_details or 'Unknown'}, {company.country}"
+        location = f"{company.location_details or 'Onbekend'}, {company.country}"
 
         # Format last activity
         last_activity = (
             company.updated_at.strftime("%b %d, %Y")
             if company.updated_at
-            else "Unknown"
+            else "Onbekend"
+        )
+        created_at = (
+            company.created_at.strftime("%b %d, %Y")
+            if company.created_at
+            else "Onbekend"
         )
 
         return CompanyResponse(
             id=company.id,
             company=company.discovered_name,
-            industry=company.primary_industry or "Unknown",
+            industry=company.primary_industry or "Onbekend",
             location=location,
             score=score,
             status=company.status,
             lastActivity=last_activity,
+            createdAt=created_at,
             equipmentNeed=company.equipment_needs
             or self._infer_equipment_need(company),
-            estimatedValue=company.estimated_deal_value
-            or self._calculate_deal_value(company),
             employees=company.employee_count or self._estimate_employees(company),
             website=company.website_url or company.source_url,
+            sourceUrl=company.source_url,
             email=company.contact_email,
             phone=company.contact_phone,
             notes=company.initial_reasoning,
             recentNews=company.recent_news,
             qualificationScore=qualification_score,
+            icpName=company.icp_name,
+            qualificationReasoning=company.qualification_reasoning,
         )
 
     def _calculate_default_score(self, company: Company) -> int:
@@ -192,20 +199,11 @@ class CompanyService:
 
     def _infer_equipment_need(self, company: Company) -> str:
         industry_equipment = {
-            "Healthcare": "Medical Equipment",
-            "Beauty & Wellness": "Beauty Equipment",
-            "Horeca": "Kitchen Equipment",
+            "Healthcare": "Medische apparatuur",
+            "Beauty & Wellness": "Beauty-apparatuur",
+            "Horeca": "Keukenapparatuur",
         }
-        return industry_equipment.get(company.primary_industry, "Equipment")
-
-    def _calculate_deal_value(self, company: Company) -> str:
-        # Industry-based deal value estimation
-        industry_values = {
-            "Healthcare": "€75,000-€125,000",
-            "Beauty & Wellness": "€35,000-€65,000",
-            "Horeca": "€25,000-€45,000",
-        }
-        return industry_values.get(company.primary_industry, "€35,000-€75,000")
+        return industry_equipment.get(company.primary_industry, "Apparatuur")
 
     def _estimate_employees(self, company: Company) -> str:
         # Default employee estimates by industry

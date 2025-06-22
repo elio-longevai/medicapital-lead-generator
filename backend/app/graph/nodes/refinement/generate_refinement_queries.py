@@ -10,7 +10,6 @@ FIELD_NAME_TRANSLATIONS_NL = {
     "contact_email": "e-mailadres",
     "contact_phone": "telefoonnummer",
     "employee_count": "aantal medewerkers",
-    "estimated_revenue": "geschatte omzet",
     "equipment_needs": "producten en diensten",
     "recent_news": "recent nieuws",
     "location_details": "adres",

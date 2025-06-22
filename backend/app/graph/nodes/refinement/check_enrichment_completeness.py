@@ -10,7 +10,6 @@ ENRICHABLE_FIELDS = [
     "contact_phone",
     "location_details",
     "employee_count",
-    "estimated_revenue",
     "equipment_needs",
     "recent_news",
 ]
