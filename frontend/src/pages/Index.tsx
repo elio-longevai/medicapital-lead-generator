@@ -164,14 +164,14 @@ const Index = () => {
 						</TabsTrigger>
 					</TabsList>
 
-					<TabsContent value="dashboard" className="space-y-8">
-						{/* Metrics Overview */}
+					<TabsContent value="dashboard" className="space-y-6">
+						{/* Key Metrics */}
 						{dashboardLoading ? (
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-								{[...Array(4)].map((_, index) => (
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								{[...Array(3)].map((_, index) => (
 									<Card
 										key={`loading-metric-skeleton-${Date.now()}-${index}`}
-										className="bg-white/80 backdrop-blur-sm border-0 shadow-xl"
+										className="bg-white/80 backdrop-blur-sm border-0 shadow-lg"
 									>
 										<CardContent className="p-6">
 											<div className="animate-pulse">
@@ -184,233 +184,202 @@ const Index = () => {
 								))}
 							</div>
 						) : (
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-								{dashboardMetrics.map((metric) => (
-									<Card
-										key={metric.title}
-										className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-									>
-										<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-											<CardTitle className="text-sm font-semibold text-slate-700">
-												{metric.title}
-											</CardTitle>
-											<div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-												<metric.icon className="h-5 w-5 text-blue-600" />
-											</div>
-										</CardHeader>
-										<CardContent>
-											<div className="text-3xl font-bold text-slate-900 mb-2">
-												{metric.value}
-											</div>
-											<div className="flex items-center text-sm mb-1">
-												<span
-													className={`font-medium ${
-														metric.changeType === "positive"
-															? "text-emerald-600"
-															: metric.changeType === "neutral"
-																? "text-slate-600"
-																: "text-red-600"
-													}`}
-												>
-													{metric.change}
-												</span>
-											</div>
-											<p className="text-xs text-slate-500">
-												{metric.description}
-											</p>
-										</CardContent>
-									</Card>
-								))}
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+									<CardContent className="p-6">
+										<div className="flex items-center justify-between mb-4">
+											<h3 className="text-sm font-semibold text-slate-700">
+												Totaal Leads
+											</h3>
+											<Users className="h-5 w-5 text-blue-600" />
+										</div>
+										<div className="text-2xl font-bold text-slate-900 mb-1">
+											{dashboardData?.totalLeads || "0"}
+										</div>
+										<p className="text-sm text-emerald-600 font-medium">
+											{dashboardData
+												? `${dashboardData.qualificationRate.toFixed(1)}% gekwalificeerd`
+												: "Laden..."}
+										</p>
+									</CardContent>
+								</Card>
+
+								<Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+									<CardContent className="p-6">
+										<div className="flex items-center justify-between mb-4">
+											<h3 className="text-sm font-semibold text-slate-700">
+												Hoogwaardige Prospects
+											</h3>
+											<Target className="h-5 w-5 text-green-600" />
+										</div>
+										<div className="text-2xl font-bold text-slate-900 mb-1">
+											{dashboardData?.qualifiedLeads || "0"}
+										</div>
+										<p className="text-sm text-slate-600">
+											Klaar voor outreach
+										</p>
+									</CardContent>
+								</Card>
+
+								<Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+									<CardContent className="p-6">
+										<div className="flex items-center justify-between mb-4">
+											<h3 className="text-sm font-semibold text-slate-700">
+												Actieve Sectoren
+											</h3>
+											<TrendingUp className="h-5 w-5 text-indigo-600" />
+										</div>
+										<div className="text-2xl font-bold text-slate-900 mb-1">
+											{dashboardData?.topIndustries.length || "0"}
+										</div>
+										<p className="text-sm text-slate-600">
+											Doelgerichte campagnes
+										</p>
+									</CardContent>
+								</Card>
 							</div>
 						)}
 
-						{/* ICP Status & Recent Leads */}
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-							{/* ICP Development Status */}
-							<Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+						{/* Main Content */}
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							{/* Active Campaigns */}
+							<Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
 								<CardHeader>
-									<CardTitle>Campagne Overzicht</CardTitle>
+									<CardTitle className="flex items-center">
+										<Building2 className="h-5 w-5 mr-2 text-blue-600" />
+										Actieve Campagnes
+									</CardTitle>
 									<CardDescription>
-										Geautomatiseerde leadontdekking draait voor de volgende
-										klantprofielen.
+										Geautomatiseerde leadgeneratie per doelgroep
 									</CardDescription>
 								</CardHeader>
-								<CardContent className="space-y-6">
-									<div className="space-y-4">
-										<div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200">
-											<div className="flex items-center">
-												<Building2 className="h-5 w-5 text-emerald-600 mr-3" />
-												<div>
-													<h4 className="font-semibold text-emerald-900">
-														De Groene Groeipartner
-													</h4>
-													<p className="text-sm text-emerald-700">
-														Producenten & installateurs van groene technologie.
-													</p>
-												</div>
-											</div>
-											<Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-												Actief
-											</Badge>
+								<CardContent className="space-y-3">
+									<div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+										<div>
+											<h4 className="font-medium text-emerald-900">
+												Groene Technologie
+											</h4>
+											<p className="text-sm text-emerald-700">
+												Producenten & installateurs
+											</p>
 										</div>
-
-										<div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-											<div className="flex items-center">
-												<Sparkles className="h-5 w-5 text-blue-600 mr-3" />
-												<div>
-													<h4 className="font-semibold text-blue-900">
-														De Slimme Energieverbruiker
-													</h4>
-													<p className="text-sm text-blue-700">
-														Bedrijven met een hoog energieverbruik (MKB+).
-													</p>
-												</div>
-											</div>
-											<Badge className="bg-blue-100 text-blue-800 border-blue-200">
-												Actief
-											</Badge>
-										</div>
-
-										<div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-											<div className="flex items-center">
-												<Users className="h-5 w-5 text-amber-600 mr-3" />
-												<div>
-													<h4 className="font-semibold text-amber-900">
-														De Praktijkhouder-Ondernemer
-													</h4>
-													<p className="text-sm text-amber-700">
-														Privéklinieken & zelfstandige praktijken.
-													</p>
-												</div>
-											</div>
-											<Badge className="bg-amber-100 text-amber-800 border-amber-200">
-												Actief
-											</Badge>
-										</div>
+										<Badge className="bg-emerald-100 text-emerald-800">
+											Actief
+										</Badge>
 									</div>
 
-									<div className="pt-4 border-t border-slate-200">
-										<div className="flex items-center justify-between mb-4">
-											<h4 className="font-semibold text-slate-900">
-												Leadontdekking Status
+									<div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+										<div>
+											<h4 className="font-medium text-blue-900">
+												Energieverbruikers
 											</h4>
-											<Badge
-												variant="outline"
-												className="bg-blue-100 text-blue-800 border-blue-200"
-											>
-												<Globe className="h-3 w-3 mr-1" />
-												Scannen Actief
-											</Badge>
+											<p className="text-sm text-blue-700">
+												MKB+ met hoog verbruik
+											</p>
 										</div>
-										<div className="space-y-2 text-sm">
-											<div className="flex justify-between">
-												<span className="text-slate-600">
-													Dagelijks ontdekkingspercentage
-												</span>
-												<span className="font-semibold text-slate-900">
-													15-25 leads
-												</span>
-											</div>
-											<div className="flex justify-between">
-												<span className="text-slate-600">
-													Kwaliteitsdrempel
-												</span>
-												<span className="font-semibold text-emerald-600">
-													75%+ match
-												</span>
-											</div>
+										<Badge className="bg-blue-100 text-blue-800">Actief</Badge>
+									</div>
+
+									<div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+										<div>
+											<h4 className="font-medium text-amber-900">
+												Zorgverleners
+											</h4>
+											<p className="text-sm text-amber-700">
+												Klinieken & praktijken
+											</p>
+										</div>
+										<Badge className="bg-amber-100 text-amber-800">
+											Actief
+										</Badge>
+									</div>
+
+									<div className="pt-3 border-t border-slate-200">
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-slate-600">
+												Dagelijkse ontdekking:
+											</span>
+											<span className="text-sm font-semibold text-slate-900">
+												15-25 leads
+											</span>
 										</div>
 									</div>
 								</CardContent>
 							</Card>
 
-							{/* Recent High-Quality Leads */}
-							<Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+							{/* Recent Leads */}
+							<Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
 								<CardHeader>
-									<CardTitle className="flex items-center text-xl">
-										<Sparkles className="h-6 w-6 mr-3 text-indigo-600" />
-										Recente Hoogwaardige Leads
+									<CardTitle className="flex items-center">
+										<Sparkles className="h-5 w-5 mr-2 text-indigo-600" />
+										Recente Leads
 									</CardTitle>
-									<CardDescription className="text-base">
-										Nieuwste prospects die voldoen aan ICP-criteria
+									<CardDescription>
+										Nieuwste hoogwaardige prospects
 									</CardDescription>
 								</CardHeader>
-								<CardContent className="space-y-4">
+								<CardContent className="space-y-3">
 									{leadsLoading ? (
-										<div className="space-y-4">
+										<div className="space-y-3">
 											{[...Array(3)].map((_, index) => (
 												<div
-													key={`loading-lead-skeleton-${Date.now()}-${index}`}
-													className="p-5 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl"
+													key={`loading-lead-skeleton-${Date.now()}-${Math.random()}-${index}`}
+													className="p-3 bg-slate-50 border border-slate-200 rounded-lg"
 												>
 													<div className="animate-pulse">
 														<div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
-														<div className="h-3 bg-slate-200 rounded w-1/2 mb-2" />
-														<div className="h-3 bg-slate-200 rounded w-full" />
+														<div className="h-3 bg-slate-200 rounded w-1/2" />
 													</div>
 												</div>
 											))}
 										</div>
 									) : recentLeads.length > 0 ? (
 										<>
-											{recentLeads.map((lead) => (
+											{recentLeads.slice(0, 4).map((lead) => (
 												<button
 													key={lead.id}
 													type="button"
-													className="flex items-center justify-between p-5 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl hover:shadow-lg cursor-pointer transition-all duration-200 hover:border-blue-300 group w-full text-left"
+													className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-all duration-200 group w-full text-left"
 													onClick={() => setSelectedCompany(lead)}
-													aria-label={`Selecteer ${lead.company} lead`}
+													aria-label={`Bekijk ${lead.company}`}
 												>
 													<div className="flex-1">
-														<div className="flex items-center justify-between mb-3">
-															<h4 className="font-semibold text-slate-900 text-lg group-hover:text-blue-900 transition-colors">
+														<div className="flex items-center justify-between mb-1">
+															<h4 className="font-medium text-slate-900 group-hover:text-blue-900">
 																{lead.company}
 															</h4>
-															<div className="flex items-center space-x-2">
-																<div
-																	className={`flex items-center font-bold text-lg ${getScoreColor(lead.score)}`}
-																>
-																	{lead.score}
-																	<Star className="h-4 w-4 ml-1 text-amber-500" />
-																</div>
+															<div
+																className={`text-sm font-semibold ${getScoreColor(lead.score)}`}
+															>
+																{lead.score}
 															</div>
 														</div>
-														<div className="flex items-center justify-between text-sm mb-2">
-															<span className="text-slate-600 font-medium">
+														<div className="flex items-center justify-between text-sm">
+															<span className="text-slate-600">
 																{lead.industry}
 															</span>
 															{getStatusBadge(lead.status)}
 														</div>
-														<div className="flex items-center justify-between">
-															<span className="text-slate-700 font-medium">
-																{lead.equipmentNeed}
-															</span>
-														</div>
-														<div className="flex items-center justify-between mt-2 text-xs text-slate-500">
-															<span>{lead.location}</span>
-															<span>{lead.lastActivity}</span>
-														</div>
 													</div>
-													<ArrowRight className="h-5 w-5 text-slate-400 ml-4 group-hover:text-blue-600 transition-colors" />
+													<ArrowRight className="h-4 w-4 text-slate-400 ml-3 group-hover:text-blue-600" />
 												</button>
 											))}
+											<Button
+												variant="outline"
+												className="w-full mt-2 text-sm"
+												onClick={() => setActiveTab("leads")}
+											>
+												Alle Leads Bekijken
+												<ArrowRight className="h-4 w-4 ml-2" />
+											</Button>
 										</>
 									) : (
-										<div className="text-center py-8">
-											<p className="text-slate-600">
+										<div className="text-center py-6">
+											<p className="text-slate-600 text-sm">
 												Geen recente leads gevonden
 											</p>
 										</div>
 									)}
-
-									<Button
-										variant="outline"
-										className="w-full mt-4 border-dashed border-2 border-slate-300 hover:border-blue-400 hover:bg-blue-50 transition-all"
-										onClick={() => setActiveTab("leads")}
-									>
-										Bekijk Alle Leads
-										<ArrowRight className="h-4 w-4 ml-2" />
-									</Button>
 								</CardContent>
 							</Card>
 						</div>
