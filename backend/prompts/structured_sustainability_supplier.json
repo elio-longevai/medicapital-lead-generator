@@ -1,0 +1,26 @@
+{
+  "sectors": [
+    "Sustainability"
+  ],
+  "target_entities": [
+    "Manufacturers",
+    "Distributors",
+    "Specialized Installers"
+  ],
+  "geo_focus": [
+    "NL"
+  ],
+  "key_products": [
+    "Battery storage systems",
+    "Commercial EV charging infrastructure",
+    "Large-scale solar energy projects",
+    "Heat pumps for commercial/industrial use",
+    "Infrared panels for commercial/industrial use",
+    "Electrified construction equipment",
+    "Energy transition solutions",
+    "Robotics"
+  ],
+  "financial_criteria": "Minimum 2-3 years in operation, Legal form: BV (private limited company), Stable sales flow, Not suitable for complex corporate finance structures.",
+  "scale_indicators": "5-25 employees (sweet spot 10-25 employees), Excludes companies >200 employees and <5 employees.",
+  "investment_range": "Capital-intensive sustainable solutions, larger deals (not small residential projects)."
+}

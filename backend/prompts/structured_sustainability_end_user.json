@@ -1,0 +1,26 @@
+{
+  "sectors": [
+    "Sustainability"
+  ],
+  "target_entities": [
+    "End-users",
+    "Manufacturing companies",
+    "Logistics centers",
+    "Warehouses",
+    "Agricultural companies",
+    "Data centers",
+    "Office buildings",
+    "Hospitality (with cold storage)",
+    "Companies focused on CO2 reduction"
+  ],
+  "geo_focus": [
+    "NL"
+  ],
+  "key_products": [
+    "Solar panels",
+    "Battery storage"
+  ],
+  "financial_criteria": "Minimum 3 years active and profitable, positive equity.",
+  "scale_indicators": "SME+ to large enterprises (including small to medium-sized data centers, large agricultural and office buildings).",
+  "investment_range": "€35,000 - €150,000"
+}

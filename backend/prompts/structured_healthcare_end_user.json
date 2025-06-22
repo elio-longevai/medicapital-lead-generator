@@ -1,0 +1,29 @@
+{
+  "sectors": [
+    "Healthcare"
+  ],
+  "target_entities": [
+    "Practice Owners",
+    "Independent Practices",
+    "Clinics",
+    "General Practitioner Practices",
+    "Physiotherapy Practices",
+    "Dental Practices",
+    "Independent Treatment Centers (ZBCs)",
+    "Private Clinics",
+    "Skin Therapy Clinics",
+    "Eye Clinics",
+    "Wellness/Beauty Clinics (with medically-certified equipment)"
+  ],
+  "geo_focus": [
+    "NL",
+    "BE"
+  ],
+  "key_products": [
+    "Medical equipment",
+    "Medically-certified equipment (FDA-approved)"
+  ],
+  "financial_criteria": "Focus on cashflow management; preference for leasing solutions for equipment and financing.",
+  "scale_indicators": null,
+  "investment_range": null
+}
