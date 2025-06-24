@@ -79,7 +79,7 @@ async def _scrape_company_website(
     try:
         # Use a client configured for JSON mode to improve reliability
         json_llm_client = llm_client.with_structured_output(EnrichedCompanyData)
-        response = await asyncio.to_thread(json_llm_client.invoke, final_prompt)
+        response = await json_llm_client.ainvoke(final_prompt)
 
         # The response should already be a dictionary when using structured_output
         enriched_data = response.model_dump()
@@ -98,11 +98,13 @@ async def _scrape_company_website(
         return None
 
 
-def scrape_and_enrich_companies(state: GraphState) -> dict:
+async def scrape_and_enrich_companies(state: GraphState) -> dict:
     """Scrapes company websites and enriches data with LLM analysis in parallel."""
     logger.info(
         f"---NODE: Scraping and Enriching {len(state.candidate_leads)} Companies---"
     )
+    if not state.candidate_leads:
+        return {"enriched_companies": []}
 
     # Load the enrichment prompt
     enrichment_prompt_path = (
@@ -120,32 +122,25 @@ def scrape_and_enrich_companies(state: GraphState) -> dict:
             ]
         }
 
-    async def _run_enrichment():
-        # Create a list of async tasks to run concurrently
-        tasks = [
-            _scrape_company_website(lead, enrichment_prompt)
-            for lead in state.candidate_leads
-        ]
-        enriched_results = await asyncio.gather(*tasks)
+    # Create a list of async tasks to run concurrently
+    tasks = [
+        _scrape_company_website(lead, enrichment_prompt)
+        for lead in state.candidate_leads
+    ]
+    enriched_results = await asyncio.gather(*tasks)
 
-        # Pair original leads with their new, enriched data
-        final_enriched_companies = []
-        for lead, data in zip(state.candidate_leads, enriched_results):
-            final_enriched_companies.append({"lead": lead, "enriched_data": data})
-            if data:
-                logger.info(
-                    f"    ✓ Successfully enriched data for {lead.discovered_name}"
-                )
-            else:
-                logger.warning(
-                    f"    - No enrichment data returned for {lead.discovered_name}"
-                )
-        return final_enriched_companies
-
-    # Run the entire async enrichment process
-    enriched_companies = asyncio.run(_run_enrichment())
+    # Pair original leads with their new, enriched data
+    final_enriched_companies = []
+    for lead, data in zip(state.candidate_leads, enriched_results):
+        final_enriched_companies.append({"lead": lead, "enriched_data": data})
+        if data:
+            logger.info(f"    ✓ Successfully enriched data for {lead.discovered_name}")
+        else:
+            logger.warning(
+                f"    - No enrichment data returned for {lead.discovered_name}"
+            )
 
     logger.info(
-        f"  > Completed scraping. {len([c for c in enriched_companies if c['enriched_data']])} companies enriched."
+        f"  > Completed scraping. {len([c for c in final_enriched_companies if c['enriched_data']])} companies enriched."
     )
-    return {"enriched_companies": enriched_companies}
+    return {"enriched_companies": final_enriched_companies}

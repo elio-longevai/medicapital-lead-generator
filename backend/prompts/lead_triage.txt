@@ -22,16 +22,9 @@ Beslis, uitsluitend op basis van de verstrekte `title` en `description` van het 
 **Analyse en Uitvoer:**
 1.  **Analyseer:** Duidt de tekst op een specifiek B2B-bedrijf? Past het binnen de sectoren en geografie?
 2.  **Rechtvaardig:** Als het een potentiële lead is, schrijf dan een korte rechtvaardiging van één zin in het Nederlands, waarin u uitlegt *waarom* het goed past op basis van de tekst.
-3.  **Formatteer:** Reageer met een enkel, schoon JSON-object dat overeenkomt met het volgende Pydantic-model.
+3.  **Formatteer:** Reageer met een enkel, schoon JSON-object dat overeenkomt met de gevraagde structuur.
 
-```pydantic
-class CandidateLead(BaseModel):
-    discovered_name: str
-    source_url: str
-    country: str
-    primary_industry: str
-    initial_reasoning: str
-```
+{format_instructions}
 
-- Als het resultaat een **GOEDE LEAD** is, vul dan het JSON-object in. Gebruik de verstrekte `{source_url}` en `{country}`. De velden `primary_industry` en `initial_reasoning` moeten in het Nederlands zijn.
-- Als het resultaat **GEEN LEAD** is (bijv. een nieuwsartikel, een forum, een bedrijvengids zoals 'Europages', een overheidswebsite), **MOET** u antwoorden met het woord `null` en niets anders.
+- Als het resultaat een **GOEDE LEAD** is, vul dan het JSON-object volledig in. Gebruik de verstrekte `{source_url}` en `{country}`. Gebruik Nederlands.
+- Als het resultaat **GEEN LEAD** is (bijv. een nieuwsartikel, een forum, een bedrijvengids), **MOET** u een JSON-object retourneren waarin het veld `discovered_name` de waarde `null` heeft.

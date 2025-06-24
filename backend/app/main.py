@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import typer
 from pathlib import Path
@@ -56,13 +57,13 @@ def load_icp_text(filename: str) -> str:
         raise typer.Exit(code=1)
 
 
-def _run_single_icp_workflow(
+async def _arun_single_icp_workflow(
     icp_name: str,
     raw_icp_text: str,
     country_code: str,
     queries_per_icp: int | None,
 ):
-    """Executes the full lead generation workflow for a single ICP."""
+    """Executes the full lead generation workflow for a single ICP asynchronously."""
     logging.info(f"\n{'=' * 50}")
     logging.info(f"🚀 STARTING RUN FOR ICP: {icp_name} ({country_code.upper()}) 🚀")
     if queries_per_icp:
@@ -76,9 +77,8 @@ def _run_single_icp_workflow(
         queries_per_icp=queries_per_icp,
     )
 
-    # The .stream() method is useful for observing the state at each step
     final_state = None
-    for event in main_workflow.stream(initial_state):
+    async for event in main_workflow.astream(initial_state):
         state_key = list(event.keys())[0]
         final_state = event[state_key]
         # logging.info(f"--- Just finished {state_key} ---") # Optional: for verbose debugging
@@ -90,11 +90,11 @@ def _run_single_icp_workflow(
     logging.info(f"{'=' * 50}\n")
 
 
-def run_all_icps(queries_per_icp: int | None = None):
+async def arun_all_icps(queries_per_icp: int | None = None):
     """Iterates through all configured ICPs and runs the workflow for each."""
     for icp_config in ICP_CONFIG:
         raw_icp_text = load_icp_text(icp_config["file"])
-        _run_single_icp_workflow(
+        await _arun_single_icp_workflow(
             icp_name=icp_config["name"],
             raw_icp_text=raw_icp_text,
             country_code=icp_config["country"],
@@ -109,7 +109,7 @@ def run_once(
     ),
 ):
     """Run the lead generation process one time for all configured ICPs."""
-    run_all_icps(queries_per_icp)
+    asyncio.run(arun_all_icps(queries_per_icp))
 
 
 @cli.command()
@@ -122,13 +122,16 @@ def start_scheduler(
     """
     Start a scheduler to run lead generation for all ICPs periodically.
     """
-    scheduler = BlockingScheduler(timezone="UTC")
 
+    def sync_run_all_icps():
+        """Wrapper to run the async function in a sync context for the scheduler."""
+        asyncio.run(arun_all_icps(queries_per_icp))
+
+    scheduler = BlockingScheduler(timezone="UTC")
     scheduler.add_job(
-        run_all_icps,
+        sync_run_all_icps,
         "interval",
         hours=interval_hours,
-        kwargs={"queries_per_icp": queries_per_icp},
         id="all_icps_run",
         next_run_time=datetime.datetime.now(datetime.timezone.utc),
     )

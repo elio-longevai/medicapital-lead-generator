@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 
 
 class CandidateLead(BaseModel):
     """A pre-vetted lead, extracted from search results."""
 
-    discovered_name: str = Field(description="The name of the company as found.")
+    discovered_name: Optional[str] = Field(
+        description="The name of the company as found.", default=None
+    )
     source_url: str = Field(
         description="The URL of the page where the company was mentioned."
     )

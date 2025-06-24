@@ -27,39 +27,38 @@ async def _triage_one_result(
                     "country": country,
                 }
             )
-            logger.info(f"  > PASS: Found potential lead '{candidate.discovered_name}'")
-            return candidate
-        except Exception:
-            logger.info("  > REJECTED: Not a B2B lead.")
+            if candidate and candidate.discovered_name:
+                logger.info(
+                    f"  > PASS: Found potential lead '{candidate.discovered_name}'"
+                )
+                return candidate
+            else:
+                logger.info("  > REJECTED: Not a B2B lead (or null name).")
+                return None
+        except Exception as e:
+            logger.info(f"  > REJECTED: Not a B2B lead (exception: {e}).")
             return None
 
 
-def triage_and_extract_leads(state: GraphState) -> dict:
+async def triage_and_extract_leads(state: GraphState) -> dict:
     """Uses an LLM to triage search results in parallel."""
     logger.info(f"---NODE: Triaging {len(state.search_results)} Search Results---")
     parser = PydanticOutputParser(pydantic_object=CandidateLead)
     prompt = PromptTemplate(
         template=prompts.LEAD_TRIAGE_PROMPT,
         input_variables=["title", "description", "source_url", "country"],
-        partial_variables={"parser_instructions": parser.get_format_instructions()},
+        partial_variables={"format_instructions": parser.get_format_instructions()},
     )
     chain = prompt | llm_client | parser
 
-    async def _run_triage():
-        semaphore = asyncio.Semaphore(4)  # Limit to 4 concurrent tasks
-        tasks = [
-            _triage_one_result(result, state.target_country, chain, semaphore)
-            for result in state.search_results
-        ]
+    semaphore = asyncio.Semaphore(4)  # Limit to 4 concurrent LLM tasks
+    tasks = [
+        _triage_one_result(result, state.target_country, chain, semaphore)
+        for result in state.search_results
+    ]
 
-        # Gather results
-        results = await asyncio.gather(*tasks)
-
-        # Filter out None values (rejections)
-        return [lead for lead in results if lead]
-
-    # Run the async triage process
-    candidate_leads = asyncio.run(_run_triage())
+    results = await asyncio.gather(*tasks)
+    candidate_leads = [lead for lead in results if lead]
 
     logger.info(
         f"  > Completed triage. {len(candidate_leads)} potential leads identified."

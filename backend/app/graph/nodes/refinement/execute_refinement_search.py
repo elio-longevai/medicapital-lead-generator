@@ -42,35 +42,30 @@ async def _execute_single_refinement_search(
     return all_results
 
 
-def execute_refinement_search(state: GraphState) -> dict:
+async def execute_refinement_search(state: GraphState) -> dict:
     """Executes targeted web searches for missing data points."""
     logger.info("---🕸️ NODE: Executing Refinement Search---")
     refinement_results = {}
     country = state.target_country
 
-    async def run_refinement_searches():
-        # Create a fresh search client instance for this event loop
-        search_client = create_multi_provider_search_client()
-        tasks = []
-        for index, queries in state.refinement_queries.items():
-            company_name = state.enriched_companies[index]["lead"].discovered_name
-            logger.info(f"  > Executing {len(queries)} searches for '{company_name}'")
-            # Create a task for each company's search coroutine
-            task = asyncio.create_task(
-                _execute_single_refinement_search(queries, country, search_client)
-            )
-            tasks.append((index, task))
+    search_client = create_multi_provider_search_client()
+    tasks = []
+    for index, queries in state.refinement_queries.items():
+        company_name = state.enriched_companies[index]["lead"].discovered_name
+        logger.info(f"  > Executing {len(queries)} searches for '{company_name}'")
+        # Create a task for each company's search coroutine
+        task = asyncio.create_task(
+            _execute_single_refinement_search(queries, country, search_client)
+        )
+        tasks.append((index, task))
 
-        # Wait for all tasks to complete
-        results = await asyncio.gather(*[task for _, task in tasks])
+    # Wait for all tasks to complete
+    results = await asyncio.gather(*[task for _, task in tasks])
 
-        # Map results back to company index
-        for (index, _), result_list in zip(tasks, results):
-            if result_list:
-                refinement_results[index] = result_list
-
-    # Run the async orchestration
-    asyncio.run(run_refinement_searches())
+    # Map results back to company index
+    for (index, _), result_list in zip(tasks, results):
+        if result_list:
+            refinement_results[index] = result_list
 
     logger.info(
         f"  > Refinement search complete. Found new data for {len(refinement_results)} companies."

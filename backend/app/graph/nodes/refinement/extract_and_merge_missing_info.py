@@ -1,5 +1,5 @@
 import logging
-
+import asyncio
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 
@@ -11,7 +11,7 @@ from .check_enrichment_completeness import ENRICHABLE_FIELDS
 logger = logging.getLogger(__name__)
 
 
-def extract_and_merge_missing_info(state: GraphState) -> dict:
+async def extract_and_merge_missing_info(state: GraphState) -> dict:
     """Uses a targeted LLM call for each missing field and merges the data."""
     logger.info("---🔄 NODE: Extracting and Merging Refined Info---")
     updated_enriched_companies = state.enriched_companies
@@ -21,6 +21,8 @@ def extract_and_merge_missing_info(state: GraphState) -> dict:
     prompt = PromptTemplate.from_template(prompts.REFINEMENT_PROMPT)
     # The output should be a simple string (or "null")
     chain = prompt | llm_client | StrOutputParser()
+
+    all_company_tasks = []
 
     for index, search_results in refinement_results.items():
         company_data = updated_enriched_companies[index]
@@ -40,7 +42,6 @@ def extract_and_merge_missing_info(state: GraphState) -> dict:
             f"  > Refining '{company_name}' for fields: {', '.join(missing_fields)}"
         )
 
-        # Combine all search result snippets into one block for this company
         combined_snippets = "\n\n".join(
             [
                 f"Source: {r.get('url', 'N/A')}\nTitle: {r.get('title', '')}\n{r.get('description', '')}"
@@ -48,27 +49,38 @@ def extract_and_merge_missing_info(state: GraphState) -> dict:
             ]
         )
 
-        for field in missing_fields:
-            try:
-                # Invoke the chain for each missing field individually
-                extracted_info = chain.invoke(
-                    {
-                        "company_name": company_name,
-                        "snippet": combined_snippets,
-                        "field_name": field,
-                    }
-                )
-
-                # The LLM is instructed to return "null" if info is not found
-                if extracted_info and extracted_info.lower() != "null":
-                    enriched_data[field] = extracted_info
-                    logger.info(
-                        f"    + Merged new data for '{field}': {extracted_info[:100]}"
+        # For each company, create a task to process all its missing fields
+        async def process_company(
+            local_enriched_data, local_company_name, local_missing_fields
+        ):
+            field_tasks = []
+            for field in local_missing_fields:
+                field_tasks.append(
+                    chain.ainvoke(
+                        {
+                            "company_name": local_company_name,
+                            "snippet": combined_snippets,
+                            "field_name": field,
+                        }
                     )
-
-            except Exception as e:
-                logger.error(
-                    f"    - Error extracting '{field}' for '{company_name}': {e}"
                 )
+            # Gather results for all fields of this company
+            extracted_infos = await asyncio.gather(*field_tasks, return_exceptions=True)
+            for field, info in zip(local_missing_fields, extracted_infos):
+                if isinstance(info, Exception):
+                    logger.error(
+                        f"    - Error extracting '{field}' for '{local_company_name}': {info}"
+                    )
+                    continue
+                if info and info.lower() != "null":
+                    local_enriched_data[field] = info
+                    logger.info(f"    + Merged new data for '{field}': {info[:100]}")
+
+        all_company_tasks.append(
+            process_company(enriched_data, company_name, missing_fields)
+        )
+
+    # Run all company processing tasks concurrently
+    await asyncio.gather(*all_company_tasks)
 
     return {"enriched_companies": updated_enriched_companies}

@@ -163,11 +163,8 @@ class CompanyService:
             else "Onbekend"
         )
 
-        # Extract description from enriched_data
-        description = None
-        if company.enriched_data and isinstance(company.enriched_data, dict):
-            # The description is stored in the "enriched_data" field within the enriched_data JSON
-            description = company.enriched_data.get("enriched_data")
+        # Use company_description field directly
+        description = company.company_description
 
         return CompanyResponse(
             id=company.id,
