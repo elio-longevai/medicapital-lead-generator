@@ -321,7 +321,7 @@ class CircuitBreaker:
 class MultiProviderSearchClient:
     """Orchestrates searches across multiple providers."""
 
-    PROVIDER_TIER = ["brave", "tavily", "serper", "firecrawl"]
+    PROVIDER_TIER = ["brave", "serper", "tavily", "firecrawl"]
 
     def __init__(self, clients: Dict[str, BaseSearchClient]):
         self.clients = clients
@@ -347,10 +347,6 @@ class MultiProviderSearchClient:
         """Attempt a search with a single provider, handling errors."""
         if self.circuit_breaker.is_disabled(provider_name):
             logger.info(f"⏭️ Skipping {provider_name}: temporarily disabled")
-            return None
-
-        if not await asyncio.to_thread(api_usage_service.can_use_api, provider_name):
-            logger.warning(f"⚠️ Skipping {provider_name}: Daily limit reached.")
             return None
 
         search_client = self.clients.get(provider_name)
