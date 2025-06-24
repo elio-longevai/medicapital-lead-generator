@@ -220,7 +220,7 @@ class TavilyClient(BaseSearchClient, CountryMappingMixin):
         payload = {
             "api_key": self.api_key,
             "query": query,
-            "search_depth": "basic",
+            "search_depth": "advanced",
             "include_answer": False,
             "include_images": False,
             "include_raw_content": True,
