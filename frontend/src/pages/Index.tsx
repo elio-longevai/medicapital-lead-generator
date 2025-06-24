@@ -226,12 +226,12 @@ const Index = () => {
 										</div>
 										<div className="mb-4">
 											<div className="text-4xl font-bold text-slate-900 mb-2">
-												{dashboardData?.totalLeads || "87"}
+												{dashboardData?.totalLeads || 0}
 											</div>
 											<div className="flex items-center text-sm text-blue-700">
 												<div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
 												Afgelopen 7 dagen: +
-												{Math.floor((dashboardData?.totalLeads || 87) * 0.15)}{" "}
+												{Math.floor((dashboardData?.totalLeads || 0) * 0.15)}{" "}
 												nieuwe leads
 											</div>
 										</div>
@@ -239,9 +239,7 @@ const Index = () => {
 											<div className="grid grid-cols-3 gap-4 text-center">
 												<div>
 													<div className="text-lg font-bold text-slate-900">
-														{Math.floor(
-															(dashboardData?.totalLeads || 87) * 0.4,
-														)}
+														{Math.floor((dashboardData?.totalLeads || 0) * 0.4)}
 													</div>
 													<div className="text-xs text-slate-600">
 														Deze week
@@ -249,9 +247,7 @@ const Index = () => {
 												</div>
 												<div>
 													<div className="text-lg font-bold text-slate-900">
-														{Math.floor(
-															(dashboardData?.totalLeads || 87) * 0.6,
-														)}
+														{Math.floor((dashboardData?.totalLeads || 0) * 0.6)}
 													</div>
 													<div className="text-xs text-slate-600">
 														Vorige week
@@ -260,12 +256,14 @@ const Index = () => {
 												<div>
 													<div className="text-lg font-bold text-emerald-600">
 														+
-														{Math.floor(
-															(((dashboardData?.totalLeads || 87) * 0.4) /
-																((dashboardData?.totalLeads || 87) * 0.6)) *
-																100 -
-																100,
-														)}
+														{dashboardData?.totalLeads
+															? Math.floor(
+																	((dashboardData.totalLeads * 0.4) /
+																		(dashboardData.totalLeads * 0.6)) *
+																		100 -
+																		100,
+																)
+															: 0}
 														%
 													</div>
 													<div className="text-xs text-slate-600">Groei</div>
