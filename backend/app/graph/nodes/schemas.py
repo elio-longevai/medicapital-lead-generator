@@ -48,8 +48,8 @@ class EnrichedCompanyData(BaseModel):
     website_url: Optional[str] = Field(
         description="Officiële website URL of null", default=None
     )
-    enriched_data: Optional[str] = Field(
-        description="Korte samenvatting van belangrijke bedrijfsinformatie",
+    company_description: Optional[str] = Field(
+        description="Korte, feitelijke samenvatting van de kernactiviteiten, missie en waardepropositie van het bedrijf in het Nederlands.",
         default=None,
     )
     estimated_revenue: Optional[str] = Field(

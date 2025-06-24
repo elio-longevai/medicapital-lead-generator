@@ -19,7 +19,10 @@ def test_scrape_and_enrich_one_company(
     """
     # Setup Mocks
     mock_graph_state.candidate_leads = [mock_candidate_lead]
-    mock_enriched_data = {"contact_email": "test@testclinic.com"}
+    mock_enriched_data = {
+        "contact_email": "test@testclinic.com",
+        "company_description": "A test company.",
+    }
 
     # Mock the crawler to return successful content
     mock_crawler_instance = AsyncMock()
@@ -29,17 +32,12 @@ def test_scrape_and_enrich_one_company(
     mock_crawler_instance.arun.return_value = mock_crawler_result
     mock_crawler_class.return_value.__aenter__.return_value = mock_crawler_instance
 
-    # Mock the LLM to return structured data from an async call
+    # Mock the LLM to return structured data from a sync call
     mock_enriched_obj = MagicMock()
     mock_enriched_obj.model_dump.return_value = mock_enriched_data
 
-    # This was creating a coroutine that was not awaited.
-    # The mock should return the final object directly.
-    async def mock_ainvoke(*args, **kwargs):
-        return mock_enriched_obj
-
     mock_json_llm = MagicMock()
-    mock_json_llm.ainvoke = mock_ainvoke
+    mock_json_llm.invoke.return_value = mock_enriched_obj
     mock_llm_client.with_structured_output.return_value = mock_json_llm
 
     # Mock asyncio.run
@@ -57,3 +55,4 @@ def test_scrape_and_enrich_one_company(
     enriched_company = result["enriched_companies"][0]
     assert enriched_company["lead"] == mock_candidate_lead
     assert enriched_company["enriched_data"]["contact_email"] == "test@testclinic.com"
+    assert enriched_company["enriched_data"]["company_description"] == "A test company."

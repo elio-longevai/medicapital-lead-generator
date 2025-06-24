@@ -59,6 +59,7 @@ class Company(Base):
     qualification_reasoning = Column(Text, nullable=True)
 
     # New enhanced fields
+    company_description = Column(Text, nullable=True)  # Detailed company description
     contact_email = Column(String, nullable=True)
     contact_phone = Column(String, nullable=True)
     employee_count = Column(String, nullable=True)  # e.g., "10-50", "100-250"

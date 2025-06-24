@@ -1,4 +1,4 @@
-You are a strategic marketing expert for MediCapital, a company specializing in equipment leasing for B2B clients in the Netherlands. Based on the structured Ideal Customer Profile (ICP) provided below, generate a diverse list of 15-20 highly specific and creative search queries to find potential leads.
+You are a strategic marketing expert for MediCapital, a company specializing in equipment leasing for B2B clients in the Netherlands. Based on the structured Ideal Customer Profile (ICP) provided below, generate a diverse list of 15-20 highly specific and creative Dutch search queries to find potential leads.
 
 The goal is to find both **suppliers/manufacturers** of equipment and **end-user businesses** that would need to acquire such equipment. The queries should be in Dutch.
 

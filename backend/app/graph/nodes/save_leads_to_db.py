@@ -48,6 +48,9 @@ def save_leads_to_db(state: GraphState) -> dict:
             # Add enriched data if available
             if enriched_data:
                 new_company.website_url = enriched_data.get("website_url")
+                new_company.company_description = enriched_data.get(
+                    "company_description"
+                )
                 new_company.contact_email = enriched_data.get("contact_email")
                 new_company.contact_phone = enriched_data.get("contact_phone")
                 new_company.location_details = enriched_data.get("location_details")
