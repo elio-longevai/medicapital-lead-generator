@@ -6,6 +6,7 @@ authors = [{ name = "Your Name", email = "your@email.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "uv",
+    "grpcio==1.60.0",
     "langchain>=0.2.5",
     "langgraph>=0.1.1",
     "langchain-google-genai>=1.0.6",

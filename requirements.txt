@@ -96,11 +96,12 @@ googleapis-common-protos==1.70.0
     #   grpcio-status
 greenlet==3.2.3
     # via playwright
-grpcio==1.73.0
+grpcio==1.60.0
     # via
+    #   -r requirements.in
     #   google-api-core
     #   grpcio-status
-grpcio-status==1.73.0
+grpcio-status==1.60.0
     # via google-api-core
 h11==0.16.0
     # via
