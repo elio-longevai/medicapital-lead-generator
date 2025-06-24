@@ -177,7 +177,7 @@ class CompanyService:
             createdAt=created_at,
             equipmentNeed=company.equipment_needs
             or self._infer_equipment_need(company),
-            employees=company.employee_count or self._estimate_employees(company),
+            employees=company.employee_count,
             website=company.website_url or company.source_url,
             sourceUrl=company.source_url,
             email=company.contact_email,
@@ -208,7 +208,3 @@ class CompanyService:
             "Horeca": "Keukenapparatuur",
         }
         return industry_equipment.get(company.primary_industry, "Apparatuur")
-
-    def _estimate_employees(self, company: Company) -> str:
-        # Default employee estimates by industry
-        return "10-50"  # Conservative default

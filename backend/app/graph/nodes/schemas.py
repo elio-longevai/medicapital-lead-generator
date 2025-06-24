@@ -36,7 +36,8 @@ class EnrichedCompanyData(BaseModel):
         description="Volledig adres/locatie of null", default=None
     )
     employee_count: Optional[str] = Field(
-        description="Medewerkersaantal bereik (bijv. '10-50') of null", default=None
+        description="Medewerkersaantal (employee count) (bijv. '10-50') of null",
+        default=None,
     )
     equipment_needs: Optional[str] = Field(
         description="Specifieke genoemde apparatuur/technologiebehoeften of null",
@@ -53,7 +54,8 @@ class EnrichedCompanyData(BaseModel):
         default=None,
     )
     estimated_revenue: Optional[str] = Field(
-        description="Geschat jaaromzet bereik (bijv. '€1M-€5M') of null", default=None
+        description="Geschatte jaaromzet (annual revenue) (bijv. '€1M-€5M') of null",
+        default=None,
     )
     qualification_details: QualificationDetails = Field(
         default_factory=QualificationDetails
