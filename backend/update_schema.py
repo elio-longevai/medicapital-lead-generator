@@ -5,8 +5,8 @@ import logging
 
 def update_database_schema():
     """
-    Updates the database schema by adding the 'icp_name' column
-    to the 'leads' table if it doesn't already exist.
+    Updates the database schema by adding missing columns
+    to the 'companies' table if they don't already exist.
     """
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -31,15 +31,32 @@ def update_database_schema():
             f"🧐 Found {len(existing_columns)} existing columns in 'companies' table."
         )
 
-        # Add the 'icp_name' column if it's missing
-        if "icp_name" not in existing_columns:
-            try:
-                cursor.execute("ALTER TABLE companies ADD COLUMN icp_name TEXT")
-                logging.info("✅ Added column: icp_name")
-            except sqlite3.Error as e:
-                logging.error(f"❌ Error adding 'icp_name': {e}")
-        else:
-            logging.info("⏭️  Column 'icp_name' already exists.")
+        # Define all columns that should exist based on the Company model
+        required_columns = {
+            "icp_name": "TEXT",
+            "company_description": "TEXT",
+            "contact_email": "TEXT",
+            "contact_phone": "TEXT",
+            "employee_count": "TEXT",
+            "equipment_needs": "TEXT",
+            "recent_news": "TEXT",
+            "qualification_details": "TEXT",
+            "location_details": "TEXT",
+            "estimated_revenue": "TEXT",
+        }
+
+        # Add missing columns
+        for column_name, column_type in required_columns.items():
+            if column_name not in existing_columns:
+                try:
+                    cursor.execute(
+                        f"ALTER TABLE companies ADD COLUMN {column_name} {column_type}"
+                    )
+                    logging.info(f"✅ Added column: {column_name}")
+                except sqlite3.Error as e:
+                    logging.error(f"❌ Error adding '{column_name}': {e}")
+            else:
+                logging.info(f"⏭️  Column '{column_name}' already exists.")
 
         conn.commit()
         logging.info("\n🎉 Schema update check completed!")

@@ -14,11 +14,11 @@ from app.graph.state import GraphState
 # This list defines which Ideal Customer Profiles the system will run.
 # Each dict contains the file's basename and its target country.
 ICP_CONFIG = [
-    {
-        "name": "sustainability_supplier",
-        "country": "NL",
-        "file": "icp_sustainability_supplier.txt",
-    },
+    # {
+    #     "name": "sustainability_supplier",
+    #     "country": "NL",
+    #     "file": "icp_sustainability_supplier.txt",
+    # },
     {
         "name": "sustainability_end_user",
         "country": "NL",
