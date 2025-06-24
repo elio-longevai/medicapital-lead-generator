@@ -177,7 +177,7 @@ class CompanyService:
             createdAt=created_at,
             equipmentNeed=company.equipment_needs
             or self._infer_equipment_need(company),
-            employees=company.employee_count,
+            employees=company.employee_count or "N/A",
             website=company.website_url or company.source_url,
             sourceUrl=company.source_url,
             email=company.contact_email,

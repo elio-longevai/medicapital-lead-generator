@@ -23,7 +23,7 @@ class CompanyResponse(BaseModel):
     lastActivity: str  # formatted updated_at
     createdAt: str  # formatted created_at
     equipmentNeed: str
-    employees: str  # employee_count
+    employees: Optional[str] = None  # employee_count
     website: str  # website_url or source_url
     sourceUrl: str
     email: Optional[str] = None  # contact_email

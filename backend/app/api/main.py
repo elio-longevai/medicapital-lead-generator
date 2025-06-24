@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from .models import (
 from ..db.session import get_db
 from ..db.models import Company
 from ..services.company_service import CompanyService
+from ..main import arun_all_icps
 import logging
 
 app = FastAPI(title="MediCapital Lead API", version="1.0.0")
@@ -100,6 +101,17 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     """Get dashboard statistics"""
     service = CompanyService(db)
     return service.get_dashboard_statistics()
+
+
+@app.post("/api/scrape-leads", status_code=202)
+async def scrape_leads(background_tasks: BackgroundTasks):
+    """
+    Triggers a new lead scraping process in the background.
+    """
+    background_tasks.add_task(arun_all_icps, queries_per_icp=5)
+    return {
+        "message": "Lead scraping process started. It will take approximately 10 minutes to complete."
+    }
 
 
 @app.get("/health")

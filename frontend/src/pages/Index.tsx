@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import {
 	Card,
 	CardContent,
@@ -22,6 +23,7 @@ import {
 	Globe,
 	Filter,
 	Loader2,
+	Bot,
 } from "lucide-react";
 import { LeadDatabase } from "@/components/LeadDatabase";
 import { CompanyProfile } from "@/components/CompanyProfile";
@@ -32,6 +34,7 @@ import { getIcpMetadata } from "@/lib/icp-utils";
 const Index = () => {
 	const [activeTab, setActiveTab] = useState("dashboard");
 	const [selectedCompany, setSelectedCompany] = useState(null);
+	const [isScraping, setIsScraping] = useState(false);
 
 	// Fetch real dashboard data
 	const { data: dashboardData, isLoading: dashboardLoading } =
@@ -115,6 +118,45 @@ const Index = () => {
 		return "text-red-600";
 	};
 
+	const handleScrape = async () => {
+		setIsScraping(true);
+		toast.info("De lead scraping is gestart...", {
+			description:
+				"Dit proces kan tot 10 minuten duren. U kunt doorgaan met het gebruik van de applicatie.",
+		});
+
+		try {
+			const response = await fetch("http://localhost:8000/api/scrape-leads", {
+				method: "POST",
+			});
+
+			if (!response.ok) {
+				// We expect a 202, but handle other non-ok statuses as errors
+				const errorData = await response.json().catch(() => ({
+					detail: "Onbekende serverfout, controleer de backend logs.",
+				}));
+				throw new Error(
+					errorData.detail || `Serverfout: ${response.statusText}`,
+				);
+			}
+
+			// The backend sends a 202 Accepted response with a message
+			const result = await response.json();
+			toast.success("Scraping succesvol gestart!", {
+				description: result.message,
+			});
+		} catch (error) {
+			console.error("Scraping error:", error);
+			toast.error("Fout bij het starten van de scrape", {
+				description:
+					error.message ||
+					"Controleer de console en backend voor meer details.",
+			});
+		} finally {
+			setIsScraping(false);
+		}
+	};
+
 	if (selectedCompany) {
 		return (
 			<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -142,8 +184,9 @@ const Index = () => {
 							</p>
 						</div>
 
-						{/* Navigation tabs integrated in header */}
-						<div className="flex-shrink-0">
+						{/* Actions Section: Tabs & Scrape Button */}
+						<div className="flex items-center space-x-4">
+							{/* Navigation tabs integrated in header */}
 							<Tabs
 								value={activeTab}
 								onValueChange={setActiveTab}
@@ -173,6 +216,22 @@ const Index = () => {
 									</TabsTrigger>
 								</TabsList>
 							</Tabs>
+
+							{/* Scrape Leads Button */}
+							<Button
+								onClick={handleScrape}
+								disabled={isScraping}
+								className="h-12 bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-xl shadow-lg flex items-center justify-center px-4"
+							>
+								{isScraping ? (
+									<Loader2 className="h-5 w-5 animate-spin mr-2" />
+								) : (
+									<Bot className="h-5 w-5 mr-2" />
+								)}
+								<span>
+									{isScraping ? "Bezig met zoeken..." : "Vind nieuwe leads"}
+								</span>
+							</Button>
 						</div>
 					</div>
 				</div>
