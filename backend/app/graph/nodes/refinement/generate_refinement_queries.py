@@ -12,7 +12,7 @@ FIELD_NAME_TRANSLATIONS_NL = {
     "employee_count": "aantal medewerkers",
     "equipment_needs": "producten en diensten",
     "recent_news": "recent nieuws",
-    "location_details": "adres",
+    "location_details": "adres locatie",
     "website_url": "website",
 }
 
@@ -22,7 +22,7 @@ def get_search_term_for_field(field: str, country: str) -> str:
     Translates a field name into a localized search term if applicable.
     Defaults to English if no translation is available.
     """
-    if country.upper() == "NL":
+    if country.upper() == "NL" or country.upper() == "BE":
         return FIELD_NAME_TRANSLATIONS_NL.get(field, field.replace("_", " "))
     # Add other country logic here if needed in the future
     # elif country.upper() == 'BE':

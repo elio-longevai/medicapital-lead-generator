@@ -170,7 +170,7 @@ class BraveSearchClient(BaseSearchClient, CountryMappingMixin):
 
     def _prepare_request(self, query: str, country: str):
         headers = {**self.DEFAULT_HEADERS, "X-Subscription-Token": self.api_key}
-        params = {"q": query, "country": country.lower(), "count": 5}
+        params = {"q": query, "country": country.lower(), "count": 10}
         return self.BASE_URL, headers, params
 
     def _parse_response(self, data: dict) -> list[dict]:
@@ -195,7 +195,7 @@ class SerperClient(BaseSearchClient, CountryMappingMixin):
             "X-API-KEY": self.api_key,
             "Content-Type": "application/json",
         }
-        payload = {"q": query, "gl": country.lower(), "num": 5}
+        payload = {"q": query, "gl": country.lower(), "num": 10}
         return self.BASE_URL, headers, payload
 
     def _parse_response(self, data: dict) -> list[dict]:
@@ -223,8 +223,8 @@ class TavilyClient(BaseSearchClient, CountryMappingMixin):
             "search_depth": "basic",
             "include_answer": False,
             "include_images": False,
-            "include_raw_content": False,
-            "max_results": 5,
+            "include_raw_content": True,
+            "max_results": 10,
             "country": self._get_country_name(country),
         }
         return self.BASE_URL, headers, payload
@@ -255,7 +255,7 @@ class FirecrawlClient(BaseSearchClient, CountryMappingMixin):
         payload = {
             "query": query,
             "pageOptions": {"fetchPageContent": False},
-            "limit": 5,
+            "limit": 10,
         }
         # Add location only if country is valid
         location = self._get_country_name(country)
