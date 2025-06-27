@@ -30,11 +30,11 @@ import { CompanyProfile } from "@/components/CompanyProfile";
 import { QualificationWorkflow } from "@/components/QualificationWorkflow";
 import { useDashboardStats, useCompanies } from "@/hooks/useCompanies";
 import { getIcpMetadata } from "@/lib/icp-utils";
+import { useScrapingStatus, useScrapeLeads } from "@/hooks/useScrapingStatus";
 
 const Index = () => {
 	const [activeTab, setActiveTab] = useState("dashboard");
 	const [selectedCompany, setSelectedCompany] = useState(null);
-	const [isScraping, setIsScraping] = useState(false);
 
 	// Fetch real dashboard data
 	const { data: dashboardData, isLoading: dashboardLoading } =
@@ -43,6 +43,10 @@ const Index = () => {
 		limit: 5,
 		sort_by: "score",
 	});
+	const { data: scrapingStatus } = useScrapingStatus();
+	const scrapeLeadsMutation = useScrapeLeads();
+
+	const isScraping = scrapingStatus?.is_scraping || scrapeLeadsMutation.isPending;
 
 	const recentLeads = recentLeadsData?.companies || [];
 
@@ -119,42 +123,25 @@ const Index = () => {
 	};
 
 	const handleScrape = async () => {
-		setIsScraping(true);
-		toast.info("De lead scraping is gestart...", {
+		toast.info("De lead scraping wordt gestart...", {
 			description:
 				"Dit proces kan tot 10 minuten duren. U kunt doorgaan met het gebruik van de applicatie.",
 		});
 
-		try {
-			const response = await fetch("http://localhost:8000/api/scrape-leads", {
-				method: "POST",
-			});
-
-			if (!response.ok) {
-				// We expect a 202, but handle other non-ok statuses as errors
-				const errorData = await response.json().catch(() => ({
-					detail: "Onbekende serverfout, controleer de backend logs.",
-				}));
-				throw new Error(
-					errorData.detail || `Serverfout: ${response.statusText}`,
-				);
-			}
-
-			// The backend sends a 202 Accepted response with a message
-			const result = await response.json();
-			toast.success("Scraping succesvol gestart!", {
-				description: result.message,
-			});
-		} catch (error) {
-			console.error("Scraping error:", error);
-			toast.error("Fout bij het starten van de scrape", {
-				description:
-					error.message ||
-					"Controleer de console en backend voor meer details.",
-			});
-		} finally {
-			setIsScraping(false);
-		}
+		scrapeLeadsMutation.mutate(undefined, {
+			onSuccess: (result) => {
+				// The status will be updated by the polling query,
+				// so we don't need a success toast here, the info toast is enough.
+			},
+			onError: (error) => {
+				console.error("Scraping error:", error);
+				toast.error("Fout bij het starten van de scrape", {
+					description:
+						error.message ||
+						"Controleer de console en backend voor meer details.",
+				});
+			},
+		});
 	};
 
 	if (selectedCompany) {

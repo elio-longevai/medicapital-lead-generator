@@ -6,6 +6,10 @@ class CompanyStatusUpdate(BaseModel):
     status: str
 
 
+class ScrapingStatus(BaseModel):
+    is_scraping: bool
+
+
 class QualificationScore(BaseModel):
     financialStability: int
     equipmentNeed: int

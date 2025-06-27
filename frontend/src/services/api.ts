@@ -47,6 +47,10 @@ export interface DashboardStats {
   topIndustries: Array<{ industry: string; count: number }>;
 }
 
+export interface ScrapingStatus {
+  is_scraping: boolean;
+}
+
 class ApiService {
   async getCompanies(params: {
     skip?: number;
@@ -93,6 +97,28 @@ class ApiService {
   async getDashboardStats(): Promise<DashboardStats> {
     const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`);
     if (!response.ok) throw new Error('Failed to fetch dashboard stats');
+    return response.json();
+  }
+
+  async getScrapingStatus(): Promise<ScrapingStatus> {
+    const response = await fetch(`${API_BASE_URL}/api/scrape-status`);
+    if (!response.ok) throw new Error('Failed to fetch scraping status');
+    return response.json();
+  }
+
+  async startScraping(): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/scrape-leads`, {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        detail: "Onbekende serverfout, controleer de backend logs.",
+      }));
+      throw new Error(
+        errorData.detail || `Serverfout: ${response.statusText}`,
+      );
+    }
     return response.json();
   }
 }

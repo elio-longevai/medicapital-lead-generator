@@ -8,6 +8,7 @@ from .models import (
     CompanyListResponse,
     DashboardStats,
     CompanyStatusUpdate,
+    ScrapingStatus,
 )
 from ..db.session import get_db
 from ..db.models import Company
@@ -16,6 +17,9 @@ from ..main import arun_all_icps
 import logging
 
 app = FastAPI(title="MediCapital Lead API", version="1.0.0")
+
+# Global scraping status tracker
+_scraping_status = {"is_scraping": False}
 
 app.add_middleware(
     CORSMiddleware,
@@ -103,12 +107,38 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     return service.get_dashboard_statistics()
 
 
+async def run_scraping_with_status_tracking(queries_per_icp: int):
+    """
+    Wrapper function to track scraping status during the process.
+    """
+    global _scraping_status
+    _scraping_status["is_scraping"] = True
+    try:
+        await arun_all_icps(queries_per_icp=queries_per_icp)
+    finally:
+        _scraping_status["is_scraping"] = False
+
+
+@app.get("/api/scrape-status", response_model=ScrapingStatus)
+def get_scrape_status():
+    """
+    Returns the current scraping status.
+    """
+    return _scraping_status
+
+
 @app.post("/api/scrape-leads", status_code=202)
 async def scrape_leads(background_tasks: BackgroundTasks):
     """
     Triggers a new lead scraping process in the background.
     """
-    background_tasks.add_task(arun_all_icps, queries_per_icp=5)
+    if _scraping_status["is_scraping"]:
+        raise HTTPException(
+            status_code=409,
+            detail="Scraping is already in progress. Please wait for it to complete.",
+        )
+
+    background_tasks.add_task(run_scraping_with_status_tracking, queries_per_icp=5)
     return {
         "message": "Lead scraping process started. It will take approximately 10 minutes to complete."
     }
