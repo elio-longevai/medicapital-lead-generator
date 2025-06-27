@@ -8,15 +8,19 @@ class CandidateLead(BaseModel):
     discovered_name: Optional[str] = Field(
         description="The name of the company as found.", default=None
     )
-    source_url: str = Field(
-        description="The URL of the page where the company was mentioned."
+    source_url: Optional[str] = Field(
+        description="The URL of the page where the company was mentioned.", default=None
     )
-    country: str = Field(description="The two-letter country code (e.g., 'NL').")
-    primary_industry: str = Field(
-        description="The main industry of the company (e.g., 'Healthcare', 'Sustainability')."
+    country: Optional[str] = Field(
+        description="The two-letter country code (e.g., 'NL').", default=None
     )
-    initial_reasoning: str = Field(
-        description="A brief justification for why this company is a potential lead."
+    primary_industry: Optional[str] = Field(
+        description="The main industry of the company (e.g., 'Healthcare', 'Sustainability').",
+        default=None,
+    )
+    initial_reasoning: Optional[str] = Field(
+        description="A brief justification for why this company is a potential lead.",
+        default=None,
     )
 
 

@@ -27,16 +27,21 @@ async def _triage_one_result(
                     "country": country,
                 }
             )
-            if candidate and candidate.discovered_name:
+            # Check if we have a valid lead (discovered_name is not None/empty)
+            if (
+                candidate
+                and candidate.discovered_name
+                and candidate.discovered_name.strip()
+            ):
                 logger.info(
                     f"  > PASS: Found potential lead '{candidate.discovered_name}'"
                 )
                 return candidate
             else:
-                logger.info("  > REJECTED: Not a B2B lead (or null name).")
+                logger.info("  > REJECTED: Not a B2B lead (or null/empty name).")
                 return None
         except Exception as e:
-            logger.info(f"  > REJECTED: Not a B2B lead (exception: {e}).")
+            logger.warning(f"  > REJECTED: LLM parsing error - {str(e)}")
             return None
 
 
