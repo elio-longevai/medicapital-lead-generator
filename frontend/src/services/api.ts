@@ -1,5 +1,4 @@
-// TODO: Make API_BASE_URL configurable via environment variables for different deployment environments
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export interface Company {
   id: number;

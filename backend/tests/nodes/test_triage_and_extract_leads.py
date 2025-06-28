@@ -21,9 +21,9 @@ async def test_triage_one_good_lead(mock_llm, mock_candidate_lead):
         "description": "A clinic",
     }
 
-    # Execute
+    # Execute with empty existing names set
     result = await _triage_one_result(
-        search_result, "NL", mock_chain, asyncio.Semaphore(1)
+        search_result, "NL", mock_chain, asyncio.Semaphore(1), set()
     )
 
     # Assert
@@ -48,7 +48,35 @@ async def test_triage_one_bad_lead(mock_llm):
     }
 
     result = await _triage_one_result(
-        search_result, "NL", mock_chain, asyncio.Semaphore(1)
+        search_result, "NL", mock_chain, asyncio.Semaphore(1), set()
     )
 
+    assert result is None
+
+
+@pytest.mark.asyncio
+@patch("app.graph.nodes.triage_and_extract_leads.llm_client")
+async def test_triage_one_existing_company_declined(mock_llm, mock_candidate_lead):
+    """
+    Tests that _triage_one_result declines leads for companies that already exist in database.
+    """
+    # Mock the chain used inside the function
+    mock_chain = AsyncMock()
+    mock_chain.ainvoke.return_value = mock_candidate_lead
+
+    search_result = {
+        "title": "Test Health Clinic",
+        "url": "https://testclinic.com",
+        "description": "A clinic",
+    }
+
+    # Include the normalized name of the candidate lead in existing names
+    existing_names = {"test health clinic"}  # normalized version
+
+    # Execute
+    result = await _triage_one_result(
+        search_result, "NL", mock_chain, asyncio.Semaphore(1), existing_names
+    )
+
+    # Assert that the result is None (declined)
     assert result is None

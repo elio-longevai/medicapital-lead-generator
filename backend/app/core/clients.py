@@ -277,7 +277,7 @@ class FirecrawlClient(BaseSearchClient, CountryMappingMixin):
 class CircuitBreaker:
     """Simple circuit breaker to temporarily disable failing providers."""
 
-    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 300):
+    def __init__(self, failure_threshold: int = 50, recovery_timeout: int = 300):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout  # seconds
         self.failure_counts: Dict[str, int] = {}
