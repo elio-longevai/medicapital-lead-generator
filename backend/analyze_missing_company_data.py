@@ -14,10 +14,7 @@ import logging
 from collections import defaultdict
 from typing import Dict, List, Optional
 
-from sqlalchemy import and_
-
-from app.db.models import Company
-from app.db.session import SessionLocal
+from app.db.repositories import CompanyRepository
 from app.graph.nodes.refinement.check_enrichment_completeness import ENRICHABLE_FIELDS
 
 # Configure logging
@@ -29,32 +26,31 @@ class CompanyDataAnalyzer:
     """Analyzes missing data in company records."""
 
     def __init__(self):
-        self.db = SessionLocal()
+        self.company_repo = CompanyRepository()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.db.close()
+        # No need to close MongoDB connections
+        pass
 
     def get_companies_for_analysis(
         self, country: Optional[str] = None, icp_name: Optional[str] = None
-    ) -> List[Company]:
+    ) -> List[Dict]:
         """Get companies for analysis based on filters."""
-        query = self.db.query(Company)
+        filter_query = {}
 
-        conditions = []
         if country:
-            conditions.append(Company.country == country)
+            filter_query["country"] = country
         if icp_name:
-            conditions.append(Company.icp_name == icp_name)
+            filter_query["icp_name"] = icp_name
 
-        if conditions:
-            query = query.filter(and_(*conditions))
+        # Use the repository to find companies
+        companies = list(self.company_repo.collection.find(filter_query))
+        return companies
 
-        return query.all()
-
-    def analyze_missing_fields(self, companies: List[Company]) -> Dict:
+    def analyze_missing_fields(self, companies: List[Dict]) -> Dict:
         """Analyze missing fields across all companies."""
         total_companies = len(companies)
         field_stats = {}
@@ -64,7 +60,7 @@ class CompanyDataAnalyzer:
             populated_count = 0
 
             for company in companies:
-                field_value = getattr(company, field, None)
+                field_value = company.get(field)
                 if field_value:
                     populated_count += 1
                 else:
@@ -83,17 +79,17 @@ class CompanyDataAnalyzer:
 
         return field_stats
 
-    def analyze_by_country(self, companies: List[Company]) -> Dict:
+    def analyze_by_country(self, companies: List[Dict]) -> Dict:
         """Analyze missing data by country."""
         country_stats = defaultdict(lambda: defaultdict(int))
         country_totals = defaultdict(int)
 
         for company in companies:
-            country = company.country or "Unknown"
+            country = company.get("country") or "Unknown"
             country_totals[country] += 1
 
             for field in ENRICHABLE_FIELDS:
-                field_value = getattr(company, field, None)
+                field_value = company.get(field)
                 if not field_value:
                     country_stats[country][field] += 1
 
@@ -111,17 +107,17 @@ class CompanyDataAnalyzer:
 
         return country_analysis
 
-    def analyze_by_icp(self, companies: List[Company]) -> Dict:
+    def analyze_by_icp(self, companies: List[Dict]) -> Dict:
         """Analyze missing data by ICP name."""
         icp_stats = defaultdict(lambda: defaultdict(int))
         icp_totals = defaultdict(int)
 
         for company in companies:
-            icp = company.icp_name or "Unknown"
+            icp = company.get("icp_name") or "Unknown"
             icp_totals[icp] += 1
 
             for field in ENRICHABLE_FIELDS:
-                field_value = getattr(company, field, None)
+                field_value = company.get(field)
                 if not field_value:
                     icp_stats[icp][field] += 1
 
@@ -140,7 +136,7 @@ class CompanyDataAnalyzer:
         return icp_analysis
 
     def find_companies_needing_most_enrichment(
-        self, companies: List[Company], top_n: int = 10
+        self, companies: List[Dict], top_n: int = 10
     ) -> List[Dict]:
         """Find companies that need the most enrichment."""
         company_scores = []
@@ -148,7 +144,7 @@ class CompanyDataAnalyzer:
         for company in companies:
             missing_fields = []
             for field in ENRICHABLE_FIELDS:
-                field_value = getattr(company, field, None)
+                field_value = company.get(field)
                 if not field_value:
                     missing_fields.append(field)
 
@@ -168,7 +164,7 @@ class CompanyDataAnalyzer:
 
         # Sort by missing count (descending) and then by company name
         company_scores.sort(
-            key=lambda x: (-x["missing_count"], x["company"].discovered_name)
+            key=lambda x: (-x["missing_count"], x["company"].get("discovered_name", ""))
         )
 
         return company_scores[:top_n]
@@ -243,8 +239,9 @@ class CompanyDataAnalyzer:
                 if len(item["missing_fields"]) > 3:
                     missing_fields_str += f" (+{len(item['missing_fields']) - 3} more)"
 
+                discovered_name = company.get("discovered_name", "Unknown")
                 print(
-                    f"{company.discovered_name[:29]:<30} {item['missing_count']:<8} {item['completion_percentage']:<9.1f}% {missing_fields_str}"
+                    f"{discovered_name[:29]:<30} {item['missing_count']:<8} {item['completion_percentage']:<9.1f}% {missing_fields_str}"
                 )
 
         print()
@@ -310,7 +307,7 @@ class CompanyDataAnalyzer:
             [
                 c
                 for c in companies
-                if any(not getattr(c, field, None) for field in ENRICHABLE_FIELDS)
+                if any(not c.get(field) for field in ENRICHABLE_FIELDS)
             ]
         )
 

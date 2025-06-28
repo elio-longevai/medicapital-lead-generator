@@ -55,6 +55,7 @@ class DashboardStats(BaseModel):
     qualifiedLeads: int
     inReviewLeads: int
     discoveredLeads: int
+    leadsThisWeek: int
     qualificationRate: float
     avgScore: float
     topIndustries: List[dict]

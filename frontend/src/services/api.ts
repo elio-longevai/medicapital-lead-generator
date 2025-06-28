@@ -40,6 +40,7 @@ export interface DashboardStats {
   qualifiedLeads: number;
   inReviewLeads: number;
   discoveredLeads: number;
+  leadsThisWeek: number;
   qualificationRate: number;
   avgScore: number;
   topIndustries: Array<{ industry: string; count: number }>;

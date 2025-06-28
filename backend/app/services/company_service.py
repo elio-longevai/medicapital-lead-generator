@@ -78,6 +78,7 @@ class CompanyService:
         qualified_leads = stats["qualified_leads"]
         in_review_leads = stats["in_review_leads"]
         discovered_leads = stats["discovered_leads"]
+        leads_this_week = stats["leads_this_week"]
 
         qualification_rate = (
             (qualified_leads / total_leads * 100) if total_leads > 0 else 0
@@ -88,6 +89,7 @@ class CompanyService:
             qualifiedLeads=qualified_leads,
             inReviewLeads=in_review_leads,
             discoveredLeads=discovered_leads,
+            leadsThisWeek=leads_this_week,
             qualificationRate=qualification_rate,
             avgScore=stats["avg_score"],
             topIndustries=[

@@ -315,41 +315,32 @@ const Index = () => {
 											</div>
 											<div className="flex items-center text-sm text-blue-700">
 												<div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
-												Afgelopen 7 dagen: +
-												{Math.floor((dashboardData?.totalLeads || 0) * 0.15)}{" "}
-												nieuwe leads
+												{dashboardData?.leadsThisWeek || 0} nieuwe leads deze week
 											</div>
 										</div>
 										<div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-blue-200/50">
 											<div className="grid grid-cols-3 gap-4 text-center">
 												<div>
 													<div className="text-lg font-bold text-slate-900">
-														{Math.floor((dashboardData?.totalLeads || 0) * 0.4)}
+														{(dashboardData?.totalLeads || 0) - (dashboardData?.leadsThisWeek || 0)}
 													</div>
 													<div className="text-xs text-slate-600">
-														Deze week
+														Bestaande Leads
 													</div>
 												</div>
 												<div>
 													<div className="text-lg font-bold text-slate-900">
-														{Math.floor((dashboardData?.totalLeads || 0) * 0.6)}
+														{dashboardData?.leadsThisWeek || 0}
 													</div>
 													<div className="text-xs text-slate-600">
-														Vorige week
+														Deze Week
 													</div>
 												</div>
 												<div>
 													<div className="text-lg font-bold text-emerald-600">
-														+
-														{dashboardData?.totalLeads
-															? Math.floor(
-																	((dashboardData.totalLeads * 0.4) /
-																		(dashboardData.totalLeads * 0.6)) *
-																		100 -
-																		100,
-																)
-															: 0}
-														%
+														+{dashboardData?.totalLeads && dashboardData?.leadsThisWeek 
+															? Math.round((dashboardData.leadsThisWeek / dashboardData.totalLeads) * 100)
+															: 0}%
 													</div>
 													<div className="text-xs text-slate-600">Groei</div>
 												</div>
@@ -564,18 +555,20 @@ const Index = () => {
 											<div className="grid grid-cols-2 gap-4 text-sm">
 												<div className="flex items-center justify-between">
 													<span className="text-slate-600">
-														Dagelijkse ontdekking:
+														Deze week:
 													</span>
 													<span className="font-semibold text-slate-900">
-														25 leads
+														{dashboardData?.totalLeads && dashboardData?.leadsThisWeek 
+															? `${Math.round((dashboardData.leadsThisWeek / dashboardData.totalLeads) * 100)}% groei`
+															: "0% groei"}
 													</span>
 												</div>
 												<div className="flex items-center justify-between">
 													<span className="text-slate-600">
-														Actieve campagnes:
+														Actieve doelgroepen:
 													</span>
 													<span className="font-semibold text-blue-600">
-														3 doelgroepen
+														{dashboardData?.topIndustries?.length || 0}
 													</span>
 												</div>
 											</div>

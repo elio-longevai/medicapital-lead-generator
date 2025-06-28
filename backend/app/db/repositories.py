@@ -155,6 +155,8 @@ class CompanyRepository:
     def get_statistics(self) -> Dict[str, Any]:
         """Get dashboard statistics."""
         try:
+            from datetime import datetime, timedelta
+
             # Total leads
             total_leads = self.collection.count_documents({})
 
@@ -162,6 +164,15 @@ class CompanyRepository:
             qualified_leads = self.collection.count_documents({"status": "qualified"})
             in_review_leads = self.collection.count_documents({"status": "in_review"})
             discovered_leads = self.collection.count_documents({"status": "discovered"})
+
+            # Calculate time-based statistics
+            now = datetime.utcnow()
+            one_week_ago = now - timedelta(days=7)
+
+            # Leads created this week
+            leads_this_week = self.collection.count_documents(
+                {"created_at": {"$gte": one_week_ago}}
+            )
 
             # Average qualification score
             pipeline = [
@@ -190,6 +201,7 @@ class CompanyRepository:
                 "qualified_leads": qualified_leads,
                 "in_review_leads": in_review_leads,
                 "discovered_leads": discovered_leads,
+                "leads_this_week": leads_this_week,
                 "avg_score": float(avg_score),
                 "top_icps": top_icps,
             }
@@ -200,6 +212,7 @@ class CompanyRepository:
                 "qualified_leads": 0,
                 "in_review_leads": 0,
                 "discovered_leads": 0,
+                "leads_this_week": 0,
                 "avg_score": 75.0,
                 "top_icps": [],
             }
