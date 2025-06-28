@@ -321,7 +321,7 @@ class CircuitBreaker:
 class MultiProviderSearchClient:
     """Orchestrates searches across multiple providers."""
 
-    PROVIDER_TIER = ["brave", "serper", "tavily", "firecrawl"]
+    PROVIDER_TIER = ["serper", "tavily", "brave", "firecrawl"]
 
     def __init__(self, clients: Dict[str, BaseSearchClient]):
         self.clients = clients

@@ -1,0 +1,19 @@
+{
+  "sectors": [
+    "Healthcare"
+  ],
+  "target_entities": [
+    "Healthcare Facilities"
+  ],
+  "geo_focus": [
+    "NL"
+  ],
+  "key_products": [
+    "Medical equipment",
+    "Diagnostic tools",
+    "Treatment devices"
+  ],
+  "financial_criteria": null,
+  "scale_indicators": "5-50 employees",
+  "investment_range": null
+}

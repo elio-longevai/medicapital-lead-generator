@@ -36,6 +36,8 @@ help:
 	@printf "  \033[36m%-25s\033[0m %s\n" "make create-db" "🗄️  Initialize the database tables."
 	@printf "\n\033[1m--- Code Quality ---\033[0m\n"
 	@printf "  \033[36m%-25s\033[0m %s\n" "make test" "🧪 Run the entire test suite with pytest."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make test-full-flow" "🚀 Run end-to-end integration test (quick & comprehensive)."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make test-single-company" "🎯 Run REAL workflow for single company (1 query only)."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make format" "✨ Automatically format code to match project style."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make lint" "🔍 Check code for potential errors and style issues."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make vulture" "🦅 Hunt for and report unused (dead) code."
@@ -144,6 +146,14 @@ run-backend:
 run-test:
 	@echo "\n🧪 Running short test of lead generation pipeline (5 queries)..."
 	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main run-once --country NL --limit 5
+
+test-full-flow:
+	@echo "\n🚀 Running workflow structure validation (quick)..."
+	@$(PYTEST) backend/tests/test_integration_full_flow.py::test_workflow_structure_validation -v -s
+
+test-single-company:
+	@echo "\n🎯 Running REAL workflow for single company (1 query)..."
+	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python test_single_flow.py
 
 run-api:
 	@echo "\n🌐 Starting FastAPI backend server..."

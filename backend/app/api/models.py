@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
 
@@ -40,8 +40,7 @@ class CompanyResponse(BaseModel):
     estimatedRevenue: Optional[str] = None  # estimated_revenue
     description: Optional[str] = None  # enriched_data description
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CompanyListResponse(BaseModel):

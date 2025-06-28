@@ -35,6 +35,11 @@ pypi = { url = "https://pypi.org/simple" }
 pythonpath = [
   "backend"
 ]
+filterwarnings = [
+    "ignore::DeprecationWarning:fake_http_header.*",
+    "ignore::DeprecationWarning:importlib.resources.*",
+    "ignore:Support for class-based.*:DeprecationWarning:pydantic.*",
+]
 
 [tool.dotenv.ini_options]
 dotenv_files = ".env"

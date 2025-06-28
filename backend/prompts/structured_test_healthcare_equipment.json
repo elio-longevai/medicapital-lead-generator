@@ -1,0 +1,21 @@
+{
+  "sectors": [
+    "Healthcare"
+  ],
+  "target_entities": [
+    "Medical clinics",
+    "Dental practices",
+    "Physiotherapy centers"
+  ],
+  "geo_focus": [
+    "NL"
+  ],
+  "key_products": [
+    "Medical equipment",
+    "Diagnostic tools",
+    "Treatment devices"
+  ],
+  "financial_criteria": "Annual revenue €200K - €2M",
+  "scale_indicators": "5-50 employees",
+  "investment_range": "Not specified"
+}

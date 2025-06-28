@@ -37,4 +37,19 @@ def test_generate_for_unenriched_company(mock_graph_state, mock_candidate_lead):
     result = generate_refinement_queries(mock_graph_state)
 
     queries = result["refinement_queries"][0]
-    assert len(queries) == len(ENRICHABLE_FIELDS)
+    # Cost-optimized approach with tier-1 employee queries only:
+    # - 5 regular fields (excluding employee_count): 5 queries
+    # - employee_count field gets tier-1 treatment only:
+    #   * 4 tier-1 high-performance patterns for NL (50-100% success rates)
+    #   * Total employee queries: 4
+    # - Total: 5 + 4 = 9 queries (down from 19 for cost efficiency)
+    assert len(queries) == 9
+
+    # Verify the top-priority company size pattern is included
+    company_size_queries = [q for q in queries if "company size employees" in q]
+    assert len(company_size_queries) == 1
+    assert '"Test Health Clinic" company size employees' in queries
+
+    # Verify other tier-1 patterns are included
+    assert '"Test Health Clinic" linkedin company size' in queries
+    assert '"Test Health Clinic" aantal medewerkers' in queries
