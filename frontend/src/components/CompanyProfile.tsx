@@ -47,6 +47,9 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
+// Amsterdam timezone
+const AMSTERDAM_TZ = "Europe/Amsterdam";
+
 export const CompanyProfile = ({ company, onBack }) => {
 	const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 	const updateStatusMutation = useUpdateCompanyStatus();
@@ -55,23 +58,38 @@ export const CompanyProfile = ({ company, onBack }) => {
 		if (!company) return [];
 
 		const activityList = [];
-		const createdAt = new Date(company.createdAt);
-		const updatedAt = new Date(company.lastActivity);
+		
+		// Parse dates properly - handle both ISO strings and fallback to null
+		const parseDate = (dateString) => {
+			if (!dateString || dateString === "Onbekend") return null;
+			try {
+				// If it's already an ISO string, parse it directly
+				const date = new Date(dateString);
+				return isNaN(date.getTime()) ? null : date;
+			} catch {
+				return null;
+			}
+		};
+
+		const createdAt = parseDate(company.createdAt);
+		const updatedAt = parseDate(company.lastActivity);
 
 		// Lead Discovered
-		activityList.push({
-			date: createdAt,
-			type: "discovery",
-			title: "Lead ontdekt",
-			description: `Gevonden via bron: ${company.sourceUrl}`,
-			icon: Star,
-			color: "text-yellow-600",
-		});
+		if (createdAt) {
+			activityList.push({
+				date: createdAt,
+				type: "discovery",
+				title: "Lead ontdekt",
+				description: `Gevonden via bron: ${company.sourceUrl}`,
+				icon: Star,
+				color: "text-yellow-600",
+			});
+		}
 
 		// Recent News
-		if (company.recentNews) {
+		if (company.recentNews && updatedAt) {
 			activityList.push({
-				date: updatedAt, // Assume news is from around the update time
+				date: updatedAt,
 				type: "research",
 				title: "Recent nieuws gevonden",
 				description: company.recentNews,
@@ -81,7 +99,7 @@ export const CompanyProfile = ({ company, onBack }) => {
 		}
 
 		// Initial Reasoning
-		if (company.notes) {
+		if (company.notes && createdAt) {
 			activityList.push({
 				date: createdAt,
 				type: "note",
@@ -93,7 +111,7 @@ export const CompanyProfile = ({ company, onBack }) => {
 		}
 
 		// Qualification
-		if (company.qualificationReasoning) {
+		if (company.qualificationReasoning && updatedAt) {
 			activityList.push({
 				date: updatedAt,
 				type: "qualification",
@@ -105,7 +123,7 @@ export const CompanyProfile = ({ company, onBack }) => {
 		}
 
 		// Last Update (if it's different from creation)
-		if (updatedAt.getTime() - createdAt.getTime() > 1000 * 60 * 5) {
+		if (createdAt && updatedAt && updatedAt.getTime() - createdAt.getTime() > 1000 * 60 * 5) {
 			// more than 5 mins difference
 			activityList.push({
 				date: updatedAt,

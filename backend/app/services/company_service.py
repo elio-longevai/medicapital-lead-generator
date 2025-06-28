@@ -9,6 +9,7 @@ from ..api.models import (
     QualificationScore,
 )
 from typing import Optional
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -148,16 +149,16 @@ class CompanyService:
         # Format location
         location = f"{company.location_details or 'Onbekend'}, {company.country}"
 
-        # Format last activity
+        # Format last activity - return full ISO datetime instead of date-only
         last_activity = (
-            company.updated_at.strftime("%b %d, %Y")
+            company.updated_at.replace(tzinfo=datetime.timezone.utc).isoformat()
             if company.updated_at
-            else "Onbekend"
+            else None
         )
         created_at = (
-            company.created_at.strftime("%b %d, %Y")
+            company.created_at.replace(tzinfo=datetime.timezone.utc).isoformat()
             if company.created_at
-            else "Onbekend"
+            else None
         )
 
         # Use company_description field directly

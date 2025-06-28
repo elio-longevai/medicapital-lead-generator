@@ -24,8 +24,10 @@ class CompanyResponse(BaseModel):
     location: str  # formatted location
     score: int  # calculated from qualification_score
     status: str
-    lastActivity: str  # formatted updated_at
-    createdAt: str  # formatted created_at
+    lastActivity: Optional[str] = (
+        None  # formatted updated_at - now ISO datetime or None
+    )
+    createdAt: Optional[str] = None  # formatted created_at - now ISO datetime or None
     equipmentNeed: str
     employees: Optional[str] = None  # employee_count
     website: str  # website_url or source_url
