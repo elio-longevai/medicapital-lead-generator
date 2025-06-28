@@ -226,7 +226,7 @@ class ExistingCompanyEnricher:
                 merge_result = await extract_and_merge_missing_info(state)
                 updated_companies = merge_result.get("enriched_companies", [])
 
-                if updated_companies:
+                if updated_companies and updated_companies[0]:
                     enriched_data = updated_companies[0].get("enriched_data", {})
                     if enriched_data:
                         enrichment_results[str(company["_id"])] = enriched_data

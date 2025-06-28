@@ -69,8 +69,13 @@ def save_leads_to_db(state: GraphState) -> dict:
                 # Calculate qualification score from details
                 if enriched_data.get("qualification_details"):
                     qual_details = enriched_data["qualification_details"]
-                    avg_score = sum(qual_details.values()) / len(qual_details)
-                    company_data["qualification_score"] = int(avg_score)
+                    if qual_details:  # Ensure qual_details is not empty
+                        avg_score = sum(qual_details.values()) / len(qual_details)
+                        company_data["qualification_score"] = int(avg_score)
+                    else:
+                        company_data["qualification_score"] = (
+                            75  # Default score if no details
+                        )
 
             # Insert into MongoDB
             result_id = company_repo.create_company(company_data)
