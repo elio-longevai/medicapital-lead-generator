@@ -51,13 +51,13 @@ class MongoDB:
 
     def get_collection(self, collection_name: str) -> Collection:
         """Get a collection from the database."""
-        if not self.database:
+        if self.database is None:
             self.connect()
         return self.database[collection_name]
 
     def get_database(self) -> Database:
         """Get the database instance."""
-        if not self.database:
+        if self.database is None:
             self.connect()
         return self.database
 
@@ -68,13 +68,13 @@ mongodb = MongoDB()
 
 def get_mongo_db() -> Database:
     """Get MongoDB database instance for dependency injection."""
-    if not mongodb.database:
+    if mongodb.database is None:
         mongodb.connect()
     return mongodb.database
 
 
 def get_mongo_collection(collection_name: str) -> Collection:
     """Get MongoDB collection for dependency injection."""
-    if not mongodb.database:
+    if mongodb.database is None:
         mongodb.connect()
     return mongodb.database[collection_name]

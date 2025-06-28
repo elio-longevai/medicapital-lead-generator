@@ -72,6 +72,138 @@ class CompanyRepository:
         cursor = self.collection.find({"icp_name": icp_name})
         return list(cursor)
 
+    def find_with_filters(
+        self,
+        skip: int = 0,
+        limit: int = 0,
+        icp_name: Optional[str] = None,
+        status: Optional[str] = None,
+        country: Optional[str] = None,
+        search: Optional[str] = None,
+        sort_by: str = "score",
+    ) -> Dict[str, Any]:
+        """Find companies with filters and pagination."""
+
+        # Build filter query
+        filter_query = {}
+
+        if icp_name and icp_name != "all":
+            filter_query["icp_name"] = icp_name
+
+        if status and status != "all":
+            filter_query["status"] = status
+        elif not status or status == "all":
+            # By default, do not show rejected leads
+            filter_query["status"] = {"$ne": "rejected"}
+
+        if country:
+            filter_query["country"] = country
+
+        if search:
+            filter_query["$or"] = [
+                {"discovered_name": {"$regex": search, "$options": "i"}},
+                {"equipment_needs": {"$regex": search, "$options": "i"}},
+            ]
+
+        # Build sort query
+        sort_query = []
+        if sort_by == "score":
+            sort_query.append(("qualification_score", -1))
+        elif sort_by == "company":
+            sort_query.append(("discovered_name", 1))
+        elif sort_by == "activity":
+            sort_query.append(("created_at", -1))
+
+        # Get total count
+        total = self.collection.count_documents(filter_query)
+
+        # Get filtered results
+        cursor = self.collection.find(filter_query)
+        if sort_query:
+            cursor = cursor.sort(sort_query)
+        if skip > 0:
+            cursor = cursor.skip(skip)
+        if limit > 0:
+            cursor = cursor.limit(limit)
+
+        companies = list(cursor)
+
+        return {"companies": companies, "total": total}
+
+    def find_by_id(self, company_id: str) -> Optional[Dict]:
+        """Find company by string ID (converts to ObjectId)."""
+        try:
+            object_id = ObjectId(company_id)
+            return self.collection.find_one({"_id": object_id})
+        except Exception as e:
+            logger.error(f"Error finding company by ID {company_id}: {e}")
+            return None
+
+    def update_status(self, company_id: str, new_status: str) -> bool:
+        """Update company status by ID."""
+        try:
+            object_id = ObjectId(company_id)
+            result = self.collection.update_one(
+                {"_id": object_id},
+                {"$set": {"status": new_status, "updated_at": datetime.utcnow()}},
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            logger.error(f"Error updating company status: {e}")
+            return False
+
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get dashboard statistics."""
+        try:
+            # Total leads
+            total_leads = self.collection.count_documents({})
+
+            # Leads by status
+            qualified_leads = self.collection.count_documents({"status": "qualified"})
+            in_review_leads = self.collection.count_documents({"status": "in_review"})
+            discovered_leads = self.collection.count_documents({"status": "discovered"})
+
+            # Average qualification score
+            pipeline = [
+                {"$match": {"qualification_score": {"$exists": True, "$ne": None}}},
+                {
+                    "$group": {
+                        "_id": None,
+                        "avg_score": {"$avg": "$qualification_score"},
+                    }
+                },
+            ]
+            avg_result = list(self.collection.aggregate(pipeline))
+            avg_score = avg_result[0]["avg_score"] if avg_result else 75.0
+
+            # Top ICPs
+            pipeline = [
+                {"$match": {"icp_name": {"$exists": True, "$ne": None}}},
+                {"$group": {"_id": "$icp_name", "count": {"$sum": 1}}},
+                {"$sort": {"count": -1}},
+                {"$limit": 3},
+            ]
+            top_icps = list(self.collection.aggregate(pipeline))
+
+            return {
+                "total_leads": total_leads,
+                "qualified_leads": qualified_leads,
+                "in_review_leads": in_review_leads,
+                "discovered_leads": discovered_leads,
+                "avg_score": float(avg_score),
+                "top_icps": top_icps,
+            }
+        except Exception as e:
+            logger.error(f"Error getting statistics: {e}")
+            return {
+                "total_leads": 0,
+                "qualified_leads": 0,
+                "in_review_leads": 0,
+                "discovered_leads": 0,
+                "avg_score": 75.0,
+                "top_icps": [],
+            }
+
 
 class SearchQueryRepository:
     """Repository for SearchQuery document operations."""

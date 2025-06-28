@@ -1,7 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 from typing import Optional
 from .models import (
     CompanyResponse,
@@ -10,8 +9,6 @@ from .models import (
     CompanyStatusUpdate,
     ScrapingStatus,
 )
-from ..db.session import get_db
-from ..db.models import Company
 from ..services.company_service import CompanyService
 from ..main import arun_all_icps
 import logging
@@ -51,10 +48,9 @@ def get_companies(
     country: Optional[str] = None,
     search: Optional[str] = None,
     sort_by: str = "score",
-    db: Session = Depends(get_db),
 ):
     """Get companies with filtering and pagination"""
-    service = CompanyService(db)
+    service = CompanyService()
     return service.get_companies_with_filters(
         skip=skip,
         icp_name=icp_name,
@@ -66,9 +62,9 @@ def get_companies(
 
 
 @app.get("/api/companies/{company_id}", response_model=CompanyResponse)
-def get_company(company_id: int, db: Session = Depends(get_db)):
+def get_company(company_id: str):
     """Get details for a single company."""
-    service = CompanyService(db)
+    service = CompanyService()
     company = service.get_company_by_id(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -77,18 +73,17 @@ def get_company(company_id: int, db: Session = Depends(get_db)):
 
 @app.patch("/api/companies/{company_id}/status", response_model=CompanyResponse)
 def update_company_status(
-    company_id: int,
+    company_id: str,
     status_update: CompanyStatusUpdate,
-    db: Session = Depends(get_db),
 ):
     """Update the status of a company (e.g., 'contacted', 'rejected')."""
-    service = CompanyService(db)
+    service = CompanyService()
     updated_company = service.update_company_status(company_id, status_update.status)
 
     if not updated_company:
         # Check if company exists at all
-        company_exists = db.query(Company.id).filter(Company.id == company_id).first()
-        if not company_exists:
+        company = service.get_company_by_id(company_id)
+        if not company:
             raise HTTPException(status_code=404, detail="Company not found")
         # If it exists, the status must have been invalid
         raise HTTPException(
@@ -99,9 +94,9 @@ def update_company_status(
 
 
 @app.get("/api/dashboard/stats", response_model=DashboardStats)
-def get_dashboard_stats(db: Session = Depends(get_db)):
+def get_dashboard_stats():
     """Get dashboard statistics"""
-    service = CompanyService(db)
+    service = CompanyService()
     return service.get_dashboard_statistics()
 
 

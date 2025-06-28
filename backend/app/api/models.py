@@ -18,7 +18,7 @@ class QualificationScore(BaseModel):
 
 
 class CompanyResponse(BaseModel):
-    id: int
+    id: str  # MongoDB ObjectId as string
     company: str  # discovered_name
     industry: str  # primary_industry
     location: str  # formatted location
