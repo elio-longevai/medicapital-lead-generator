@@ -70,7 +70,7 @@ install-backend:
 
 compile-requirements:
 	@echo "\n📝 Compiling 'requirements.in' to lock dependencies in 'requirements.txt'..."
-	@$(UV) pip compile requirements.in -o requirements.txt
+	@$(UV) pip compile backend/requirements.in -o backend/requirements.txt
 	@echo "\n✅ 'requirements.txt' has been updated. Don't forget to commit it!"
 
 setup: clean install setup-pre-commit
