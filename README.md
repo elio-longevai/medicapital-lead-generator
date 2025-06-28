@@ -26,12 +26,14 @@ The MediCapital Lead Generation Engine is a sophisticated AI-powered system that
 
 | Feature | Description |
 |---------|-------------|
-| 🧠 **AI-Powered Discovery** | Uses Google Gemini to intelligently parse ICPs and generate targeted search strategies |
-| 🌍 **Multi-Market Support** | Simultaneously targets Netherlands (NL) and Belgium (BE) markets |
-| 🔍 **Smart Deduplication** | Advanced company name normalization prevents duplicate entries |
-| ⏰ **Automated Scheduling** | Runs continuously with configurable intervals and country rotation |
-| 📊 **Production-Ready** | MongoDB with MongoDB Atlas for scalable, cloud-based data storage |
-| 🚀 **High Performance** | Async operations for concurrent web searches and AI processing |
+| 🧠 **AI-Powered Discovery** | Uses Google Gemini to intelligently parse ICPs and generate targeted search strategies. |
+| 🌐 **Interactive Frontend Control** | FastAPI backend allows the frontend to trigger and monitor lead generation tasks. |
+| 🛡️ **Resilient Search** | Multi-provider search (Serper, Tavily, Brave, Firecrawl) with a circuit breaker for high availability. |
+| LOOP **Cost-Optimized Refinement Loop** | Intelligently seeks missing data points using performance-tiered, cost-effective search queries. |
+| 🔍 **Smart Deduplication** | Advanced company name normalization prevents duplicate entries. |
+| ⏰ **Automated & Manual Execution** | Run workflows on a schedule, trigger them manually via CLI, or start them from the web UI. |
+| 📊 **Production-Ready** | Scalable architecture using MongoDB Atlas, FastAPI, and a worker-based system. |
+| 🚀 **High Performance** | Fully asynchronous pipeline for concurrent web searches, scraping, and AI processing. |
 
 ---
 
@@ -43,105 +45,103 @@ The MediCapital Lead Generation Engine is a sophisticated AI-powered system that
 | **Backend** | ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-web%20framework-teal) ![Pydantic](https://img.shields.io/badge/Pydantic-data%20validation-red) ![PyMongo](https://img.shields.io/badge/PyMongo-MongoDB%20driver-green) |
 | **Frontend** | ![React](https://img.shields.io/badge/React-UI%20library-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-language-blue) ![Vite](https://img.shields.io/badge/Vite-build%20tool-purple) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-styling-cyan) |
 | **Database** | ![MongoDB](https://img.shields.io/badge/MongoDB-database-green) ![MongoDB Atlas](https://img.shields.io/badge/MongoDB%20Atlas-cloud-blue) |
-| **APIs** | ![Brave Search](https://img.shields.io/badge/Brave%20Search-web%20search-orange) ![Firecrawl](https://img.shields.io/badge/Firecrawl-scraping-red) ![Tavily](https://img.shields.io/badge/Tavily-search-green) |
+| **Search & Scraping APIs** | ![Serper](https://img.shields.io/badge/Serper-search-blue) ![Tavily](https://img.shields.io/badge/Tavily-search-green) ![Brave Search](https://img.shields.io/badge/Brave%20Search-web%20search-orange) ![Firecrawl](https://img.shields.io/badge/Firecrawl-scraping-red) |
 | **Tooling** | ![UV](https://img.shields.io/badge/uv-package%20manager-blue) ![Bun](https://img.shields.io/badge/Bun-frontend%20tooling-yellow) ![Ruff](https://img.shields.io/badge/Ruff-linting%20%26%20formatting-red) |
 
 ---
 
 ## 🏗️ **System Architecture**
 
-The system follows a **LangGraph workflow** pattern, processing leads through a series of intelligent nodes that include a refinement loop for comprehensive data enrichment.
+The system follows a **LangGraph workflow** pattern, processing leads through a series of intelligent nodes. It includes a robust, multi-attempt refinement loop for comprehensive data enrichment and a circuit breaker for resilient web searching.
 
 ```mermaid
 graph TD
     A[📝 Raw ICP Text] --> B(🧠 structure_icp);
-    B --> C(🔍 generate_search_queries);
-    C --> D(🌐 execute_web_search);
-    D --> E(🎯 triage_and_extract_leads);
-    E --> F(🌐 scrape_and_enrich_companies);
-    F --> G{<br/>check_enrichment_completeness};
-    G -- "Data is Complete" --> K(💾 save_leads_to_db);
-    G -- "Data is Missing" --> H(🔍 generate_refinement_queries);
-    H --> I(🌐 execute_refinement_search);
-    I --> J(🧩 extract_and_merge_missing_info);
-    J --> G;
-    K --> L([🏁 END]);
+    B --> C(📚 get_used_queries);
+    C --> D(🔍 generate_search_queries);
+    D --> E(🌐 execute_web_search);
+    E --> F(🎯 triage_and_extract_leads);
+    F --> G(🌐 scrape_and_enrich_companies);
+    G --> H{<br/>check_enrichment_completeness};
+    H -- "Data is Complete" --> L(💾 save_leads_to_db);
+    H -- "Data is Missing" --> I(🔍 generate_refinement_queries);
+    I --> J(🌐 execute_refinement_search);
+    J --> K(🧩 extract_and_merge_missing_info);
+    K --> H;
+    L --> M([🏁 END]);
 
     style A fill:#e1f5fe
     style B fill:#f3e5f5
-    style C fill:#e8f5e8
-    style D fill:#fff3e0
-    style E fill:#fce4ec
-    style F fill:#e0f7fa
-    style G fill:#f9fbe7
-    style H fill:#f3e5f5
-    style I fill:#fff3e0
-    style J fill:#fce4ec
-    style K fill:#f1f8e9
+    style C fill:#e8f5e9
+    style D fill:#e8f5e8
+    style E fill:#fff3e0
+    style F fill:#fce4ec
+    style G fill:#e0f7fa
+    style H fill:#f9fbe7
+    style I fill:#f3e5f5
+    style J fill:#fff3e0
+    style K fill:#fce4ec
+    style L fill:#f1f8e9
 ```
 
 ### **🔄 Workflow Stages**
 
-1.  **📋 ICP Structuring** - Converts raw business requirements into structured JSON. *(Note: This is a candidate for optimization to run only once.)*
-2.  **🎯 Query Generation** - Creates targeted Dutch search queries using strategic patterns.
-3.  **🌐 Web Search** - Executes concurrent searches via Brave Search API.
-4.  **🤖 AI Triage** - An LLM evaluates each search result for B2B relevance and ICP fit.
-5.  ** scraping & Enrichment** - The official company website is scraped, and key data points (contact info, revenue, etc.) are extracted.
-6.  **🔎 Completeness Check & Refinement Loop** - The system checks if critical data is missing. If so, it generates and executes new, highly specific search queries to find the missing information, merging it with the existing lead data. The loop specifically targets missing fields such as contact email, phone number, location details, employee count, equipment needs, and recent news to complete company profiles. This loop continues until the lead is sufficiently enriched.
-7.  **💾 Database Storage** - Saves unique, enriched leads to the database with smart deduplication.
+1.  **📋 ICP Structuring**: Converts raw business requirements into structured JSON, caching the result for efficiency.
+2.  **📚 Get Used Queries**: Fetches previously executed search queries from MongoDB to avoid redundant searches.
+3.  **🎯 Query Generation**: Creates a list of targeted Dutch search queries using strategic patterns, avoiding already used queries.
+4.  **🌐 Web Search**: Executes concurrent searches using a **multi-provider strategy** (Serper, Tavily, Brave, Firecrawl). A circuit breaker temporarily disables any provider that is failing or rate-limited, ensuring high availability.
+5.  **🤖 AI Triage**: An LLM evaluates each search result for B2B relevance and ICP fit, filtering out noise.
+6.  **🕸️ Scraping & Enrichment**: The official company website is scraped, and an LLM extracts key data points (contact info, employee count, etc.) into a structured format.
+7.  **🔎 Completeness Check & Refinement Loop**: The system checks if critical data is missing.
+    *   If data is missing, it enters a **refinement loop**.
+    *   **Generate Refinement Queries**: Creates new, highly specific, and cost-optimized queries to find the missing information. For example, it uses performance-tiered queries to find `employee_count`.
+    *   **Execute Refinement Search**: Runs the new queries.
+    *   **Extract & Merge**: A targeted LLM call extracts only the missing data from the new search results and merges it.
+    *   The loop repeats until the lead is sufficiently enriched or a max attempt limit is reached.
+8.  **💾 Database Storage**: Saves unique, enriched leads to the MongoDB database with smart deduplication.
 
 ---
 
 ## 📁 **Codebase Structure**
 
+The backend codebase is organized into modular components, with the core workflow logic residing in the `graph/nodes` directory.
+
 ```
-medicapital_lead_engine/
+backend/
 ├── 📦 app/
+│   ├── 📄 api/
+│   │   ├── main.py          # FastAPI endpoint definitions
+│   │   └── models.py        # Pydantic models for API requests/responses
 │   ├── 🔧 core/
-│   │   ├── settings.py      # Configuration management with Pydantic
-│   │   └── clients.py       # API clients (Gemini, Brave Search)
+│   │   ├── settings.py      # Configuration management (Pydantic)
+│   │   └── clients.py       # API clients (Gemini, Multi-Provider Search)
 │   ├── 🗄️ db/
 │   │   ├── mongodb.py       # MongoDB connection management
-│   │   ├── mongo_models.py  # Pydantic document models
-│   │   └── repositories.py  # Repository pattern for database operations
+│   │   ├── mongo_models.py  # Pydantic models for MongoDB documents
+│   │   └── repositories.py  # Repository pattern for DB operations
 │   ├── 🕸️ graph/
 │   │   ├── state.py         # Pydantic models for workflow state
 │   │   ├── prompts.py       # Centralized prompt management
-│   │   ├── nodes.py         # Core workflow logic (async)
-│   │   └── workflow.py      # LangGraph workflow assembly
+│   │   ├── workflow.py      # LangGraph workflow assembly
+│   │   └── nodes/           # INDIVIDUAL WORKFLOW NODES
+│   │       ├── structure_icp.py
+│   │       ├── generate_search_queries.py
+│   │       ├── execute_web_search.py
+│   │       ├── triage_and_extract_leads.py
+│   │       ├── scrape_and_enrich_companies.py
+│   │       ├── save_leads_to_db.py
+│   │       └── refinement/  # Refinement loop nodes
 │   ├── 🛠️ services/
-│   │   └── company_name_normalizer.py  # Smart deduplication logic
-│   └── 🚀 main.py           # CLI interface with Typer
-├── 📝 prompts/
-│   ├── icp.txt              # Ideal Customer Profile definition
-│   ├── icp_structuring.txt  # ICP parsing prompt
-│   ├── query_generation.txt # Search query generation prompt
-│   └── lead_triage.txt      # Lead qualification prompt
-├── 🧪 tests/
-│   └── test_normalizer.py   # Unit tests
-├── ⚙️ pyproject.toml        # Project configuration & dependencies
-└── 📖 README.md             # This file
+│   │   ├── company_service.py
+│   │   └── company_name_normalizer.py
+│   ├── 🚀 main.py           # CLI interface (Typer)
+│   └── 🛰️ api_server.py     # FastAPI server entry point (Uvicorn)
+├── 📝 prompts/              # Prompt templates (.txt, .json)
+├── 🧪 tests/                # Pytest unit and integration tests
+├── 📜 analyze_missing_company_data.py # Utility script for data analysis
+├── 📜 enrich_existing_companies.py   # Utility script for batch enrichment
+└── ⚙️ pyproject.toml        # Project config & dependencies
 ```
-
-### **🧩 Core Components**
-
-#### **🔧 Core Layer (`app/core/`)**
-- **`settings.py`** - Centralized configuration using Pydantic Settings
-- **`clients.py`** - Clean API wrappers for external services (Gemini LLM, Brave Search)
-
-#### **🗄️ Database Layer (`app/db/`)**
-- **`mongodb.py`** - MongoDB connection management and client configuration
-- **`mongo_models.py`** - Pydantic document models for MongoDB collections
-- **`repositories.py`** - Repository pattern implementation for database operations
-
-#### **🕸️ Workflow Engine (`app/graph/`)**
-- **`state.py`** - Pydantic models for type-safe data flow through the workflow
-- **`prompts.py`** - Dynamic prompt loading from external files for easy customization
-- **`nodes.py`** - Async workflow nodes with concurrent processing capabilities
-- **`workflow.py`** - LangGraph workflow orchestration and compilation
-
-#### **🛠️ Services (`app/services/`)**
-- **`company_name_normalizer.py`** - Advanced text processing for duplicate prevention
 
 ---
 
@@ -149,13 +149,13 @@ medicapital_lead_engine/
 
 ### **Prerequisites**
 
-- **Python 3.12+** - Download from [python.org](https://www.python.org/downloads/)
-- **Bun** - Install from [bun.sh](https://bun.sh/) (for frontend development)
-- **uv** - Install from [**astral**.sh/uv](https://astral.sh/uv) (for backend package management)
+- **Python 3.12+** - [python.org](https://www.python.org/downloads/)
+- **Bun** - [bun.sh](https://bun.sh/) (for frontend)
+- **uv** - [astral.sh/uv](https://astral.sh/uv) (for backend)
 
 ### **1. Environment Setup**
 
-First, create a `.env` file in the `backend/` directory of the project. You can do this by copying the example values below.
+Create a `.env` file in the `backend/` directory by copying the example below.
 
 **Required API Keys & Configuration:**
 ```env
@@ -171,13 +171,13 @@ LANGCHAIN_PROJECT="MediCapital Lead Engine"
 GOOGLE_API_KEY="your_gemini_key_here"
 
 # Search Providers
-# The system uses a tiered approach (Firecrawl > Tavily > Brave > Serper).
+# The system uses a tiered approach (Serper > Tavily > Brave > Firecrawl).
 # Provide keys for as many as you can to increase reliability.
 # At least one key is required for the system to run.
-FIRECRAWL_API_KEY="your_firecrawl_key_here"
+SERPER_API_KEY="your_serper_key_here"
 TAVILY_API_KEY="your_tavily_key_here"
 BRAVE_API_KEY="your_brave_search_key_here"
-SERPER_API_KEY="your_serper_key_here"
+FIRECRAWL_API_KEY="your_firecrawl_key_here"
 
 # Database - MongoDB
 # Get your connection string from MongoDB Atlas
@@ -190,153 +190,115 @@ DB_PASSWORD="your_mongodb_password"
 LOG_LEVEL="INFO"
 ```
 
-### **2. Installation**
+### **2. Installation & Setup**
 
 ```bash
-# Create virtual environment
-uv venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+# --- Backend ---
+cd backend
+make setup          # Installs uv, creates venv, installs deps
+make create-db      # Initialize MongoDB database and indexes
 
-# Install dependencies
-uv pip install -e .[dev]
+# --- Frontend ---
+cd ../frontend
+bun install         # Install dependencies
 ```
 
-### **3. Database Initialization**
+### **3. Running the Application**
 
-```bash
-# Create database tables
-python -m app.main create-db
-```
+The application consists of a backend API/worker and a frontend client.
 
-### **4. Running the Application**
+1.  **Start the Backend API:**
+    ```bash
+    cd backend
+    make run-api
+    # API server starts at http://localhost:8000
+    ```
 
-1. **Backend Setup & Execution:**
-   ```bash
-   cd backend
-   make setup              # Installs uv, creates venv, installs deps
-   make create-db          # Initialize database
-   make run-api           # Start API server at http://localhost:8000
-   ```
+2.  **Start the Frontend:**
+    ```bash
+    cd frontend
+    bun run dev
+    # Frontend dev server starts at http://localhost:5173
+    ```
 
-2. **Frontend Setup & Execution:**
-   ```bash
-   cd frontend
-   bun install            # Install dependencies
-   bun run dev           # Start dev server at http://localhost:8080
-   ```
+### **4. Lead Generation Commands**
 
-### **5. Lead Generation Commands**
+You can trigger the lead generation process in several ways:
 
-```bash
-# Single run for Netherlands
-python -m app.main run-once --country NL
-
-# Single run for Belgium  
-python -m app.main run-once --country BE
-
-# Start automated scheduler (4-hour intervals)
-python -m app.main start-scheduler --interval-hours 4
-```
+-   **From the Web UI (Recommended):** Click the "Scrape New Leads" button in the application dashboard.
+-   **Via CLI (for a single run):**
+    ```bash
+    cd backend
+    python -m app.main run-once --queries-per-icp 5
+    ```
+-   **Via Scheduled Worker (for production):**
+    ```bash
+    cd backend
+    # This command is typically run by a process manager like systemd or in a Docker container.
+    # See the Procfile for production commands.
+    python -m app.main start-scheduler --interval-hours 4
+    ```
 
 ---
 
-## ⚙️ **Configuration**
+## 🎛️ **API Endpoints**
 
-### **Environment Variables**
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GOOGLE_API_KEY` | Google Gemini API key for AI processing | ✅ |
-| `BRAVE_API_KEY` | Brave Search API key for web searches | ✅ |
-| `LANGCHAIN_API_KEY` | LangSmith API key for observability | ✅ |
-| `MONGODB_URI` | MongoDB connection string (Atlas or local) | ✅ |
-| `MONGODB_DATABASE` | MongoDB database name | ❌ (defaults to medicapital) |
-| `DB_USER` | MongoDB username | ✅ |
-| `DB_PASSWORD` | MongoDB password | ✅ |
-| `LOG_LEVEL` | Logging level (INFO, DEBUG, etc.) | ❌ |
-
-### **Customization**
-
-The system is designed for easy customization:
-
-- **📝 ICP Definition**: Edit `prompts/icp.txt` to modify target customer profile
-- **🎯 Search Strategy**: Modify `prompts/query_generation.txt` to adjust search patterns  
-- **🤖 Lead Qualification**: Update `prompts/lead_triage.txt` to change qualification criteria
-
-### **Ideal Customer Profiles (ICPs)**
-
-The system currently has **3 active ICPs** configured:
-
-- **sustainability_supplier** (Netherlands) - Sustainability equipment suppliers
-- **sustainability_end_user** (Netherlands) - End users of sustainability equipment  
-- **healthcare_end_user** (Netherlands) - Healthcare equipment end users
-
-To add a new ICP:
-
-1. Create a new `.txt` file in the `prompts/` directory with your ICP definition
-2. Add the new ICP to the `ICP_CONFIG` list in `backend/app/main.py`:
-   ```python
-   {
-       "name": "your_icp_name",
-       "country": "NL",  # or "BE"
-       "file": "your_icp_file.txt",
-   }
-   ```
-
-### **API Endpoints**
-
-The FastAPI backend provides the following endpoints:
+The FastAPI backend provides the following endpoints for the frontend:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/companies` | GET | List companies with filtering and pagination |
-| `/api/companies/{id}` | GET | Get details for a single company |
-| `/api/companies/{id}/status` | PATCH | Update company status |
-| `/api/dashboard/stats` | GET | Get dashboard statistics |
-| `/health` | GET | Health check endpoint |
+| `/api/companies` | GET | List companies with filtering, sorting, and pagination. |
+| `/api/companies/{id}` | GET | Get details for a single company. |
+| `/api/companies/{id}/status` | PATCH | Update a company's status (e.g., 'qualified', 'rejected'). |
+| `/api/dashboard/stats` | GET | Get aggregated statistics for the dashboard. |
+| `/api/scrape-leads` | POST | **Trigger a new lead scraping process in the background.** |
+| `/api/scrape-status` | GET | **Check the current status of the scraping process.** |
+| `/health` | GET | Health check endpoint. |
+
+---
+
+## 🛠️ **Utility Scripts**
+
+The `backend/` directory contains standalone scripts for data maintenance.
+
+-   **`analyze_missing_company_data.py`**:
+    -   **Purpose**: Scans the database and generates a report on which data fields are most frequently missing across all companies.
+    -   **Usage**: `python analyze_missing_company_data.py`
+
+-   **`enrich_existing_companies.py`**:
+    -   **Purpose**: Finds companies with incomplete data and runs them through the refinement pipeline to fill in the gaps.
+    -   **Usage**: `python enrich_existing_companies.py --batch-size 5 --dry-run`
 
 ---
 
 ## 🗄️ **Database Schema**
 
-### **MongoDB Collections**
-
-#### **Companies Collection**
+The primary data is stored in the `companies` collection in MongoDB.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `_id` | ObjectId | MongoDB document identifier |
-| `normalized_name` | String | Cleaned company name (indexed for uniqueness) |
-| `discovered_name` | String | Original company name as found |
-| `source_url` | String | URL where company was first discovered |
-| `website_url` | String | The company's official website URL |
-| `country` | String(2) | Country code (NL/BE) |
-| `primary_industry` | String | Main industry classification |
-| `initial_reasoning` | String | AI's initial justification for the lead |
-| `status` | String | Lead status (discovered, qualified, etc.) |
-| `contact_email` | String | Contact email address |
-| `contact_phone` | String | Contact phone number |
-| `employee_count` | String | Estimated number of employees |
-| `estimated_revenue`| String | Estimated annual revenue |
-| `equipment_needs` | String | Notes on potential equipment needs |
-| `recent_news` | String | Summary of recent company news |
-| `location_details`| String | Full location (city, country) |
-| `qualification_score` | Integer | AI-generated score (0-100) on ICP fit |
-| `qualification_details` | Object | Detailed breakdown of qualification criteria |
-| `enriched_data` | Object | Raw enriched data object from scraping |
-| `created_at` | DateTime | Discovery timestamp |
-| `updated_at` | DateTime | Last modification timestamp |
-
-#### **Additional Collections**
-
-- **`api_usage`** - Tracks API call statistics by provider and date
-- **`search_queries`** - Stores used search queries to prevent duplicates
-- **`leads`** - Future collection for lead management workflow
-
-**Indexes:**
-- `normalized_name` (unique) - Prevents duplicate companies
-- `created_at` (descending) - Optimizes recent lead queries
-- `icp_name` - Filters companies by target profile
+| `_id` | ObjectId | MongoDB document identifier. |
+| `normalized_name` | String | Cleaned company name (indexed for uniqueness). |
+| `discovered_name` | String | Original company name as found. |
+| `source_url` | String | URL where company was first discovered. |
+| `website_url` | String | The company's official website URL. |
+| `country` | String(2) | Country code (NL/BE). |
+| `icp_name` | String | The ICP profile name that generated this lead. |
+| `status` | String | Lead status (`discovered`, `in_review`, `qualified`, `rejected`). |
+| `initial_reasoning` | String | AI's initial justification for the lead. |
+| `company_description`| String | AI-generated summary of the company's business. |
+| `contact_email` | String | Contact email address. |
+| `contact_phone` | String | Contact phone number. |
+| `location_details`| String | Full location (city, country). |
+| `employee_count` | String | Estimated number of employees (e.g., "10-50"). |
+| `estimated_revenue`| String | Estimated annual revenue. |
+| `equipment_needs` | String | Notes on potential equipment needs. |
+| `recent_news` | String | Summary of recent company news. |
+| `qualification_score` | Integer | AI-generated score (0-100) on ICP fit. |
+| `qualification_details` | Object | Detailed breakdown of qualification criteria scores. |
+| `enriched_data` | Object | Raw enriched data object from scraping. |
+| `created_at` | DateTime | Discovery timestamp. |
+| `updated_at` | DateTime | Last modification timestamp. |
 
 ---
 
@@ -344,85 +306,14 @@ The FastAPI backend provides the following endpoints:
 
 ```bash
 # Run the full test suite
-pytest
+make test
 
-# Run a quick, 5-query test of the entire pipeline
-make run-test
+# Run a quick, 1-query test of the entire pipeline
+make test-single-company
 
-# Run with coverage
-pytest --cov=app
-
-# Run specific test
-pytest tests/test_normalizer.py -v
+# Run with coverage report
+make test-cov
 ```
-
----
-
-## 🚀 **Production Deployment**
-
-### **MongoDB Setup**
-
-```bash
-# 1. Set up MongoDB Atlas cluster or self-hosted MongoDB
-# 2. Configure environment variables
-export MONGODB_URI="mongodb+srv://user:password@cluster.mongodb.net/?retryWrites=true&w=majority"
-export MONGODB_DATABASE="medicapital"
-export DB_USER="your_username"
-export DB_PASSWORD="your_password"
-
-# 3. Initialize database with indexes
-python -m app.main create-db
-```
-
-### **Production Checklist**
-
-- [ ] Configure MongoDB Atlas cluster or self-hosted MongoDB
-- [ ] Set up environment variable management (e.g., AWS Secrets Manager)
-- [ ] Configure MongoDB connection pooling and SSL/TLS
-- [ ] Set up MongoDB monitoring and alerting
-- [ ] Configure automated backups (Atlas automatic or mongodump)
-- [ ] Deploy with process manager (systemd, Docker, etc.)
-- [ ] Configure log aggregation
-- [ ] Set up health checks
-- [ ] Implement database connection retry logic
-
----
-
-## 🔧 **Development**
-
-### **Adding New Features**
-
-1. **New Workflow Nodes**: Add to `app/graph/nodes.py` and register in `workflow.py`
-2. **Database Changes**: Update models in `app/db/mongo_models.py` and repositories in `repositories.py`
-3. **New Prompts**: Add to `prompts/` directory and load in `prompts.py`
-4. **API Integrations**: Add clients to `app/core/clients.py`
-
-### **Code Quality**
-
-The codebase follows these principles:
-- **🎯 Type Safety**: Full Pydantic models and type hints
-- **🔄 Async-First**: Concurrent operations for performance
-- **📦 Modular Design**: Clear separation of concerns
-- **🧪 Testable**: Dependency injection and mocking support
-- **📝 Self-Documenting**: Comprehensive docstrings and comments
-
----
-
-## 📊 **Performance & Monitoring**
-
-### **Built-in Observability**
-
-- **🔍 LangSmith Integration**: Full workflow tracing and debugging
-- **📈 Performance Metrics**: Async operations with timing
-- **🚨 Error Handling**: Graceful degradation and retry logic
-- **📝 Structured Logging**: Detailed operation logs
-
-### **Performance Characteristics**
-
-- **⚡ Concurrent Processing**: Web searches and AI calls run in parallel
-- **🎯 Smart Batching**: Efficient database operations
-- **🔄 Async Architecture**: Non-blocking I/O operations
-- **💾 Memory Efficient**: Streaming data processing
 
 ---
 
@@ -430,10 +321,10 @@ The codebase follows these principles:
 
 This is a private project for MediCapital Solutions. For internal development:
 
-1. Create feature branch from `main`
-2. Implement changes with tests
-3. Update documentation as needed
-4. Submit pull request for review
+1.  Create feature branch from `main`.
+2.  Implement changes with tests.
+3.  Update documentation as needed.
+4.  Submit pull request for review.
 
 ---
 
