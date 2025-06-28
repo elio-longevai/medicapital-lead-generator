@@ -30,7 +30,7 @@ The MediCapital Lead Generation Engine is a sophisticated AI-powered system that
 | 🌍 **Multi-Market Support** | Simultaneously targets Netherlands (NL) and Belgium (BE) markets |
 | 🔍 **Smart Deduplication** | Advanced company name normalization prevents duplicate entries |
 | ⏰ **Automated Scheduling** | Runs continuously with configurable intervals and country rotation |
-| 📊 **Production-Ready** | SQLite for development, PostgreSQL for production with full observability |
+| 📊 **Production-Ready** | MongoDB with MongoDB Atlas for scalable, cloud-based data storage |
 | 🚀 **High Performance** | Async operations for concurrent web searches and AI processing |
 
 ---
@@ -40,9 +40,9 @@ The MediCapital Lead Generation Engine is a sophisticated AI-powered system that
 | Layer | Technologies |
 |-------|-------------|
 | **AI & LLM** | ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-AI-orange) ![LangChain](https://img.shields.io/badge/LangChain-framework-green) ![LangGraph](https://img.shields.io/badge/LangGraph-workflow-purple) |
-| **Backend** | ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-web%20framework-teal) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-ORM-red) |
+| **Backend** | ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-web%20framework-teal) ![Pydantic](https://img.shields.io/badge/Pydantic-data%20validation-red) ![PyMongo](https://img.shields.io/badge/PyMongo-MongoDB%20driver-green) |
 | **Frontend** | ![React](https://img.shields.io/badge/React-UI%20library-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-language-blue) ![Vite](https://img.shields.io/badge/Vite-build%20tool-purple) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-styling-cyan) |
-| **Database** | ![SQLite](https://img.shields.io/badge/SQLite-development-blue) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-production-blue) |
+| **Database** | ![MongoDB](https://img.shields.io/badge/MongoDB-database-green) ![MongoDB Atlas](https://img.shields.io/badge/MongoDB%20Atlas-cloud-blue) |
 | **APIs** | ![Brave Search](https://img.shields.io/badge/Brave%20Search-web%20search-orange) ![Firecrawl](https://img.shields.io/badge/Firecrawl-scraping-red) ![Tavily](https://img.shields.io/badge/Tavily-search-green) |
 | **Tooling** | ![UV](https://img.shields.io/badge/uv-package%20manager-blue) ![Bun](https://img.shields.io/badge/Bun-frontend%20tooling-yellow) ![Ruff](https://img.shields.io/badge/Ruff-linting%20%26%20formatting-red) |
 
@@ -101,8 +101,9 @@ medicapital_lead_engine/
 │   │   ├── settings.py      # Configuration management with Pydantic
 │   │   └── clients.py       # API clients (Gemini, Brave Search)
 │   ├── 🗄️ db/
-│   │   ├── models.py        # SQLAlchemy ORM models
-│   │   └── session.py       # Database connection management
+│   │   ├── mongodb.py       # MongoDB connection management
+│   │   ├── mongo_models.py  # Pydantic document models
+│   │   └── repositories.py  # Repository pattern for database operations
 │   ├── 🕸️ graph/
 │   │   ├── state.py         # Pydantic models for workflow state
 │   │   ├── prompts.py       # Centralized prompt management
@@ -129,8 +130,9 @@ medicapital_lead_engine/
 - **`clients.py`** - Clean API wrappers for external services (Gemini LLM, Brave Search)
 
 #### **🗄️ Database Layer (`app/db/`)**
-- **`models.py`** - SQLAlchemy models defining the `Company` entity with full lead lifecycle support
-- **`session.py`** - Database connection management and session handling
+- **`mongodb.py`** - MongoDB connection management and client configuration
+- **`mongo_models.py`** - Pydantic document models for MongoDB collections
+- **`repositories.py`** - Repository pattern implementation for database operations
 
 #### **🕸️ Workflow Engine (`app/graph/`)**
 - **`state.py`** - Pydantic models for type-safe data flow through the workflow
@@ -177,10 +179,12 @@ TAVILY_API_KEY="your_tavily_key_here"
 BRAVE_API_KEY="your_brave_search_key_here"
 SERPER_API_KEY="your_serper_key_here"
 
-# Database URL
-# Default is a local SQLite file.
-# For production, use a PostgreSQL connection string.
-DATABASE_URL="sqlite:///./medicapital.db"
+# Database - MongoDB
+# Get your connection string from MongoDB Atlas
+MONGODB_URI="your_mongodb_connection_string"
+MONGODB_DATABASE="medicapital"
+DB_USER="your_mongodb_username"
+DB_PASSWORD="your_mongodb_password"
 
 # Log Level
 LOG_LEVEL="INFO"
@@ -245,7 +249,10 @@ python -m app.main start-scheduler --interval-hours 4
 | `GOOGLE_API_KEY` | Google Gemini API key for AI processing | ✅ |
 | `BRAVE_API_KEY` | Brave Search API key for web searches | ✅ |
 | `LANGCHAIN_API_KEY` | LangSmith API key for observability | ✅ |
-| `DATABASE_URL` | Database connection string | ❌ (defaults to SQLite) |
+| `MONGODB_URI` | MongoDB connection string (Atlas or local) | ✅ |
+| `MONGODB_DATABASE` | MongoDB database name | ❌ (defaults to medicapital) |
+| `DB_USER` | MongoDB username | ✅ |
+| `DB_PASSWORD` | MongoDB password | ✅ |
 | `LOG_LEVEL` | Logging level (INFO, DEBUG, etc.) | ❌ |
 
 ### **Customization**
@@ -292,37 +299,44 @@ The FastAPI backend provides the following endpoints:
 
 ## 🗄️ **Database Schema**
 
-### **Companies Table**
+### **MongoDB Collections**
+
+#### **Companies Collection**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | Integer | Primary key |
-| `normalized_name` | String | Cleaned company name (unique) |
+| `_id` | ObjectId | MongoDB document identifier |
+| `normalized_name` | String | Cleaned company name (indexed for uniqueness) |
 | `discovered_name` | String | Original company name as found |
 | `source_url` | String | URL where company was first discovered |
 | `website_url` | String | The company's official website URL |
 | `country` | String(2) | Country code (NL/BE) |
 | `primary_industry` | String | Main industry classification |
-| `initial_reasoning` | Text | AI's initial justification for the lead |
+| `initial_reasoning` | String | AI's initial justification for the lead |
 | `status` | String | Lead status (discovered, qualified, etc.) |
 | `contact_email` | String | Contact email address |
 | `contact_phone` | String | Contact phone number |
 | `employee_count` | String | Estimated number of employees |
 | `estimated_revenue`| String | Estimated annual revenue |
-| `equipment_needs` | Text | Notes on potential equipment needs |
-| `recent_news` | Text | Summary of recent company news |
+| `equipment_needs` | String | Notes on potential equipment needs |
+| `recent_news` | String | Summary of recent company news |
 | `location_details`| String | Full location (city, country) |
 | `qualification_score` | Integer | AI-generated score (0-100) on ICP fit |
-| `qualification_details` | JSON | Detailed breakdown of qualification criteria |
-| `enriched_data` | Text | Raw enriched data blob from scraping |
+| `qualification_details` | Object | Detailed breakdown of qualification criteria |
+| `enriched_data` | Object | Raw enriched data object from scraping |
 | `created_at` | DateTime | Discovery timestamp |
 | `updated_at` | DateTime | Last modification timestamp |
 
-**Future Extensions:**
-- `website_url` - Company website (Sprint 2)
-- `enriched_data` - Additional company data (Sprint 2)  
-- `qualification_score` - AI scoring (Sprint 3)
-- `qualification_reasoning` - Detailed qualification analysis (Sprint 3)
+#### **Additional Collections**
+
+- **`api_usage`** - Tracks API call statistics by provider and date
+- **`search_queries`** - Stores used search queries to prevent duplicates
+- **`leads`** - Future collection for lead management workflow
+
+**Indexes:**
+- `normalized_name` (unique) - Prevents duplicate companies
+- `created_at` (descending) - Optimizes recent lead queries
+- `icp_name` - Filters companies by target profile
 
 ---
 
@@ -346,31 +360,31 @@ pytest tests/test_normalizer.py -v
 
 ## 🚀 **Production Deployment**
 
-### **Database Migration**
+### **MongoDB Setup**
 
 ```bash
-# Switch to PostgreSQL
-export DATABASE_URL="postgresql://user:password@host:port/dbname"
+# 1. Set up MongoDB Atlas cluster or self-hosted MongoDB
+# 2. Configure environment variables
+export MONGODB_URI="mongodb+srv://user:password@cluster.mongodb.net/?retryWrites=true&w=majority"
+export MONGODB_DATABASE="medicapital"
+export DB_USER="your_username"
+export DB_PASSWORD="your_password"
 
-# Initialize Alembic (one-time setup)
-alembic init alembic
-
-# Generate migration
-alembic revision --autogenerate -m "Initial schema"
-
-# Apply migration
-alembic upgrade head
+# 3. Initialize database with indexes
+python -m app.main create-db
 ```
 
 ### **Production Checklist**
 
-- [ ] Configure PostgreSQL database
+- [ ] Configure MongoDB Atlas cluster or self-hosted MongoDB
 - [ ] Set up environment variable management (e.g., AWS Secrets Manager)
-- [ ] Configure monitoring and alerting
-- [ ] Set up automated backups
+- [ ] Configure MongoDB connection pooling and SSL/TLS
+- [ ] Set up MongoDB monitoring and alerting
+- [ ] Configure automated backups (Atlas automatic or mongodump)
 - [ ] Deploy with process manager (systemd, Docker, etc.)
 - [ ] Configure log aggregation
 - [ ] Set up health checks
+- [ ] Implement database connection retry logic
 
 ---
 
@@ -379,7 +393,7 @@ alembic upgrade head
 ### **Adding New Features**
 
 1. **New Workflow Nodes**: Add to `app/graph/nodes.py` and register in `workflow.py`
-2. **Database Changes**: Update models in `app/db/models.py` and create Alembic migration
+2. **Database Changes**: Update models in `app/db/mongo_models.py` and repositories in `repositories.py`
 3. **New Prompts**: Add to `prompts/` directory and load in `prompts.py`
 4. **API Integrations**: Add clients to `app/core/clients.py`
 

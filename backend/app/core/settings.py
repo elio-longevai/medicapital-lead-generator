@@ -29,8 +29,11 @@ class Settings(BaseSettings):
     TAVILY_API_KEY: str
     FIRECRAWL_API_KEY: str
 
-    # Database
-    DATABASE_URL: str = "sqlite:///./medicapital.db"
+    # Database - MongoDB
+    MONGODB_URI: str
+    MONGODB_DATABASE: str = "medicapital"
+    DB_USER: str
+    DB_PASSWORD: str
 
     # Application
     LOG_LEVEL: str = "INFO"

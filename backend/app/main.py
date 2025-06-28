@@ -5,8 +5,8 @@ from pathlib import Path
 from apscheduler.schedulers.blocking import BlockingScheduler
 import logging
 
-from app.db.models import Base, Company
-from app.db.session import engine, get_db
+from app.db.repositories import CompanyRepository
+from app.db.mongodb import mongodb
 from app.graph.workflow import main_workflow
 from app.graph.state import GraphState
 
@@ -150,10 +150,32 @@ def start_scheduler(
 
 @cli.command()
 def create_db():
-    """Creates the database tables based on the models."""
-    logging.info("⚙️  Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    logging.info("✅ Done.")
+    """Creates the database connection and indexes (MongoDB)."""
+    logging.info("⚙️  Setting up MongoDB connection and indexes...")
+    try:
+        # Connect to MongoDB
+        mongodb.connect()
+
+        # Create indexes (this is handled by the repositories)
+        from app.db.repositories import (
+            CompanyRepository,
+            SearchQueryRepository,
+            ApiUsageRepository,
+            LeadRepository,
+        )
+
+        # Initialize repositories to ensure indexes are created
+        CompanyRepository()
+        SearchQueryRepository()
+        ApiUsageRepository()
+        LeadRepository()
+
+        logging.info("✅ MongoDB setup complete.")
+    except Exception as e:
+        logging.error(f"❌ Failed to setup MongoDB: {e}")
+        raise typer.Exit(code=1)
+    finally:
+        mongodb.disconnect()
 
 
 @cli.command(name="list-leads")
@@ -161,29 +183,28 @@ def list_leads_command(
     limit: int = typer.Option(20, help="Number of leads to list."),
 ):
     """List the most recent leads from the database."""
-    db = next(get_db())
     try:
+        company_repo = CompanyRepository()
+
         logging.info(f"\n{'=' * 80}")
         logging.info("📋 Querying most recent leads from the database...")
 
-        leads = db.query(Company).order_by(Company.created_at.desc()).limit(limit).all()
+        leads = company_repo.get_recent_companies(limit)
 
         logging.info(f"-> Found {len(leads)} leads.")
         for lead in leads:
-            logging.info(f"\n--- Lead: {lead.discovered_name} ---")
-            logging.info(f"    ICP: {lead.icp_name or 'N/A'}")
-            logging.info(f"    Status: {lead.status}")
-            logging.info(f"    Source: {lead.source_url}")
-            logging.info(f"    Reasoning: {lead.initial_reasoning}")
-            logging.info(f"    Score: {lead.qualification_score or 'N/A'}")
-            logging.info(f"    Created: {lead.created_at}")
+            logging.info(f"\n--- Lead: {lead['discovered_name']} ---")
+            logging.info(f"    ICP: {lead.get('icp_name', 'N/A')}")
+            logging.info(f"    Status: {lead.get('status', 'N/A')}")
+            logging.info(f"    Source: {lead.get('source_url', 'N/A')}")
+            logging.info(f"    Reasoning: {lead.get('initial_reasoning', 'N/A')}")
+            logging.info(f"    Score: {lead.get('qualification_score', 'N/A')}")
+            logging.info(f"    Created: {lead.get('created_at', 'N/A')}")
 
         logging.info(f"\n{'=' * 80}")
 
     except Exception as e:
         logging.error(f"❌ Error querying database: {e}")
-    finally:
-        db.close()
 
 
 if __name__ == "__main__":

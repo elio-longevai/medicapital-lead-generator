@@ -1,0 +1,255 @@
+import hashlib
+import logging
+from datetime import datetime, date
+from typing import List, Optional, Dict, Any
+from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError
+from bson import ObjectId
+
+from app.db.mongodb import get_mongo_collection
+from app.db.mongo_models import COLLECTIONS
+
+logger = logging.getLogger(__name__)
+
+
+class CompanyRepository:
+    """Repository for Company document operations."""
+
+    def __init__(self):
+        self.collection: Collection = get_mongo_collection(COLLECTIONS["companies"])
+
+    def get_all_normalized_names(self) -> set:
+        """Get all normalized names from the database."""
+        cursor = self.collection.find({}, {"normalized_name": 1})
+        return {doc["normalized_name"] for doc in cursor}
+
+    def find_by_normalized_name(self, normalized_name: str) -> Optional[Dict]:
+        """Find company by normalized name."""
+        return self.collection.find_one({"normalized_name": normalized_name})
+
+    def create_company(self, company_data: Dict[str, Any]) -> Optional[ObjectId]:
+        """Create a new company document."""
+        try:
+            # Add timestamps
+            now = datetime.utcnow()
+            company_data["created_at"] = now
+            company_data["updated_at"] = now
+
+            result = self.collection.insert_one(company_data)
+            return result.inserted_id
+        except DuplicateKeyError:
+            logger.warning(
+                f"Company with normalized_name '{company_data.get('normalized_name')}' already exists"
+            )
+            return None
+        except Exception as e:
+            logger.error(f"Error creating company: {e}")
+            return None
+
+    def update_company(self, company_id: ObjectId, update_data: Dict[str, Any]) -> bool:
+        """Update a company document."""
+        try:
+            update_data["updated_at"] = datetime.utcnow()
+            result = self.collection.update_one(
+                {"_id": company_id}, {"$set": update_data}
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            logger.error(f"Error updating company: {e}")
+            return False
+
+    def get_recent_companies(self, limit: int = 20) -> List[Dict]:
+        """Get most recently created companies."""
+        cursor = self.collection.find().sort("created_at", -1).limit(limit)
+        return list(cursor)
+
+    def count_companies(self) -> int:
+        """Count total companies."""
+        return self.collection.count_documents({})
+
+    def find_by_icp_name(self, icp_name: str) -> List[Dict]:
+        """Find companies by ICP name."""
+        cursor = self.collection.find({"icp_name": icp_name})
+        return list(cursor)
+
+
+class SearchQueryRepository:
+    """Repository for SearchQuery document operations."""
+
+    def __init__(self):
+        self.collection: Collection = get_mongo_collection(
+            COLLECTIONS["search_queries"]
+        )
+
+    def _generate_query_hash(self, query: str, country: str) -> str:
+        """Generate a unique hash for the query+country combination."""
+        combined = f"{query.lower().strip()}|{country.upper().strip()}"
+        return hashlib.md5(combined.encode()).hexdigest()
+
+    def is_query_used(self, query: str, country: str) -> bool:
+        """Check if a query has already been used."""
+        query_hash = self._generate_query_hash(query, country)
+        return self.collection.find_one({"query_hash": query_hash}) is not None
+
+    def filter_unused_queries(self, queries: List[str], country: str) -> List[str]:
+        """Filter out queries that have already been used."""
+        unused_queries = []
+        for query in queries:
+            if not self.is_query_used(query, country):
+                unused_queries.append(query)
+            else:
+                logger.info(f"🔄 Skipping already used query: {query[:50]}...")
+
+        logger.info(
+            f"📊 Filtered {len(queries)} queries → {len(unused_queries)} unused queries"
+        )
+        return unused_queries
+
+    def mark_query_as_used(
+        self,
+        query: str,
+        country: str,
+        results_count: int = 0,
+        providers_used: List[str] = None,
+        success: bool = True,
+    ) -> Optional[ObjectId]:
+        """Mark a query as used in the database."""
+        query_hash = self._generate_query_hash(query, country)
+
+        search_query_doc = {
+            "query_text": query,
+            "country": country,
+            "query_hash": query_hash,
+            "used_at": datetime.utcnow(),
+            "results_count": results_count,
+            "providers_used": providers_used or [],
+            "success": success,
+        }
+
+        try:
+            result = self.collection.insert_one(search_query_doc)
+            logger.info(f"✅ Marked query as used: {query[:50]}...")
+            return result.inserted_id
+        except DuplicateKeyError:
+            # Query already exists (race condition)
+            logger.warning(f"⚠️ Query already marked as used: {query[:50]}...")
+            return None
+        except Exception as e:
+            logger.error(f"❌ Error marking query as used: {e}")
+            return None
+
+    def get_all_used_queries(self, country: str) -> List[str]:
+        """Fetch all previously used query strings for a given country."""
+        cursor = self.collection.find({"country": country}, {"query_text": 1})
+        return [doc["query_text"] for doc in cursor]
+
+    def mark_queries_as_used_batch(
+        self,
+        query_results: List[
+            tuple
+        ],  # [(query, country, results_count, providers_used, success), ...]
+    ) -> int:
+        """Mark multiple queries as used in a batch operation."""
+        added_count = 0
+
+        for query_data in query_results:
+            query, country, results_count, providers_used, success = query_data
+            if self.mark_query_as_used(
+                query, country, results_count, providers_used, success
+            ):
+                added_count += 1
+
+        logger.info(f"📝 Marked {added_count}/{len(query_results)} queries as used")
+        return added_count
+
+    def get_query_stats(self) -> Dict[str, int]:
+        """Get statistics about search query usage."""
+        total_queries = self.collection.count_documents({})
+        successful_queries = self.collection.count_documents({"success": True})
+
+        return {
+            "total_queries": total_queries,
+            "successful_queries": successful_queries,
+            "failed_queries": total_queries - successful_queries,
+        }
+
+
+class ApiUsageRepository:
+    """Repository for API Usage tracking."""
+
+    def __init__(self):
+        self.collection: Collection = get_mongo_collection(COLLECTIONS["api_usage"])
+
+    def increment_usage(self, api_name: str, usage_date: date = None) -> bool:
+        """Increment usage count for an API on a specific date."""
+        if usage_date is None:
+            usage_date = date.today()
+
+        # Convert date to ISO string for MongoDB compatibility
+        date_str = (
+            usage_date.isoformat() if isinstance(usage_date, date) else usage_date
+        )
+
+        try:
+            # Try to increment existing record
+            result = self.collection.update_one(
+                {"api_name": api_name, "date": date_str},
+                {"$inc": {"count": 1}},
+                upsert=True,
+            )
+            return result.acknowledged
+        except Exception as e:
+            logger.error(f"Error incrementing API usage: {e}")
+            return False
+
+    def get_usage_stats(self, api_name: str) -> Dict[str, Any]:
+        """Get usage statistics for an API."""
+        pipeline = [
+            {"$match": {"api_name": api_name}},
+            {
+                "$group": {
+                    "_id": None,
+                    "total_count": {"$sum": "$count"},
+                    "days_used": {"$sum": 1},
+                }
+            },
+        ]
+
+        result = list(self.collection.aggregate(pipeline))
+        if result:
+            return {
+                "api_name": api_name,
+                "total_count": result[0]["total_count"],
+                "days_used": result[0]["days_used"],
+            }
+        return {"api_name": api_name, "total_count": 0, "days_used": 0}
+
+
+class LeadRepository:
+    """Repository for Lead document operations."""
+
+    def __init__(self):
+        self.collection: Collection = get_mongo_collection(COLLECTIONS["leads"])
+
+    def create_lead(self, lead_data: Dict[str, Any]) -> Optional[ObjectId]:
+        """Create a new lead document."""
+        try:
+            result = self.collection.insert_one(lead_data)
+            return result.inserted_id
+        except DuplicateKeyError:
+            logger.warning(
+                f"Lead with source_url '{lead_data.get('source_url')}' already exists"
+            )
+            return None
+        except Exception as e:
+            logger.error(f"Error creating lead: {e}")
+            return None
+
+    def find_by_source_url(self, source_url: str) -> Optional[Dict]:
+        """Find lead by source URL."""
+        return self.collection.find_one({"source_url": source_url})
+
+    def get_leads_by_status(self, status: str) -> List[Dict]:
+        """Get leads by status."""
+        cursor = self.collection.find({"status": status})
+        return list(cursor)

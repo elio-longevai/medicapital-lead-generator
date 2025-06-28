@@ -1,33 +1,30 @@
-import datetime
 import logging
-from sqlalchemy.orm import Session
-from app.db.models import ApiUsage
+from datetime import date
+from typing import Dict, Any
 
+from app.db.repositories import ApiUsageRepository
 
 logger = logging.getLogger(__name__)
 
 
 class ApiUsageService:
-    def __init__(self, db: Session):
-        self.db = db
+    """Service for tracking API usage statistics."""
 
-    def increment_usage(self, api_name: str):
-        """Increments the usage count for a given API."""
-        api_name = api_name.lower()
+    def __init__(self):
+        self.repo = ApiUsageRepository()
 
-        today = datetime.date.today()
-        usage_record = (
-            self.db.query(ApiUsage).filter_by(api_name=api_name, date=today).first()
-        )
+    def increment_usage(self, api_name: str, usage_date: date = None) -> bool:
+        """Increment usage count for an API on a specific date."""
+        return self.repo.increment_usage(api_name, usage_date)
 
-        if usage_record:
-            usage_record.count += 1
-        else:
-            usage_record = ApiUsage(api_name=api_name, date=today, count=1)
-            self.db.add(usage_record)
+    def get_usage_stats(self, api_name: str) -> Dict[str, Any]:
+        """Get usage statistics for an API."""
+        return self.repo.get_usage_stats(api_name)
 
+    def track_api_call(self, api_name: str) -> bool:
+        """Track a single API call (convenience method)."""
         try:
-            self.db.commit()
+            return self.increment_usage(api_name)
         except Exception as e:
-            self.db.rollback()
-            logger.error(f"❌ Error incrementing API usage: {e}", exc_info=True)
+            logger.error(f"Failed to track API call for {api_name}: {e}")
+            return False

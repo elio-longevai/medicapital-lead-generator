@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from aiolimiter import AsyncLimiter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.core.settings import settings
-from app.db.session import SessionLocal
 from app.services.api_usage_service import ApiUsageService
 
 logger = logging.getLogger(__name__)
@@ -383,9 +382,8 @@ class MultiProviderSearchClient:
         Attempts searches using providers in tier order, with concurrency limits.
         """
         async with self.db_semaphore:
-            db_session = SessionLocal()
             try:
-                api_usage_service = ApiUsageService(db=db_session)
+                api_usage_service = ApiUsageService()
                 for provider_name in self.PROVIDER_TIER:
                     if results := await self._try_provider(
                         provider_name, query, country, client, api_usage_service
@@ -396,8 +394,6 @@ class MultiProviderSearchClient:
             except Exception as e:
                 logger.error(f"❌ Critical error in search client: {e}", exc_info=True)
                 return [], None
-            finally:
-                db_session.close()
 
 
 # Instantiate clients for use in the graph

@@ -120,7 +120,6 @@ clean:
 	@find . -type f -name ".coverage" -delete
 	@find . -type d -name "*.egg-info" -exec rm -rf {} +
 	@find . -type d -name ".mypy_cache" -exec rm -rf {} +
-	@rm -f medicapital.db
 	@cd frontend && rm -rf node_modules dist .vite
 	@echo "\n✅ Project is sparkling clean!"
 
