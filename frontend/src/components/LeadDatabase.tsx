@@ -33,6 +33,7 @@ import {
 import { useCompanies } from "@/hooks/useCompanies";
 import type { Company } from "@/services/api";
 import { icpList, getIcpMetadata } from "@/lib/icp-utils";
+import { formatTimeAgo } from "@/lib/date-utils";
 
 export const LeadDatabase = ({ onSelectCompany }) => {
 	const [searchTerm, setSearchTerm] = useState("");
@@ -257,7 +258,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 											</span>
 											<div className="flex items-center text-xs text-slate-500">
 												<Calendar className="h-3 w-3 mr-1" />
-												{lead.lastActivity}
+												{formatTimeAgo(lead.lastActivity)}
 											</div>
 										</div>
 										<p className="text-sm text-slate-700 line-clamp-2 leading-relaxed">
