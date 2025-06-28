@@ -16,6 +16,7 @@ uvicorn
 crawl4ai
 aiolimiter
 beautifulsoup4
+pymongo
 pytest
 pytest-asyncio
 pytest-dotenv
