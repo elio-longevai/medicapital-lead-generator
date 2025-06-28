@@ -20,7 +20,6 @@ class CompanyService:
     def get_companies_with_filters(
         self,
         skip: int,
-        limit: int,
         icp_name: Optional[str],
         status: Optional[str],
         country: Optional[str],
@@ -54,13 +53,11 @@ class CompanyService:
             query = query.order_by(desc(Company.created_at))
 
         total = query.count()
-        companies = query.offset(skip).limit(limit).all()
+        companies = query.offset(skip).all()
 
         return CompanyListResponse(
             companies=[self._transform_company(c) for c in companies],
             total=total,
-            page=skip // limit + 1,
-            limit=limit,
         )
 
     def get_company_by_id(self, company_id: int) -> Optional[CompanyResponse]:

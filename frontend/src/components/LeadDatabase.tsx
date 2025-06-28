@@ -49,8 +49,6 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 		icp_name: icpFilter !== "all" ? icpFilter : undefined,
 		status: statusFilter !== "all" ? statusFilter : undefined,
 		sort_by: sortBy,
-		// TODO: Make default limit configurable via app settings
-		limit: 50,
 	});
 
 	const companies = companiesData?.companies || [];
@@ -109,7 +107,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 						Lead Database
 					</CardTitle>
 					<CardDescription className="text-base">
-						{companies.length} gekwalificeerde prospects • Ontdek en beheer
+						{companies.length} prospects • Ontdek en beheer
 						potentiële klanten
 					</CardDescription>
 				</CardHeader>

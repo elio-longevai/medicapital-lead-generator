@@ -33,8 +33,6 @@ export interface Company {
 export interface CompanyListResponse {
   companies: Company[];
   total: number;
-  page: number;
-  limit: number;
 }
 
 export interface DashboardStats {
@@ -54,7 +52,6 @@ export interface ScrapingStatus {
 class ApiService {
   async getCompanies(params: {
     skip?: number;
-    limit?: number;
     icp_name?: string;
     status?: string;
     country?: string;

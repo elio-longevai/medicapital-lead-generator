@@ -40,7 +40,6 @@ const Index = () => {
 	const { data: dashboardData, isLoading: dashboardLoading } =
 		useDashboardStats();
 	const { data: recentLeadsData, isLoading: leadsLoading } = useCompanies({
-		limit: 5,
 		sort_by: "score",
 	});
 	const { data: scrapingStatus } = useScrapingStatus();

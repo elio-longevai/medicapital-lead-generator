@@ -3,7 +3,6 @@ import { apiService, type CompanyListResponse, type Company } from '@/services/a
 
 export function useCompanies(params: {
   skip?: number;
-  limit?: number;
   icp_name?: string;
   status?: string;
   search?: string;
@@ -12,7 +11,6 @@ export function useCompanies(params: {
   return useQuery<CompanyListResponse>({
     queryKey: ['companies', params],
     queryFn: () => apiService.getCompanies(params),
-    // TODO: Make cache time configurable via app settings
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -29,7 +27,6 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => apiService.getDashboardStats(),
-    // TODO: Make cache time configurable via app settings
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }

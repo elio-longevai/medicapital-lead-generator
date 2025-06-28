@@ -230,7 +230,6 @@ export const CompanyProfile = ({ company, onBack }) => {
 								<p className="text-gray-600 flex items-center mt-1">
 									<MapPin className="h-4 w-4 mr-1" />
 									{company.location} • {company.industry}{" "}
-									{company.icpName && `(${company.icpName})`}
 								</p>
 							</div>
 						</div>

@@ -46,7 +46,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/api/companies", response_model=CompanyListResponse)
 def get_companies(
     skip: int = 0,
-    limit: int = 100,
     icp_name: Optional[str] = None,
     status: Optional[str] = None,
     country: Optional[str] = None,
@@ -58,7 +57,6 @@ def get_companies(
     service = CompanyService(db)
     return service.get_companies_with_filters(
         skip=skip,
-        limit=limit,
         icp_name=icp_name,
         status=status,
         country=country,

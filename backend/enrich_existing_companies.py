@@ -66,7 +66,6 @@ class ExistingCompanyEnricher:
         country: Optional[str] = None,
         icp_name: Optional[str] = None,
         specific_fields: Optional[List[str]] = None,
-        limit: Optional[int] = None,
     ) -> List[Company]:
         """
         Query companies that have missing enrichable fields.
@@ -76,7 +75,6 @@ class ExistingCompanyEnricher:
             country: Filter by country code (e.g., 'NL')
             icp_name: Filter by ICP name
             specific_fields: Only look for companies missing these specific fields
-            limit: Maximum number of companies to process
 
         Returns:
             List of companies needing enrichment
@@ -111,9 +109,6 @@ class ExistingCompanyEnricher:
 
         if conditions:
             query = query.filter(and_(*conditions))
-
-        if limit:
-            query = query.limit(limit)
 
         companies = query.all()
 
@@ -334,7 +329,6 @@ class ExistingCompanyEnricher:
         country: Optional[str] = None,
         icp_name: Optional[str] = None,
         specific_fields: Optional[List[str]] = None,
-        limit: Optional[int] = None,
         dry_run: bool = False,
     ) -> EnrichmentStats:
         """
@@ -344,7 +338,6 @@ class ExistingCompanyEnricher:
             country: Filter by country code
             icp_name: Filter by ICP name
             specific_fields: Only enrich these specific fields
-            limit: Maximum number of companies to process
             dry_run: If True, don't actually update the database
 
         Returns:
@@ -360,7 +353,7 @@ class ExistingCompanyEnricher:
         try:
             # Get companies needing enrichment
             companies = self.get_companies_needing_enrichment(
-                db, country, icp_name, specific_fields, limit
+                db, country, icp_name, specific_fields
             )
 
             if not companies:
@@ -459,7 +452,6 @@ def main():
                 country=args.country,
                 icp_name=args.icp_name,
                 specific_fields=args.fields,
-                limit=args.limit,
                 dry_run=args.dry_run,
             )
         )

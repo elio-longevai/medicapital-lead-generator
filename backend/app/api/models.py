@@ -46,8 +46,6 @@ class CompanyResponse(BaseModel):
 class CompanyListResponse(BaseModel):
     companies: List[CompanyResponse]
     total: int
-    page: int
-    limit: int
 
 
 class DashboardStats(BaseModel):
