@@ -11,6 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
 	TrendingUp,
 	Users,
 	Target,
@@ -24,6 +35,7 @@ import {
 	Filter,
 	Loader2,
 	Bot,
+	Clock,
 } from "lucide-react";
 import { LeadDatabase } from "@/components/LeadDatabase";
 import { CompanyProfile } from "@/components/CompanyProfile";
@@ -204,20 +216,48 @@ const Index = () => {
 							</Tabs>
 
 							{/* Scrape Leads Button */}
-							<Button
-								onClick={handleScrape}
-								disabled={isScraping}
-								className="h-12 bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-xl shadow-lg flex items-center justify-center px-4"
-							>
-								{isScraping ? (
-									<Loader2 className="h-5 w-5 animate-spin mr-2" />
-								) : (
-									<Bot className="h-5 w-5 mr-2" />
-								)}
-								<span>
-									{isScraping ? "Bezig met zoeken..." : "Vind nieuwe leads"}
-								</span>
-							</Button>
+							<AlertDialog>
+								<AlertDialogTrigger asChild>
+									<Button
+										disabled={isScraping}
+										className="h-12 bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-xl shadow-lg flex items-center justify-center px-4"
+									>
+										{isScraping ? (
+											<Loader2 className="h-5 w-5 animate-spin mr-2" />
+										) : (
+											<Bot className="h-5 w-5 mr-2" />
+										)}
+										<span>
+											{isScraping ? "Bezig met zoeken..." : "Vind nieuwe leads"}
+										</span>
+									</Button>
+								</AlertDialogTrigger>
+								<AlertDialogContent className="sm:max-w-md">
+									<AlertDialogHeader>
+										<AlertDialogTitle className="flex items-center gap-2">
+											<Clock className="h-5 w-5 text-amber-500" />
+											Lead generatie starten
+										</AlertDialogTitle>
+										<AlertDialogDescription className="text-left space-y-2">
+											<p>
+												Het vinden van nieuwe leads kan aanzienlijke tijd in beslag nemen (tot 10-15 minuten).
+											</p>
+											<p className="text-sm text-muted-foreground">
+												Je kunt tijdens dit proces gewoon doorgaan met het gebruiken van de applicatie.
+											</p>
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<AlertDialogFooter>
+										<AlertDialogCancel>Annuleren</AlertDialogCancel>
+										<AlertDialogAction
+											onClick={handleScrape}
+											className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+										>
+											Ja, start zoeken
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
 						</div>
 					</div>
 				</div>
