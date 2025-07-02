@@ -34,17 +34,14 @@ async def _scrape_company_website(
     Scrapes a company website to get its text content, then uses an LLM to extract
     structured information.
     """
-    # 1. Configure crawler to only scrape content, not extract with an LLM yet.
-    # Consider disabling cache in production if URLs are always unique
     browser_config = BrowserConfig(headless=True, verbose=False)
     run_config = CrawlerRunConfig(
-        cache_mode=CacheMode.ENABLED,  # Consider CacheMode.DISABLED in production
+        cache_mode=CacheMode.ENABLED,
         word_count_threshold=50,
         exclude_external_links=True,
     )
 
     urls_to_try = [lead.source_url]
-    # Try to find official website URL if the source URL is not a standard one
     if not any(
         domain in lead.source_url.lower() for domain in [".com", ".nl", ".be", ".org"]
     ):
@@ -57,19 +54,17 @@ async def _scrape_company_website(
             ]
         )
 
-    # 2. Scrape the website to get raw content
     scraped_content = None
     successful_url = None
     async with AsyncWebCrawler(config=browser_config) as crawler:
         for url in urls_to_try:
             try:
                 result = await crawler.arun(url=url, config=run_config)
-                # Use the markdown content which is cleaner for LLMs
                 if result.success and result.markdown and result.markdown.raw_markdown:
                     scraped_content = result.markdown.raw_markdown
                     successful_url = url
                     logger.info(f"    ✓ Successfully scraped content from {url}")
-                    break  # Stop on first successful scrape
+                    break
             except Exception as e:
                 logger.error(f"    - Failed during scraping of {url}: {str(e)}")
                 continue
@@ -78,18 +73,17 @@ async def _scrape_company_website(
         logger.warning(f"    - Could not scrape any content for {lead.discovered_name}")
         return None
 
-    # 3. Use LLM to extract structured data from the scraped content
     logger.info(f"    > Extracting information for {lead.discovered_name} using LLM...")
 
-    # Prepare the prompt for the LLM
     final_prompt = enrichment_prompt.replace("{company_name}", lead.discovered_name)
     final_prompt = final_prompt.replace("{industry}", lead.primary_industry)
     final_prompt = final_prompt.replace("{country}", lead.country)
-    # Truncate content to avoid exceeding LLM context window limits
     final_prompt = final_prompt.replace("{website_content}", scraped_content[:15000])
 
     try:
-        response = await json_llm_client.ainvoke(final_prompt)
+        response = await asyncio.wait_for(
+            json_llm_client.ainvoke(final_prompt), timeout=60.0
+        )
         enriched_data = response.model_dump()
 
         if isinstance(enriched_data, dict):
@@ -100,7 +94,11 @@ async def _scrape_company_website(
             f"    - LLM did not return a valid dictionary for {lead.discovered_name}"
         )
         return None
-
+    except asyncio.TimeoutError:
+        logger.error(
+            f"    - Timeout occurred during LLM extraction for {lead.discovered_name}"
+        )
+        return None
     except Exception as e:
         logger.error(f"    - Failed LLM extraction for {lead.discovered_name}: {e}")
         return None
@@ -112,9 +110,15 @@ async def _scrape_with_semaphore(
     enrichment_prompt: str,
     json_llm_client,
 ):
-    """Wrapper to control concurrency with a semaphore."""
+    """
+    Wrapper to control concurrency and ensure each task is self-contained.
+    It returns the lead along with the scraping result.
+    """
     async with semaphore:
-        return await _scrape_company_website(lead, enrichment_prompt, json_llm_client)
+        enriched_data = await _scrape_company_website(
+            lead, enrichment_prompt, json_llm_client
+        )
+        return lead, enriched_data
 
 
 async def scrape_and_enrich_companies(state: GraphState) -> dict:
@@ -125,7 +129,6 @@ async def scrape_and_enrich_companies(state: GraphState) -> dict:
     if not state.candidate_leads:
         return {"enriched_companies": []}
 
-    # Load the enrichment prompt
     enrichment_prompt_path = (
         Path(__file__).parent.parent.parent.parent
         / "prompts"
@@ -141,32 +144,25 @@ async def scrape_and_enrich_companies(state: GraphState) -> dict:
             ]
         }
 
-    # Limit concurrency to avoid resource exhaustion
     CONCURRENCY_LIMIT = 5
-    BATCH_SIZE = 50  # Process 50 companies at a time
+    BATCH_SIZE = 50
     semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
     final_enriched_companies = []
-
-    # Create the structured LLM client once to be reused.
     json_llm_client = llm_client.with_structured_output(EnrichedCompanyData)
 
-    # Process leads in batches to control memory usage for task creation
     for lead_batch in _batch(state.candidate_leads, BATCH_SIZE):
-        # Create a list of async tasks to run concurrently for the current batch
-        task_to_lead = {
+        tasks = [
             asyncio.create_task(
                 _scrape_with_semaphore(
                     semaphore, lead, enrichment_prompt, json_llm_client
                 )
-            ): lead
+            )
             for lead in lead_batch
-        }
+        ]
 
-        # Process tasks as they complete to manage memory and log progressively
-        for task in asyncio.as_completed(task_to_lead):
-            lead = task_to_lead.pop(task)  # Pop the lead mapping to prevent leaks
+        for future in asyncio.as_completed(tasks):
             try:
-                enriched_data = await task
+                lead, enriched_data = await future
                 final_enriched_companies.append(
                     {"lead": lead, "enriched_data": enriched_data}
                 )
@@ -179,11 +175,9 @@ async def scrape_and_enrich_companies(state: GraphState) -> dict:
                         f"    - No enrichment data returned for {lead.discovered_name}"
                     )
             except Exception as e:
-                logger.error(
-                    f"    - Task for {lead.discovered_name} failed with error: {e}"
-                )
-                # Append a failure record to maintain list integrity
-                final_enriched_companies.append({"lead": lead, "enriched_data": None})
+                # This exception is caught if the task itself fails unexpectedly.
+                # Specific errors (like timeout) are handled within the task.
+                logger.error(f"    - A scraping task failed or was cancelled: {e}")
 
     logger.info(
         f"  > Completed scraping. {len([c for c in final_enriched_companies if c['enriched_data']])} companies enriched."
