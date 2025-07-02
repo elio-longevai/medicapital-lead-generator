@@ -98,6 +98,16 @@ async def _scrape_company_website(
         return None
 
 
+async def _scrape_with_semaphore(
+    semaphore: asyncio.Semaphore,
+    lead: CandidateLead,
+    enrichment_prompt: str,
+):
+    """Wrapper to control concurrency with a semaphore."""
+    async with semaphore:
+        return await _scrape_company_website(lead, enrichment_prompt)
+
+
 async def scrape_and_enrich_companies(state: GraphState) -> dict:
     """Scrapes company websites and enriches data with LLM analysis in parallel."""
     logger.info(
@@ -122,18 +132,26 @@ async def scrape_and_enrich_companies(state: GraphState) -> dict:
             ]
         }
 
-    # Create a list of async tasks to run concurrently
-    tasks = [
-        _scrape_company_website(lead, enrichment_prompt)
-        for lead in state.candidate_leads
-    ]
-    enriched_results = await asyncio.gather(*tasks)
-
-    # Pair original leads with their new, enriched data
+    # Limit concurrency to avoid resource exhaustion
+    semaphore = asyncio.Semaphore(5)
     final_enriched_companies = []
-    for lead, data in zip(state.candidate_leads, enriched_results):
-        final_enriched_companies.append({"lead": lead, "enriched_data": data})
-        if data:
+
+    # Create a list of async tasks to run concurrently, mapping them to leads
+    task_to_lead = {
+        asyncio.create_task(
+            _scrape_with_semaphore(semaphore, lead, enrichment_prompt)
+        ): lead
+        for lead in state.candidate_leads
+    }
+    tasks = list(task_to_lead.keys())
+
+    # Process tasks as they complete to manage memory and log progressively
+    for task in asyncio.as_completed(tasks):
+        enriched_data = await task
+        lead = task_to_lead[task]  # Get the corresponding lead
+
+        final_enriched_companies.append({"lead": lead, "enriched_data": enriched_data})
+        if enriched_data:
             logger.info(f"    ✓ Successfully enriched data for {lead.discovered_name}")
         else:
             logger.warning(
