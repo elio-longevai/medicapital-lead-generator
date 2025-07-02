@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from itertools import islice
 
 from crawl4ai import (
     AsyncWebCrawler,
@@ -16,17 +17,28 @@ from app.graph.nodes.schemas import EnrichedCompanyData
 logger = logging.getLogger(__name__)
 
 
+def _batch(iterable, size):
+    """Yields successive n-sized chunks from an iterable."""
+    it = iter(iterable)
+    while True:
+        chunk = tuple(islice(it, size))
+        if not chunk:
+            return
+        yield chunk
+
+
 async def _scrape_company_website(
-    lead: CandidateLead, enrichment_prompt: str
+    lead: CandidateLead, enrichment_prompt: str, json_llm_client
 ) -> dict | None:
     """
     Scrapes a company website to get its text content, then uses an LLM to extract
     structured information.
     """
     # 1. Configure crawler to only scrape content, not extract with an LLM yet.
+    # Consider disabling cache in production if URLs are always unique
     browser_config = BrowserConfig(headless=True, verbose=False)
     run_config = CrawlerRunConfig(
-        cache_mode=CacheMode.ENABLED,
+        cache_mode=CacheMode.ENABLED,  # Consider CacheMode.DISABLED in production
         word_count_threshold=50,
         exclude_external_links=True,
     )
@@ -77,11 +89,7 @@ async def _scrape_company_website(
     final_prompt = final_prompt.replace("{website_content}", scraped_content[:15000])
 
     try:
-        # Use a client configured for JSON mode to improve reliability
-        json_llm_client = llm_client.with_structured_output(EnrichedCompanyData)
         response = await json_llm_client.ainvoke(final_prompt)
-
-        # The response should already be a dictionary when using structured_output
         enriched_data = response.model_dump()
 
         if isinstance(enriched_data, dict):
@@ -102,10 +110,11 @@ async def _scrape_with_semaphore(
     semaphore: asyncio.Semaphore,
     lead: CandidateLead,
     enrichment_prompt: str,
+    json_llm_client,
 ):
     """Wrapper to control concurrency with a semaphore."""
     async with semaphore:
-        return await _scrape_company_website(lead, enrichment_prompt)
+        return await _scrape_company_website(lead, enrichment_prompt, json_llm_client)
 
 
 async def scrape_and_enrich_companies(state: GraphState) -> dict:
@@ -133,30 +142,48 @@ async def scrape_and_enrich_companies(state: GraphState) -> dict:
         }
 
     # Limit concurrency to avoid resource exhaustion
-    semaphore = asyncio.Semaphore(5)
+    CONCURRENCY_LIMIT = 5
+    BATCH_SIZE = 50  # Process 50 companies at a time
+    semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
     final_enriched_companies = []
 
-    # Create a list of async tasks to run concurrently, mapping them to leads
-    task_to_lead = {
-        asyncio.create_task(
-            _scrape_with_semaphore(semaphore, lead, enrichment_prompt)
-        ): lead
-        for lead in state.candidate_leads
-    }
-    tasks = list(task_to_lead.keys())
+    # Create the structured LLM client once to be reused.
+    json_llm_client = llm_client.with_structured_output(EnrichedCompanyData)
 
-    # Process tasks as they complete to manage memory and log progressively
-    for task in asyncio.as_completed(tasks):
-        enriched_data = await task
-        lead = task_to_lead[task]  # Get the corresponding lead
+    # Process leads in batches to control memory usage for task creation
+    for lead_batch in _batch(state.candidate_leads, BATCH_SIZE):
+        # Create a list of async tasks to run concurrently for the current batch
+        task_to_lead = {
+            asyncio.create_task(
+                _scrape_with_semaphore(
+                    semaphore, lead, enrichment_prompt, json_llm_client
+                )
+            ): lead
+            for lead in lead_batch
+        }
 
-        final_enriched_companies.append({"lead": lead, "enriched_data": enriched_data})
-        if enriched_data:
-            logger.info(f"    ✓ Successfully enriched data for {lead.discovered_name}")
-        else:
-            logger.warning(
-                f"    - No enrichment data returned for {lead.discovered_name}"
-            )
+        # Process tasks as they complete to manage memory and log progressively
+        for task in asyncio.as_completed(task_to_lead):
+            lead = task_to_lead.pop(task)  # Pop the lead mapping to prevent leaks
+            try:
+                enriched_data = await task
+                final_enriched_companies.append(
+                    {"lead": lead, "enriched_data": enriched_data}
+                )
+                if enriched_data:
+                    logger.info(
+                        f"    ✓ Successfully enriched data for {lead.discovered_name}"
+                    )
+                else:
+                    logger.warning(
+                        f"    - No enrichment data returned for {lead.discovered_name}"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"    - Task for {lead.discovered_name} failed with error: {e}"
+                )
+                # Append a failure record to maintain list integrity
+                final_enriched_companies.append({"lead": lead, "enriched_data": None})
 
     logger.info(
         f"  > Completed scraping. {len([c for c in final_enriched_companies if c['enriched_data']])} companies enriched."
