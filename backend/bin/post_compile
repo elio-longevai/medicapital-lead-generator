@@ -2,6 +2,6 @@
 
 echo "-----> Running post-compile hook"
 echo "-----> Installing Playwright browsers hermetically..."
-PLAYWRIGHT_BROWSERS_PATH=0 playwright install
+PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium
 
 echo "-----> Playwright browsers installation complete." 
