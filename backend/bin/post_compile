@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+echo "-----> Running post-compile hook"
+echo "-----> Installing Playwright browsers..."
+playwright install --with-deps
+
+echo "-----> Playwright browsers installation complete." 
