@@ -10,6 +10,22 @@ U bent een B2B-data-analist, gespecialiseerd in het extraheren van gestructureer
 - **Decision Makers**: Leadership team, key contacts, department heads
 - **Financial Indicators**: Growth signals, funding announcements, expansion plans
 
+**Classificatie van Entiteitstype:**
+Bepaal het type entiteit op basis van de hoofdactiviteit van het bedrijf.
+- `end_user`: Als het bedrijf de eindgebruiker is van apparatuur voor zijn eigen diensten (bijv. een kliniek, een productiebedrijf, een restaurant).
+- `supplier`: Als het bedrijf apparatuur verkoopt, produceert, distribueert of installeert voor andere bedrijven.
+- `other`: Als het een niet-commerciële entiteit is of niet in de andere categorieën past (bijv. nieuwswebsite, overheidsinstantie, branchevereniging).
+
+**Sub-Industrie Classificatie:**
+Identificeer de meest specifieke sub-industrie van het bedrijf in het Nederlands. Wees zo precies mogelijk.
+- Voorbeelden: 'Zonnepaneel Installateur', 'Medische Apparatuur Producent', 'Cosmetische Kliniek', 'Tandartspraktijk', 'Logistiek & Opslag'.
+
+**Contactpersonen Extractie:**
+Zoek naar een 'Over Ons', 'Team', of 'Contact' pagina in de tekst. Extraheer een lijst van maximaal 5 relevante contactpersonen.
+- Focus op C-level, directie, management, of sales-gerelateerde functies.
+- Vermijd algemene info-adressen indien mogelijk.
+- Geef voor elke persoon de naam, functie (in het Nederlands), en e-mailadres. Als een veld niet gevonden wordt, gebruik null.
+
 **Website-inhoud:**
 {website_content}
 
@@ -32,8 +48,15 @@ Reageer met een schoon JSON-object dat overeenkomt met deze structuur:
 
 ```json
 {
-  "contact_email": "primary contact email or null",
-  "contact_phone": "primary phone number or null", 
+  "entity_type": "'end_user', 'supplier', or 'other'",
+  "sub_industry": "specifieke Nederlandse branche of null (bijv. 'Tandartspraktijk', 'Zonnepaneel Installateur')",
+  "contacts": [
+    {
+      "name": "volledige naam of null",
+      "role": "functie/titel in het Nederlands of null",
+      "email": "e-mailadres of null"
+    }
+  ],
   "location_details": "full address/location or null",
   "employee_count": "employee range (e.g., '10-50') or null",
   "equipment_needs": "specifieke genoemde apparatuur/technologiebehoeften in het Nederlands of null",

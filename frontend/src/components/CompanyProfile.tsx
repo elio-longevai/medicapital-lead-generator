@@ -18,6 +18,8 @@ import {
 	MapPin,
 	Building2,
 	Users,
+	User,
+	Briefcase,
 	Calendar,
 	TrendingUp,
 	Star,
@@ -245,9 +247,13 @@ export const CompanyProfile = ({ company, onBack }) => {
 								<h1 className="text-2xl font-bold text-gray-900">
 									{company.company}
 								</h1>
-								<p className="text-gray-600 flex items-center mt-1">
+								<p className="text-gray-600 flex items-center mt-1 flex-wrap">
 									<MapPin className="h-4 w-4 mr-1" />
-									{company.location} • {company.industry}{" "}
+									{company.location}
+									<span className="mx-2">•</span>
+									{company.industry}
+									{company.subIndustry && <span className="text-gray-400 mx-1">/</span>}
+									{company.subIndustry}
 								</p>
 							</div>
 						</div>
@@ -381,6 +387,40 @@ export const CompanyProfile = ({ company, onBack }) => {
 											<p className="text-gray-900 leading-relaxed">
 												{company.description}
 											</p>
+										</CardContent>
+									</Card>
+								)}
+
+								{/* Contactpersonen */}
+								{company.contacts && company.contacts.length > 0 && (
+									<Card>
+										<CardHeader>
+											<CardTitle className="flex items-center">
+												<Users className="h-5 w-5 mr-2" />
+												Contactpersonen
+											</CardTitle>
+										</CardHeader>
+										<CardContent>
+											<div className="space-y-4">
+												{company.contacts.map((contact, index) => (
+													<div key={index} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+														<div className="flex items-center font-semibold text-gray-900">
+															<User className="h-4 w-4 mr-2" /> {contact.name || "Naam onbekend"}
+														</div>
+														{contact.role && (
+															<div className="flex items-center text-sm text-gray-600 mt-1 ml-6">
+																<Briefcase className="h-4 w-4 mr-2" /> {contact.role}
+															</div>
+														)}
+														{contact.email && (
+															<div className="flex items-center text-sm text-blue-600 mt-1 ml-6 hover:underline">
+																<Mail className="h-4 w-4 mr-2" />
+																<a href={`mailto:${contact.email}`}>{contact.email}</a>
+															</div>
+														)}
+													</div>
+												))}
+											</div>
 										</CardContent>
 									</Card>
 								)}

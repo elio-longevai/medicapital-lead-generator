@@ -9,6 +9,12 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+export interface Contact {
+  name?: string;
+  role?: string;
+  email?: string;
+}
+
 export interface Company {
   id: number;
   company: string;
@@ -36,6 +42,9 @@ export interface Company {
   qualificationReasoning?: string;
   estimatedRevenue?: string;
   description?: string;
+  entityType?: 'end_user' | 'supplier' | 'other';
+  subIndustry?: string;
+  contacts?: Contact[];
 }
 
 export interface CompanyListResponse {
@@ -54,19 +63,23 @@ export interface DashboardStats {
   topIndustries: Array<{ industry: string; count: number }>;
 }
 
+export interface GetCompaniesParams {
+  skip?: number;
+  icp_name?: string;
+  status?: string;
+  country?: string;
+  search?: string;
+  entity_type?: string;
+  sub_industry?: string;
+  sort_by?: string;
+}
+
 export interface ScrapingStatus {
   is_scraping: boolean;
 }
 
 class ApiService {
-  async getCompanies(params: {
-    skip?: number;
-    icp_name?: string;
-    status?: string;
-    country?: string;
-    search?: string;
-    sort_by?: string;
-  } = {}): Promise<CompanyListResponse> {
+  async getCompanies(params: GetCompaniesParams = {}): Promise<CompanyListResponse> {
     const searchParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {

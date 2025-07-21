@@ -23,6 +23,8 @@ class CompanyService:
         status: Optional[str],
         country: Optional[str],
         search: Optional[str],
+        entity_type: Optional[str],
+        sub_industry: Optional[str],
         sort_by: str,
     ) -> CompanyListResponse:
         result = self.repo.find_with_filters(
@@ -31,6 +33,8 @@ class CompanyService:
             status=status,
             country=country,
             search=search,
+            entity_type=entity_type,
+            sub_industry=sub_industry,
             sort_by=sort_by,
         )
 
@@ -134,6 +138,12 @@ class CompanyService:
         # Use company_description field directly
         description = company.get("company_description")
 
+        # Safely get first email/phone for summary display if needed
+        contacts = company.get("contacts", [])
+        primary_email = (
+            contacts[0].get("email") if contacts else company.get("contact_email")
+        )
+
         return CompanyResponse(
             id=str(company["_id"]),  # Convert ObjectId to string
             company=company.get("discovered_name", ""),
@@ -148,7 +158,7 @@ class CompanyService:
             employees=company.get("employee_count") or "Niet gevonden",
             website=company.get("website_url") or company.get("source_url", ""),
             sourceUrl=company.get("source_url", ""),
-            email=company.get("contact_email"),
+            email=primary_email,
             phone=company.get("contact_phone"),
             notes=company.get("initial_reasoning", ""),
             recentNews=company.get("recent_news"),
@@ -157,6 +167,9 @@ class CompanyService:
             qualificationReasoning=company.get("qualification_reasoning"),
             estimatedRevenue=company.get("estimated_revenue"),
             description=description,
+            entityType=company.get("entity_type"),
+            subIndustry=company.get("sub_industry"),
+            contacts=contacts,
         )
 
     def _calculate_default_score(self, company: Dict[str, Any]) -> int:

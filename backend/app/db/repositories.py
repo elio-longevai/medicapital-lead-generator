@@ -80,6 +80,8 @@ class CompanyRepository:
         status: Optional[str] = None,
         country: Optional[str] = None,
         search: Optional[str] = None,
+        entity_type: Optional[str] = None,
+        sub_industry: Optional[str] = None,
         sort_by: str = "score",
     ) -> Dict[str, Any]:
         """Find companies with filters and pagination."""
@@ -98,6 +100,12 @@ class CompanyRepository:
 
         if country:
             filter_query["country"] = country
+
+        if entity_type and entity_type != "all":
+            filter_query["entity_type"] = entity_type
+
+        if sub_industry:
+            filter_query["sub_industry"] = {"$regex": sub_industry, "$options": "i"}
 
         if search:
             filter_query["$or"] = [

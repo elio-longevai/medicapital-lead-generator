@@ -1,13 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService, type CompanyListResponse, type Company } from '@/services/api';
+import { apiService, type CompanyListResponse, type Company, type GetCompaniesParams } from '@/services/api';
 
-export function useCompanies(params: {
-  skip?: number;
-  icp_name?: string;
-  status?: string;
-  search?: string;
-  sort_by?: string;
-} = {}) {
+export function useCompanies(params: GetCompaniesParams = {}) {
   return useQuery<CompanyListResponse>({
     queryKey: ['companies', params],
     queryFn: () => apiService.getCompanies(params),

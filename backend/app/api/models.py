@@ -17,6 +17,12 @@ class QualificationScore(BaseModel):
     decisionAuthority: int
 
 
+class ContactPersonResponse(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    email: Optional[str] = None
+
+
 class CompanyResponse(BaseModel):
     id: str  # MongoDB ObjectId as string
     company: str  # discovered_name
@@ -41,6 +47,9 @@ class CompanyResponse(BaseModel):
     qualificationReasoning: Optional[str] = None
     estimatedRevenue: Optional[str] = None  # estimated_revenue
     description: Optional[str] = None  # enriched_data description
+    entityType: Optional[str] = None  # entity_type
+    subIndustry: Optional[str] = None  # sub_industry
+    contacts: Optional[List[ContactPersonResponse]] = None  # contacts
 
     model_config = ConfigDict(from_attributes=True)
 

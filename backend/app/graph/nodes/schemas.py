@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
@@ -23,14 +23,32 @@ class QualificationDetails(BaseModel):
     )
 
 
+class ContactPerson(BaseModel):
+    """Represents a single contact person extracted from a website."""
+
+    name: Optional[str] = Field(
+        description="Full name of the contact person", default=None
+    )
+    role: Optional[str] = Field(
+        description="Job title or role of the contact", default=None
+    )
+    email: Optional[str] = Field(
+        description="Email address of the contact", default=None
+    )
+
+
 class EnrichedCompanyData(BaseModel):
     """Vertegenwoordigt de gestructureerde gegevens geëxtraheerd van de website van een bedrijf."""
 
-    contact_email: Optional[str] = Field(
-        description="Primair contact e-mailadres of null", default=None
+    entity_type: str = Field(
+        description="Type of company: 'end_user', 'supplier', or 'other'",
+        default="other",
     )
-    contact_phone: Optional[str] = Field(
-        description="Primair telefoonnummer of null", default=None
+    sub_industry: Optional[str] = Field(
+        description="Specific sub-industry classification in Dutch", default=None
+    )
+    contacts: Optional[List[ContactPerson]] = Field(
+        description="List of key contact persons", default_factory=list
     )
     location_details: Optional[str] = Field(
         description="Volledig adres/locatie of null", default=None

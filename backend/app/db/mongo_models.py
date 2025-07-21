@@ -51,6 +51,9 @@ class CompanyDocument(BaseModel):
     primary_industry: Optional[str] = None
     initial_reasoning: str
     status: str = Field(default="discovered")
+    entity_type: Optional[str] = None
+    sub_industry: Optional[str] = None
+    contacts: Optional[List[Dict[str, Any]]] = None
 
     # For Sprint 2+
     website_url: Optional[str] = None

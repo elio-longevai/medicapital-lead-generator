@@ -29,6 +29,7 @@ import {
 	Target,
 	TrendingUp,
 	Loader2,
+	Filter,
 } from "lucide-react";
 import { useCompanies } from "@/hooks/useCompanies";
 import type { Company } from "@/services/api";
@@ -39,6 +40,8 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [icpFilter, setIcpFilter] = useState("all");
 	const [statusFilter, setStatusFilter] = useState("all");
+	const [entityTypeFilter, setEntityTypeFilter] = useState("all");
+	const [subIndustryFilter, setSubIndustryFilter] = useState("");
 	const [sortBy, setSortBy] = useState("score");
 
 	const {
@@ -49,6 +52,8 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 		search: searchTerm || undefined,
 		icp_name: icpFilter !== "all" ? icpFilter : undefined,
 		status: statusFilter !== "all" ? statusFilter : undefined,
+		entity_type: entityTypeFilter !== "all" ? entityTypeFilter : undefined,
+		sub_industry: subIndustryFilter || undefined,
 		sort_by: sortBy,
 	});
 
@@ -83,6 +88,25 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 		if (score >= 85) return "text-emerald-600 bg-emerald-50";
 		if (score >= 70) return "text-amber-600 bg-amber-50";
 		return "text-red-600 bg-red-50";
+	};
+
+	const getEntityTypeBadge = (type?: string) => {
+		if (!type) return null;
+		const variants = {
+			end_user: "bg-blue-100 text-blue-800 border-blue-200",
+			supplier: "bg-purple-100 text-purple-800 border-purple-200",
+			other: "bg-gray-100 text-gray-800 border-gray-200",
+		};
+		const display = {
+			end_user: "Eindgebruiker",
+			supplier: "Leverancier",
+			other: "Overig",
+		};
+		return (
+			<Badge className={`${variants[type] || variants.other} border font-medium`}>
+				{display[type] || "Onbekend"}
+			</Badge>
+		);
 	};
 
 	if (error) {
@@ -125,6 +149,17 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 								/>
 							</div>
 						</div>
+						<div className="flex-1">
+							<div className="relative">
+								<Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+								<Input
+									placeholder="Filter op branche (bv. tandarts, installateur)"
+									value={subIndustryFilter}
+									onChange={(e) => setSubIndustryFilter(e.target.value)}
+									className="pl-12 h-12 text-base border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+								/>
+							</div>
+						</div>
 						<div className="flex gap-3">
 							<Select value={icpFilter} onValueChange={setIcpFilter}>
 								<SelectTrigger className="w-48 h-12 border-slate-200 focus:border-blue-400">
@@ -151,6 +186,18 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 									<SelectItem value="discovered">Ontdekt</SelectItem>
 									<SelectItem value="contacted">Gecontacteerd</SelectItem>
 									<SelectItem value="rejected">Afgewezen</SelectItem>
+								</SelectContent>
+							</Select>
+
+							<Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
+								<SelectTrigger className="w-40 h-12 border-slate-200 focus:border-blue-400">
+									<SelectValue placeholder="Type" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Alle Types</SelectItem>
+									<SelectItem value="end_user">Eindgebruiker</SelectItem>
+									<SelectItem value="supplier">Leverancier</SelectItem>
+									<SelectItem value="other">Overig</SelectItem>
 								</SelectContent>
 							</Select>
 
@@ -199,9 +246,12 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 												{lead.company}
 											</CardTitle>
 										</div>
-										<div className="flex items-center text-sm text-slate-600 mb-3">
-											<MapPin className="h-4 w-4 mr-1" />
-											{lead.location}
+										<div className="flex items-center text-sm text-slate-600 mb-3 space-x-2">
+											<div className="flex items-center">
+												<MapPin className="h-4 w-4 mr-1" />
+												{lead.location}
+											</div>
+											{getEntityTypeBadge(lead.entityType)}
 										</div>
 									</div>
 									<div className="flex flex-col items-end space-y-3">

@@ -48,12 +48,19 @@ def save_leads_to_db(state: GraphState) -> dict:
 
             # Add enriched data if available
             if enriched_data:
+                # Extract first contact email and phone for backwards compatibility/simplicity if needed elsewhere
+                contacts = enriched_data.get("contacts", [])
+                primary_contact = contacts[0] if contacts else {}
+
                 company_data.update(
                     {
+                        "entity_type": enriched_data.get("entity_type"),
+                        "sub_industry": enriched_data.get("sub_industry"),
+                        "contacts": enriched_data.get("contacts"),
+                        "contact_email": primary_contact.get("email"),
+                        "contact_phone": None,  # Phone was removed from contacts, set to None
                         "website_url": enriched_data.get("website_url"),
                         "company_description": enriched_data.get("company_description"),
-                        "contact_email": enriched_data.get("contact_email"),
-                        "contact_phone": enriched_data.get("contact_phone"),
                         "location_details": enriched_data.get("location_details"),
                         "employee_count": enriched_data.get("employee_count"),
                         "equipment_needs": enriched_data.get("equipment_needs"),

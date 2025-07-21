@@ -48,6 +48,8 @@ def get_companies(
     status: Optional[str] = None,
     country: Optional[str] = None,
     search: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    sub_industry: Optional[str] = None,
     sort_by: str = "score",
 ):
     """Get companies with filtering and pagination"""
@@ -58,6 +60,8 @@ def get_companies(
         status=status,
         country=country,
         search=search,
+        entity_type=entity_type,
+        sub_industry=sub_industry,
         sort_by=sort_by,
     )
 
