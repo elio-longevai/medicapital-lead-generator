@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService, type CompanyListResponse, type Company, type GetCompaniesParams } from '@/services/api';
+import { apiService, type CompanyListResponse, type Company, type GetCompaniesParams, type ContactEnrichmentResponse } from '@/services/api';
 
 export function useCompanies(params: GetCompaniesParams = {}) {
   return useQuery<CompanyListResponse>({
@@ -36,6 +36,42 @@ export function useUpdateCompanyStatus() {
 
       // Also update the specific company's data in the cache if it exists
       queryClient.setQueryData(['company', variables.id], data);
+    },
+  });
+}
+
+export function useEnrichCompanyContacts() {
+  const queryClient = useQueryClient();
+  return useMutation<ContactEnrichmentResponse, Error, { id: number }>({
+    mutationFn: ({ id }) => apiService.enrichCompanyContacts(id),
+    onMutate: async ({ id }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['company', id] });
+
+      // Snapshot the previous value
+      const previousCompany = queryClient.getQueryData(['company', id]);
+
+      // Optimistically update to show enrichment in progress
+      queryClient.setQueryData(['company', id], (oldData: Company | undefined) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          contactEnrichmentStatus: 'pending' as const,
+        };
+      });
+
+      return { previousCompany };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousCompany) {
+        queryClient.setQueryData(['company', variables.id], context.previousCompany);
+      }
+    },
+    onSettled: (data, error, variables) => {
+      // Always refetch after mutation to get the latest data from server
+      queryClient.invalidateQueries({ queryKey: ['company', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
     },
   });
 }

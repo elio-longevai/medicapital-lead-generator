@@ -151,13 +151,13 @@ def get_company_contacts(company_id: str):
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    contacts = company.get("contactPersons", [])
-    enrichment_status = company.get("contactEnrichmentStatus")
-    enriched_at = company.get("contactEnrichedAt")
+    contacts = company.contactPersons or []
+    enrichment_status = company.contactEnrichmentStatus
+    enriched_at = company.contactEnrichedAt
 
     return {
         "companyId": company_id,
-        "companyName": company.get("company"),
+        "companyName": company.company,
         "contacts": contacts,
         "enrichmentStatus": enrichment_status,
         "enrichedAt": enriched_at,
@@ -176,8 +176,8 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    company_name = company.get("company")
-    website_url = company.get("website")
+    company_name = company.company
+    website_url = company.website
 
     # Start enrichment in background
     async def perform_enrichment():

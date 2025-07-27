@@ -37,7 +37,7 @@ import {
 	UserCheck,
 	RefreshCw,
 } from "lucide-react";
-import { useUpdateCompanyStatus } from "@/hooks/useCompanies";
+import { useUpdateCompanyStatus, useEnrichCompanyContacts } from "@/hooks/useCompanies";
 import { toast } from "sonner";
 import type { Company, Contact } from "@/services/api";
 import {
@@ -65,6 +65,7 @@ interface CompanyProfileProps {
 export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 	const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 	const updateStatusMutation = useUpdateCompanyStatus();
+	const enrichContactsMutation = useEnrichCompanyContacts();
 
 	const activities = useMemo(() => {
 		if (!company) return [];
@@ -237,6 +238,22 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 				onError: (error) => {
 					toast.error(`Kon lead niet afwijzen: ${error.message}`);
 					setIsRejectDialogOpen(false);
+				},
+			},
+		);
+	};
+
+	const handleEnrichContacts = () => {
+		if (!company) return;
+		
+		enrichContactsMutation.mutate(
+			{ id: company.id },
+			{
+				onSuccess: (data) => {
+					toast.success(`Contactverrijking gestart voor ${company.company}. Dit kan enkele minuten duren.`);
+				},
+				onError: (error) => {
+					toast.error(`Contactverrijking mislukt: ${error.message}`);
 				},
 			},
 		);
@@ -526,22 +543,56 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 									<Users className="h-5 w-5 mr-2" />
 									Contactinformatie
 								</CardTitle>
-								{/* Enrichment status indicator */}
-								{company.contactEnrichmentStatus && (
-									<Badge 
-										variant={company.contactEnrichmentStatus === 'completed' ? 'default' : 
-												company.contactEnrichmentStatus === 'failed' ? 'destructive' : 'secondary'}
-										className="text-xs"
-									>
-										{company.contactEnrichmentStatus === 'completed' ? 'Verrijkt' :
-										 company.contactEnrichmentStatus === 'failed' ? 'Mislukt' : 'Bezig...'}
-									</Badge>
-								)}
+								<div className="flex items-center gap-2">
+									{/* Enrichment status indicator */}
+									{company.contactEnrichmentStatus && (
+										<Badge 
+											variant={company.contactEnrichmentStatus === 'completed' ? 'default' : 
+													company.contactEnrichmentStatus === 'failed' ? 'destructive' : 'secondary'}
+											className="text-xs"
+										>
+											{company.contactEnrichmentStatus === 'completed' ? 'Verrijkt' :
+											 company.contactEnrichmentStatus === 'failed' ? 'Mislukt' : 
+											 enrichContactsMutation.isPending ? 'Verrijken...' : 'Bezig...'}
+										</Badge>
+									)}
+									{/* Refresh button for existing contacts */}
+									{company.contactPersons && company.contactPersons.length > 0 && (
+										<Button
+											size="sm"
+											variant="ghost"
+											onClick={handleEnrichContacts}
+											disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+											className="h-8 w-8 p-0"
+										>
+											<RefreshCw className={`h-4 w-4 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
+										</Button>
+									)}
+								</div>
 							</CardHeader>
 							<CardContent>
+								{/* Loading state during enrichment */}
+								{(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && 
+								 (!company.contactPersons || company.contactPersons.length === 0) && (
+									<div className="text-center py-8">
+										<RefreshCw className="h-8 w-8 text-blue-500 mx-auto mb-3 animate-spin" />
+										<p className="text-sm text-gray-600 mb-2">Contacten worden gezocht...</p>
+										<p className="text-xs text-gray-500">Dit kan enkele minuten duren</p>
+									</div>
+								)}
+								
 								{/* Contact Persons */}
 								{(company.contactPersons && company.contactPersons.length > 0) ? (
 									<div className="space-y-4">
+										{/* Show enrichment in progress indicator even when contacts exist */}
+										{(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && (
+											<div className="text-center py-3 bg-blue-50 rounded-lg border border-blue-200">
+												<div className="flex items-center justify-center gap-2">
+													<RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+													<p className="text-sm text-blue-800 font-medium">Contacten worden bijgewerkt...</p>
+												</div>
+											</div>
+										)}
 										{company.contactPersons.slice(0, 4).map((contact: Contact, index: number) => (
 											<div key={index} className="group p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 hover:from-blue-50/30 hover:to-slate-50/80 hover:border-blue-200 transition-all duration-200 hover:shadow-sm">
 												<div className="space-y-3">
@@ -693,25 +744,44 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 														</a>
 													</div>
 												)}
+												{/* Show enrichment button even with basic contact info */}
+												<div className="text-center pt-4 border-t border-gray-200">
+													<Button 
+														size="sm" 
+														variant="outline"
+														onClick={handleEnrichContacts}
+														disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+													>
+														<RefreshCw className={`h-4 w-4 mr-2 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
+														{enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending' 
+															? 'Contacten zoeken...' 
+															: 'Meer contacten zoeken'
+														}
+													</Button>
+												</div>
 											</>
 										) : (
-											<div className="text-center py-8">
-												<UserCheck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-												<p className="text-gray-500 text-sm mb-4">
-													Geen contactinformatie beschikbaar
-												</p>
-												<Button 
-													size="sm" 
-													variant="outline"
-													onClick={() => {
-														// TODO: Trigger contact enrichment
-														toast.info("Contact verrijking wordt binnenkort beschikbaar");
-													}}
-												>
-													<RefreshCw className="h-4 w-4 mr-2" />
-													Contacten zoeken
-												</Button>
-											</div>
+											/* Only show if not currently enriching */
+											!(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && (
+												<div className="text-center py-8">
+													<UserCheck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+													<p className="text-gray-500 text-sm mb-4">
+														Geen contactinformatie beschikbaar
+													</p>
+													<Button 
+														size="sm" 
+														variant="outline"
+														onClick={handleEnrichContacts}
+														disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+													>
+														<RefreshCw className={`h-4 w-4 mr-2 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
+														{enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending' 
+															? 'Contacten zoeken...' 
+															: 'Contacten zoeken'
+														}
+													</Button>
+												</div>
+											)
 										)}
 									</div>
 								)}

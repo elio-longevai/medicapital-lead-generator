@@ -84,6 +84,11 @@ export interface ScrapingStatus {
   is_scraping: boolean;
 }
 
+export interface ContactEnrichmentResponse {
+  message: string;
+  companyId: string;
+}
+
 class ApiService {
   async getCompanies(params: GetCompaniesParams = {}): Promise<CompanyListResponse> {
     const searchParams = new URLSearchParams();
@@ -142,6 +147,25 @@ class ApiService {
       }));
       throw new Error(
         errorData.detail || `Serverfout: ${response.statusText}`,
+      );
+    }
+    return response.json();
+  }
+
+  async enrichCompanyContacts(companyId: number): Promise<ContactEnrichmentResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/enrich-contacts`, {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        detail: "Onbekende fout bij het verrijken van contacten.",
+      }));
+      throw new Error(
+        errorData.detail || `Contactverrijking mislukt: ${response.statusText}`,
       );
     }
     return response.json();
