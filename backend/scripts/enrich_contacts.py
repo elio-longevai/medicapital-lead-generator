@@ -245,7 +245,7 @@ class ContactEnrichmentRunner:
             )
 
             # Process batch concurrently with rate limiting
-            semaphore = asyncio.Semaphore(2)  # Limit concurrent requests
+            semaphore = asyncio.Semaphore(10)  # Process 10 companies in parallel
 
             async def process_with_semaphore(company):
                 async with semaphore:

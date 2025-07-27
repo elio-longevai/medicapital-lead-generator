@@ -13,6 +13,10 @@ export interface Contact {
   name?: string;
   role?: string;
   email?: string;
+  phone?: string;
+  linkedin_url?: string;
+  department?: string;
+  seniority_level?: string;
 }
 
 export interface Company {
@@ -45,6 +49,9 @@ export interface Company {
   entityType?: 'end_user' | 'supplier' | 'other';
   subIndustry?: string;
   contacts?: Contact[];
+  contactPersons?: Contact[];
+  contactEnrichmentStatus?: 'pending' | 'completed' | 'failed';
+  contactEnrichedAt?: string;
 }
 
 export interface CompanyListResponse {

@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     SERPER_API_KEY: str
     TAVILY_API_KEY: str
     FIRECRAWL_API_KEY: str
+    SCRAPINGDOG_API_KEY: str
+    PEOPLE_DATA_LABS_API_KEY: str = ""  # Optional with default empty string
+    HUNTER_IO_API_KEY: str = ""  # Optional with default empty string
 
     # Database - MongoDB
     MONGODB_URI: str

@@ -181,6 +181,7 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
 
     # Start enrichment in background
     async def perform_enrichment():
+        repo = CompanyRepository()
         try:
             contact_service = ContactEnrichmentService()
             result = await contact_service.enrich_company_contacts(
@@ -188,7 +189,6 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
             )
 
             # Update company record
-            repo = CompanyRepository()
             update_data = {
                 "contact_persons": [
                     contact.model_dump() for contact in result["contacts"]
@@ -201,7 +201,6 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
         except Exception as e:
             logger.error(f"Contact enrichment failed for {company_name}: {str(e)}")
             # Update with error status
-            repo = CompanyRepository()
             repo.update_company(
                 company_id,
                 {

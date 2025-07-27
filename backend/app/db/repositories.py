@@ -1,7 +1,7 @@
 import hashlib
 import logging
 from datetime import datetime, date
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
@@ -46,7 +46,9 @@ class CompanyRepository:
             logger.error(f"Error creating company: {e}")
             return None
 
-    def update_company(self, company_id, update_data: Dict[str, Any]) -> bool:
+    def update_company(
+        self, company_id: Union[str, ObjectId], update_data: Dict[str, Any]
+    ) -> bool:
         """Update a company document."""
         try:
             # Convert string ID to ObjectId if necessary

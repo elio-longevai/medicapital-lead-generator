@@ -36,7 +36,11 @@ import type { Company } from "@/services/api";
 import { icpList, getIcpMetadata } from "@/lib/icp-utils";
 import { formatTimeAgo } from "@/lib/date-utils";
 
-export const LeadDatabase = ({ onSelectCompany }) => {
+interface LeadDatabaseProps {
+	onSelectCompany: (company: Company) => void;
+}
+
+export const LeadDatabase = ({ onSelectCompany }: LeadDatabaseProps) => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [icpFilter, setIcpFilter] = useState("all");
 	const [statusFilter, setStatusFilter] = useState("all");

@@ -45,7 +45,7 @@ class BaseSearchClient(ABC):
     BASE_URL: str
     DEFAULT_HEADERS: Dict[str, str] = {"Accept": "application/json"}
     REQUEST_METHOD: str = "GET"  # Can be overridden by subclasses
-    DEFAULT_TIMEOUT: float = 15.0  # Reduced from 30.0 for faster failure detection
+    DEFAULT_TIMEOUT: float = 8.0  # Optimized for fast contact enrichment
 
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -189,6 +189,24 @@ class SerperClient(BaseSearchClient, CountryMappingMixin):
     BASE_URL = "https://google.serper.dev/search"
     REQUEST_METHOD = "POST"
 
+    def __init__(self, api_key: str):
+        super().__init__(api_key)
+        self._limiter = None
+
+    @property
+    def limiter(self):
+        """Rate limiter for Serper API."""
+        if self._limiter is None:
+            self._limiter = AsyncLimiter(2, 1)  # 2 requests per second
+        return self._limiter
+
+    async def search_async(
+        self, query: str, country: str, client: httpx.AsyncClient
+    ) -> List[Dict[str, str]]:
+        """Performs an asynchronous web search with rate limiting."""
+        async with self.limiter:
+            return await super().search_async(query, country, client)
+
     def _prepare_request(self, query: str, country: str):
         headers = {
             "X-API-KEY": self.api_key,
@@ -213,6 +231,24 @@ class TavilyClient(BaseSearchClient, CountryMappingMixin):
 
     BASE_URL = "https://api.tavily.com/search"
     REQUEST_METHOD = "POST"
+
+    def __init__(self, api_key: str):
+        super().__init__(api_key)
+        self._limiter = None
+
+    @property
+    def limiter(self):
+        """Rate limiter for Tavily API."""
+        if self._limiter is None:
+            self._limiter = AsyncLimiter(1, 1)  # 1 request per second
+        return self._limiter
+
+    async def search_async(
+        self, query: str, country: str, client: httpx.AsyncClient
+    ) -> List[Dict[str, str]]:
+        """Performs an asynchronous web search with rate limiting."""
+        async with self.limiter:
+            return await super().search_async(query, country, client)
 
     def _prepare_request(self, query: str, country: str):
         headers = {"Content-Type": "application/json"}
@@ -244,7 +280,25 @@ class FirecrawlClient(BaseSearchClient, CountryMappingMixin):
 
     BASE_URL = "https://api.firecrawl.dev/v0/search"
     REQUEST_METHOD = "POST"
-    DEFAULT_TIMEOUT: float = 10.0  # Shorter timeout for Firecrawl due to instability
+    DEFAULT_TIMEOUT: float = 6.0  # Aggressive timeout for Firecrawl due to instability
+
+    def __init__(self, api_key: str):
+        super().__init__(api_key)
+        self._limiter = None
+
+    @property
+    def limiter(self):
+        """Rate limiter for Firecrawl API."""
+        if self._limiter is None:
+            self._limiter = AsyncLimiter(1, 2)  # 1 request per 2 seconds (conservative)
+        return self._limiter
+
+    async def search_async(
+        self, query: str, country: str, client: httpx.AsyncClient
+    ) -> List[Dict[str, str]]:
+        """Performs an asynchronous web search with rate limiting."""
+        async with self.limiter:
+            return await super().search_async(query, country, client)
 
     def _prepare_request(self, query: str, country: str):
         headers = {
@@ -274,10 +328,64 @@ class FirecrawlClient(BaseSearchClient, CountryMappingMixin):
         ]
 
 
+class ScrapingDogClient(BaseSearchClient, CountryMappingMixin):
+    """A client for the ScrapingDog API - optimized for high-volume, low-cost searches."""
+
+    BASE_URL = "https://api.scrapingdog.com/google_search"
+    REQUEST_METHOD = "GET"
+    DEFAULT_TIMEOUT: float = 10.0  # Fast timeout for high-speed searches
+
+    def __init__(self, api_key: str):
+        super().__init__(api_key)
+        # Rate limiter for ScrapingDog (can handle higher volume)
+        self._limiter = None
+
+    @property
+    def limiter(self):
+        """Lazy initialization of limiter - more generous for ScrapingDog."""
+        if self._limiter is None:
+            self._limiter = AsyncLimiter(3, 1)  # 3 requests per second
+        return self._limiter
+
+    async def search_async(
+        self, query: str, country: str, client: httpx.AsyncClient
+    ) -> List[Dict[str, str]]:
+        """Performs an asynchronous web search with rate limiting."""
+        async with self.limiter:
+            return await super().search_async(query, country, client)
+
+    def _prepare_request(self, query: str, country: str):
+        headers = self.DEFAULT_HEADERS
+        params = {
+            "api_key": self.api_key,
+            "query": query,
+            "country": country.lower(),
+            "num": 10,
+            "page": 1,
+            "results_type": "organic_results",
+        }
+        return self.BASE_URL, headers, params
+
+    def _parse_response(self, data: dict) -> list[dict]:
+        results = []
+        organic_results = data.get("organic_results", [])
+
+        for item in organic_results:
+            results.append(
+                {
+                    "title": item.get("title", ""),
+                    "description": item.get("snippet", ""),
+                    "url": item.get("link", ""),
+                }
+            )
+
+        return results
+
+
 class CircuitBreaker:
     """Simple circuit breaker to temporarily disable failing providers."""
 
-    def __init__(self, failure_threshold: int = 50, recovery_timeout: int = 300):
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 120):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout  # seconds
         self.failure_counts: Dict[str, int] = {}
@@ -320,7 +428,7 @@ class CircuitBreaker:
 class MultiProviderSearchClient:
     """Orchestrates searches across multiple providers."""
 
-    PROVIDER_TIER = ["serper", "tavily", "brave", "firecrawl"]
+    PROVIDER_TIER = ["scrapingdog", "serper", "tavily", "brave", "firecrawl"]
 
     def __init__(self, clients: Dict[str, BaseSearchClient]):
         self.clients = clients
@@ -404,6 +512,7 @@ def create_multi_provider_search_client() -> MultiProviderSearchClient:
     """Factory to create a new instance of the search client."""
     return MultiProviderSearchClient(
         clients={
+            "scrapingdog": ScrapingDogClient(api_key=settings.SCRAPINGDOG_API_KEY),
             "brave": BraveSearchClient(api_key=settings.BRAVE_API_KEY),
             "serper": SerperClient(api_key=settings.SERPER_API_KEY),
             "tavily": TavilyClient(api_key=settings.TAVILY_API_KEY),

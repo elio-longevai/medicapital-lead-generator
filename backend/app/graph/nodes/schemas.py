@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, List, Literal
 from pydantic import BaseModel, Field, field_validator
 
@@ -64,8 +65,6 @@ class EnrichedCompanyData(BaseModel):
         allowed_values = {"end_user", "supplier", "other"}
         if v not in allowed_values:
             # Log the invalid value for debugging
-            import logging
-
             logger = logging.getLogger(__name__)
             logger.warning(f"Invalid entity_type '{v}' received, defaulting to 'other'")
             return "other"
