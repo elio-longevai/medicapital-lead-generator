@@ -9,6 +9,16 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+export interface Contact {
+  name?: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  linkedin_url?: string;
+  department?: string;
+  seniority_level?: string;
+}
+
 export interface Company {
   id: number;
   company: string;
@@ -36,6 +46,11 @@ export interface Company {
   qualificationReasoning?: string;
   estimatedRevenue?: string;
   description?: string;
+  entityType?: 'end_user' | 'supplier' | 'other';
+  subIndustry?: string;
+  contactPersons?: Contact[];
+  contactEnrichmentStatus?: 'pending' | 'completed' | 'failed';
+  contactEnrichedAt?: string;
 }
 
 export interface CompanyListResponse {
@@ -54,19 +69,28 @@ export interface DashboardStats {
   topIndustries: Array<{ industry: string; count: number }>;
 }
 
+export interface GetCompaniesParams {
+  skip?: number;
+  icp_name?: string;
+  status?: string;
+  country?: string;
+  search?: string;
+  entity_type?: string;
+  sub_industry?: string;
+  sort_by?: string;
+}
+
 export interface ScrapingStatus {
   is_scraping: boolean;
 }
 
+export interface ContactEnrichmentResponse {
+  message: string;
+  companyId: string;
+}
+
 class ApiService {
-  async getCompanies(params: {
-    skip?: number;
-    icp_name?: string;
-    status?: string;
-    country?: string;
-    search?: string;
-    sort_by?: string;
-  } = {}): Promise<CompanyListResponse> {
+  async getCompanies(params: GetCompaniesParams = {}): Promise<CompanyListResponse> {
     const searchParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
@@ -123,6 +147,25 @@ class ApiService {
       }));
       throw new Error(
         errorData.detail || `Serverfout: ${response.statusText}`,
+      );
+    }
+    return response.json();
+  }
+
+  async enrichCompanyContacts(companyId: number): Promise<ContactEnrichmentResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/enrich-contacts`, {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        detail: "Onbekende fout bij het verrijken van contacten.",
+      }));
+      throw new Error(
+        errorData.detail || `Contactverrijking mislukt: ${response.statusText}`,
       );
     }
     return response.json();

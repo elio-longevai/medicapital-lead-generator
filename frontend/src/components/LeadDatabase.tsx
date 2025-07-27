@@ -29,16 +29,23 @@ import {
 	Target,
 	TrendingUp,
 	Loader2,
+	Filter,
 } from "lucide-react";
 import { useCompanies } from "@/hooks/useCompanies";
 import type { Company } from "@/services/api";
 import { icpList, getIcpMetadata } from "@/lib/icp-utils";
 import { formatTimeAgo } from "@/lib/date-utils";
 
-export const LeadDatabase = ({ onSelectCompany }) => {
+interface LeadDatabaseProps {
+	onSelectCompany: (company: Company) => void;
+}
+
+export const LeadDatabase = ({ onSelectCompany }: LeadDatabaseProps) => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [icpFilter, setIcpFilter] = useState("all");
 	const [statusFilter, setStatusFilter] = useState("all");
+	const [entityTypeFilter, setEntityTypeFilter] = useState("all");
+	const [subIndustryFilter, setSubIndustryFilter] = useState("");
 	const [sortBy, setSortBy] = useState("score");
 
 	const {
@@ -49,6 +56,8 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 		search: searchTerm || undefined,
 		icp_name: icpFilter !== "all" ? icpFilter : undefined,
 		status: statusFilter !== "all" ? statusFilter : undefined,
+		entity_type: entityTypeFilter !== "all" ? entityTypeFilter : undefined,
+		sub_industry: subIndustryFilter || undefined,
 		sort_by: sortBy,
 	});
 
@@ -63,11 +72,17 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 			rejected: "bg-rose-100 text-rose-800 border-rose-200",
 		};
 
+		const dutchLabels = {
+			qualified: "Gekwalificeerd",
+			in_review: "In Beoordeling",
+			discovered: "Nieuw",
+			contacted: "Gecontacteerd",
+			rejected: "Afgewezen",
+		};
+
 		// Handle both frontend display format and backend API format
 		const normalizedStatus = status.toLowerCase().replace(/\s+/g, "_");
-		const displayStatus = status.includes("_")
-			? status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())
-			: status;
+		const displayStatus = dutchLabels[normalizedStatus] || status;
 
 		return (
 			<Badge
@@ -83,6 +98,32 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 		if (score >= 85) return "text-emerald-600 bg-emerald-50";
 		if (score >= 70) return "text-amber-600 bg-amber-50";
 		return "text-red-600 bg-red-50";
+	};
+
+	const getEntityTypeBadge = (type?: string) => {
+		if (!type) return null;
+		const variants = {
+			end_user: "bg-blue-100 text-blue-800 border-blue-200",
+			supplier: "bg-purple-100 text-purple-800 border-purple-200",
+			other: "bg-gray-100 text-gray-800 border-gray-200",
+		};
+		const display = {
+			end_user: "Eindgebruiker",
+			supplier: "Leverancier",
+			other: "Overig",
+		};
+		// Use the same logic as CompanyProfile for consistency
+		const displayText = type === 'end_user' 
+			? 'Eindgebruiker' 
+			: type === 'supplier'
+			? 'Leverancier'
+			: 'Overig';
+		
+		return (
+			<Badge className={`${variants[type] || variants.other} border font-medium text-xs px-2 py-1`}>
+				{displayText}
+			</Badge>
+		);
 	};
 
 	if (error) {
@@ -125,6 +166,17 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 								/>
 							</div>
 						</div>
+						<div className="flex-1">
+							<div className="relative">
+								<Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+								<Input
+									placeholder="Filter op branche (bv. tandarts, installateur)"
+									value={subIndustryFilter}
+									onChange={(e) => setSubIndustryFilter(e.target.value)}
+									className="pl-12 h-12 text-base border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+								/>
+							</div>
+						</div>
 						<div className="flex gap-3">
 							<Select value={icpFilter} onValueChange={setIcpFilter}>
 								<SelectTrigger className="w-48 h-12 border-slate-200 focus:border-blue-400">
@@ -154,14 +206,15 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 								</SelectContent>
 							</Select>
 
-							<Select value={sortBy} onValueChange={setSortBy}>
+							<Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
 								<SelectTrigger className="w-40 h-12 border-slate-200 focus:border-blue-400">
-									<SelectValue placeholder="Sorteer op" />
+									<SelectValue placeholder="Type" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="score">Score</SelectItem>
-									<SelectItem value="company">Bedrijf</SelectItem>
-									<SelectItem value="activity">Activiteit</SelectItem>
+									<SelectItem value="all">Alle Types</SelectItem>
+									<SelectItem value="end_user">Eindgebruiker</SelectItem>
+									<SelectItem value="supplier">Leverancier</SelectItem>
+									<SelectItem value="other">Overig</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -201,7 +254,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 										</div>
 										<div className="flex items-center text-sm text-slate-600 mb-3">
 											<MapPin className="h-4 w-4 mr-1" />
-											{lead.location}
+											<span>{lead.location}</span>
 										</div>
 									</div>
 									<div className="flex flex-col items-end space-y-3">
@@ -210,7 +263,10 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 										>
 											{lead.score}
 										</div>
-										{getStatusBadge(lead.status)}
+										<div className="flex flex-col items-end space-y-2">
+											{getStatusBadge(lead.status)}
+											{getEntityTypeBadge(lead.entityType)}
+										</div>
 									</div>
 								</div>
 							</CardHeader>
@@ -218,7 +274,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 								<div className="space-y-4">
 									<div className="bg-gradient-to-r from-slate-50 to-blue-50 p-4 rounded-xl border border-slate-100">
 										<p className="text-sm font-semibold text-slate-700 mb-1">
-											Apparatuurbehoefte
+											Apparatuur
 										</p>
 										<p className="text-base text-slate-900 font-medium">
 											{lead.equipmentNeed}
@@ -264,16 +320,6 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 										<p className="text-sm text-slate-700 line-clamp-2 leading-relaxed">
 											{lead.recentNews || lead.notes}
 										</p>
-									</div>
-
-									<div className="flex items-center justify-between pt-3">
-										<div className="flex items-center space-x-1">
-											<Star className="h-4 w-4 text-amber-500" />
-											<span className="text-sm font-medium text-slate-700">
-												Hoge Prioriteit
-											</span>
-										</div>
-										<ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
 									</div>
 								</div>
 							</CardContent>

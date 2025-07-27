@@ -51,6 +51,9 @@ class CompanyDocument(BaseModel):
     primary_industry: Optional[str] = None
     initial_reasoning: str
     status: str = Field(default="discovered")
+    entity_type: Optional[str] = None
+    sub_industry: Optional[str] = None
+    contacts: Optional[List[Dict[str, Any]]] = None
 
     # For Sprint 2+
     website_url: Optional[str] = None
@@ -70,6 +73,11 @@ class CompanyDocument(BaseModel):
     qualification_details: Optional[Dict[str, Any]] = None
     location_details: Optional[str] = None
     estimated_revenue: Optional[str] = None
+
+    # Contact enrichment fields
+    contact_persons: Optional[List[Dict[str, Any]]] = None
+    contact_enrichment_status: Optional[str] = None
+    contact_enriched_at: Optional[datetime.datetime] = None
 
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)

@@ -18,6 +18,8 @@ import {
 	MapPin,
 	Building2,
 	Users,
+	User,
+	Briefcase,
 	Calendar,
 	TrendingUp,
 	Star,
@@ -30,9 +32,14 @@ import {
 	MessageSquare,
 	Check,
 	Trash2,
+	ExternalLink as LinkedinIcon,
+	Crown,
+	UserCheck,
+	RefreshCw,
 } from "lucide-react";
-import { useUpdateCompanyStatus } from "@/hooks/useCompanies";
+import { useUpdateCompanyStatus, useEnrichCompanyContacts } from "@/hooks/useCompanies";
 import { toast } from "sonner";
+import type { Company, Contact } from "@/services/api";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -50,9 +57,15 @@ import { nl } from "date-fns/locale";
 // Amsterdam timezone
 const AMSTERDAM_TZ = "Europe/Amsterdam";
 
-export const CompanyProfile = ({ company, onBack }) => {
+interface CompanyProfileProps {
+	company: Company;
+	onBack: () => void;
+}
+
+export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 	const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 	const updateStatusMutation = useUpdateCompanyStatus();
+	const enrichContactsMutation = useEnrichCompanyContacts();
 
 	const activities = useMemo(() => {
 		if (!company) return [];
@@ -230,6 +243,22 @@ export const CompanyProfile = ({ company, onBack }) => {
 		);
 	};
 
+	const handleEnrichContacts = () => {
+		if (!company) return;
+		
+		enrichContactsMutation.mutate(
+			{ id: company.id },
+			{
+				onSuccess: (data) => {
+					toast.success(`Contactverrijking gestart voor ${company.company}. Dit kan enkele minuten duren.`);
+				},
+				onError: (error) => {
+					toast.error(`Contactverrijking mislukt: ${error.message}`);
+				},
+			},
+		);
+	};
+
 	return (
 		<div className="min-h-screen bg-gray-50">
 			{/* Header */}
@@ -245,9 +274,13 @@ export const CompanyProfile = ({ company, onBack }) => {
 								<h1 className="text-2xl font-bold text-gray-900">
 									{company.company}
 								</h1>
-								<p className="text-gray-600 flex items-center mt-1">
+								<p className="text-gray-600 flex items-center mt-1 flex-wrap">
 									<MapPin className="h-4 w-4 mr-1" />
-									{company.location} • {company.industry}{" "}
+									{company.location}
+									<span className="mx-2">•</span>
+									{company.industry}
+									{company.subIndustry && <span className="text-gray-400 mx-1">/</span>}
+									{company.subIndustry}
 								</p>
 							</div>
 						</div>
@@ -309,6 +342,29 @@ export const CompanyProfile = ({ company, onBack }) => {
 													<p className="mt-1 text-gray-900">
 														{company.industry}
 													</p>
+												</div>
+												<div>
+													<span className="text-sm font-medium text-gray-500">
+														Type Bedrijf
+													</span>
+													<div className="mt-1">
+														<Badge 
+															className={`${
+																company.entityType === 'end_user' 
+																	? 'bg-blue-100 text-blue-800 border-blue-200'
+																	: company.entityType === 'supplier'
+																	? 'bg-purple-100 text-purple-800 border-purple-200' 
+																	: 'bg-gray-100 text-gray-800 border-gray-200'
+															} border font-medium`}
+														>
+															{company.entityType === 'end_user' 
+																? 'Eindgebruiker' 
+																: company.entityType === 'supplier'
+																? 'Leverancier'
+																: 'Overig'
+															}
+														</Badge>
+													</div>
 												</div>
 												<div>
 													<span className="text-sm font-medium text-gray-500">
@@ -384,6 +440,7 @@ export const CompanyProfile = ({ company, onBack }) => {
 										</CardContent>
 									</Card>
 								)}
+
 
 								{/* Recent News & Activity */}
 								{activities.length > 0 && (
@@ -481,24 +538,253 @@ export const CompanyProfile = ({ company, onBack }) => {
 					{/* Sidebar */}
 					<div className="space-y-6">
 						<Card>
-							<CardHeader>
-								<CardTitle>Contactinformatie</CardTitle>
+							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+								<CardTitle className="flex items-center">
+									<Users className="h-5 w-5 mr-2" />
+									Contactinformatie
+								</CardTitle>
+								<div className="flex items-center gap-2">
+									{/* Enrichment status indicator */}
+									{company.contactEnrichmentStatus && (
+										<Badge 
+											variant={company.contactEnrichmentStatus === 'completed' ? 'default' : 
+													company.contactEnrichmentStatus === 'failed' ? 'destructive' : 'secondary'}
+											className="text-xs"
+										>
+											{company.contactEnrichmentStatus === 'completed' ? 'Verrijkt' :
+											 company.contactEnrichmentStatus === 'failed' ? 'Mislukt' : 
+											 enrichContactsMutation.isPending ? 'Verrijken...' : 'Bezig...'}
+										</Badge>
+									)}
+									{/* Refresh button for existing contacts */}
+									{company.contactPersons && company.contactPersons.length > 0 && (
+										<Button
+											size="sm"
+											variant="ghost"
+											onClick={handleEnrichContacts}
+											disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+											className="h-8 w-8 p-0"
+										>
+											<RefreshCw className={`h-4 w-4 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
+										</Button>
+									)}
+								</div>
 							</CardHeader>
 							<CardContent>
-								<div className="space-y-4">
-									<div className="flex items-center">
-										<Mail className="h-4 w-4 mr-3 text-gray-500" />
-										<span className="text-gray-900">
-											{company.email || "Niet beschikbaar"}
-										</span>
+								{/* Loading state during enrichment */}
+								{(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && 
+								 (!company.contactPersons || company.contactPersons.length === 0) && (
+									<div className="text-center py-8">
+										<RefreshCw className="h-8 w-8 text-blue-500 mx-auto mb-3 animate-spin" />
+										<p className="text-sm text-gray-600 mb-2">Contacten worden gezocht...</p>
+										<p className="text-xs text-gray-500">Dit kan enkele minuten duren</p>
 									</div>
-									<div className="flex items-center">
-										<Phone className="h-4 w-4 mr-3 text-gray-500" />
-										<span className="text-gray-900">
-											{company.phone || "Niet beschikbaar"}
-										</span>
+								)}
+								
+								{/* Contact Persons */}
+								{(company.contactPersons && company.contactPersons.length > 0) ? (
+									<div className="space-y-4">
+										{/* Show enrichment in progress indicator even when contacts exist */}
+										{(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && (
+											<div className="text-center py-3 bg-blue-50 rounded-lg border border-blue-200">
+												<div className="flex items-center justify-center gap-2">
+													<RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+													<p className="text-sm text-blue-800 font-medium">Contacten worden bijgewerkt...</p>
+												</div>
+											</div>
+										)}
+										{company.contactPersons.slice(0, 4).map((contact: Contact, index: number) => (
+											<div key={index} className="group p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 hover:from-blue-50/30 hover:to-slate-50/80 hover:border-blue-200 transition-all duration-200 hover:shadow-sm">
+												<div className="space-y-3">
+													{/* Header with Name, Role and Seniority */}
+													<div className="flex items-start justify-between">
+														<div className="flex-1 min-w-0">
+															<div className="flex items-center gap-2 mb-1">
+																<User className="h-4 w-4 text-slate-500 flex-shrink-0" />
+																<h4 className="font-semibold text-slate-900 truncate text-base">
+																	{contact.name || "Onbekende naam"}
+																</h4>
+															</div>
+															<div className="flex items-center gap-2 ml-6">
+																<Briefcase className="h-3 w-3 text-slate-400 flex-shrink-0" />
+																<p className="text-sm text-slate-600 font-medium">
+																	{contact.role || "Onbekende functie"}
+																</p>
+															</div>
+														</div>
+														{/* Seniority Badge */}
+														{contact.seniority_level && (
+															<Badge 
+																variant="outline" 
+																className={`text-xs font-medium px-2 py-1 ${
+																	contact.seniority_level === 'C-Level' ? 'border-purple-300 text-purple-800 bg-purple-50' :
+																	contact.seniority_level === 'Director' ? 'border-blue-300 text-blue-800 bg-blue-50' :
+																	contact.seniority_level === 'Manager' ? 'border-emerald-300 text-emerald-800 bg-emerald-50' :
+																	'border-slate-300 text-slate-700 bg-slate-50'
+																}`}
+															>
+																{contact.seniority_level === 'C-Level' && <Crown className="h-3 w-3 mr-1" />}
+																{contact.seniority_level}
+															</Badge>
+														)}
+													</div>
+													
+													{/* Department */}
+													{contact.department && (
+														<div className="ml-6 flex items-center gap-2">
+															<div className="h-1 w-1 bg-slate-400 rounded-full"></div>
+															<span className="text-xs text-slate-500 font-medium">
+																{contact.department} afdeling
+															</span>
+														</div>
+													)}
+													
+													{/* Contact Methods - Beautifully Displayed */}
+													<div className="ml-6 space-y-2 pt-2 border-t border-slate-100">
+														<div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+															Contactgegevens
+														</div>
+														{contact.email && (
+															<div className="flex items-center gap-3 p-2 rounded-lg bg-white/60 border border-slate-100 hover:bg-blue-50/50 hover:border-blue-200 transition-colors group/email">
+																<div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 group-hover/email:bg-blue-200">
+																	<Mail className="h-3 w-3" />
+																</div>
+																<div className="flex-1 min-w-0">
+																	<div className="text-xs text-slate-500 font-medium">E-mail</div>
+																	<a 
+																		href={`mailto:${contact.email}`}
+																		className="text-sm text-blue-600 hover:text-blue-800 font-medium truncate block"
+																	>
+																		{contact.email}
+																	</a>
+																</div>
+															</div>
+														)}
+														{contact.phone && (
+															<div className="flex items-center gap-3 p-2 rounded-lg bg-white/60 border border-slate-100 hover:bg-emerald-50/50 hover:border-emerald-200 transition-colors group/phone">
+																<div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 group-hover/phone:bg-emerald-200">
+																	<Phone className="h-3 w-3" />
+																</div>
+																<div className="flex-1 min-w-0">
+																	<div className="text-xs text-slate-500 font-medium">Telefoon</div>
+																	<a 
+																		href={`tel:${contact.phone}`}
+																		className="text-sm text-emerald-600 hover:text-emerald-800 font-medium"
+																	>
+																		{contact.phone}
+																	</a>
+																</div>
+															</div>
+														)}
+														{contact.linkedin_url && (
+															<div className="flex items-center gap-3 p-2 rounded-lg bg-white/60 border border-slate-100 hover:bg-blue-50/50 hover:border-blue-200 transition-colors group/linkedin">
+																<div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 group-hover/linkedin:bg-blue-200">
+																	<LinkedinIcon className="h-3 w-3" />
+																</div>
+																<div className="flex-1 min-w-0">
+																	<div className="text-xs text-slate-500 font-medium">LinkedIn</div>
+																	<a 
+																		href={contact.linkedin_url}
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+																	>
+																		Bekijk profiel
+																		<ExternalLink className="h-3 w-3" />
+																	</a>
+																</div>
+															</div>
+														)}
+													</div>
+												</div>
+											</div>
+										))}
+										
+										{/* Show more contacts indicator */}
+										{company.contactPersons && company.contactPersons.length > 4 && (
+											<div className="text-center">
+												<Badge variant="secondary" className="text-xs font-medium px-3 py-1">
+													+{company.contactPersons.length - 4} meer contacten
+												</Badge>
+											</div>
+										)}
+										
+										{/* Enrichment timestamp */}
+										{company.contactEnrichedAt && (
+											<div className="text-xs text-slate-500 text-center pt-3 border-t border-slate-200 flex items-center justify-center gap-1">
+												<Clock className="h-3 w-3" />
+												Laatst bijgewerkt: {new Date(company.contactEnrichedAt).toLocaleDateString('nl-NL')}
+											</div>
+										)}
 									</div>
-								</div>
+								) : (
+									/* Fallback to basic contact info */
+									<div className="space-y-4">
+										{company.email || company.phone ? (
+											<>
+												{company.email && (
+													<div className="flex items-center">
+														<Mail className="h-4 w-4 mr-3 text-gray-500" />
+														<a 
+															href={`mailto:${company.email}`}
+															className="text-blue-600 hover:text-blue-800"
+														>
+															{company.email}
+														</a>
+													</div>
+												)}
+												{company.phone && (
+													<div className="flex items-center">
+														<Phone className="h-4 w-4 mr-3 text-gray-500" />
+														<a 
+															href={`tel:${company.phone}`}
+															className="text-blue-600 hover:text-blue-800"
+														>
+															{company.phone}
+														</a>
+													</div>
+												)}
+												{/* Show enrichment button even with basic contact info */}
+												<div className="text-center pt-4 border-t border-gray-200">
+													<Button 
+														size="sm" 
+														variant="outline"
+														onClick={handleEnrichContacts}
+														disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+													>
+														<RefreshCw className={`h-4 w-4 mr-2 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
+														{enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending' 
+															? 'Contacten zoeken...' 
+															: 'Meer contacten zoeken'
+														}
+													</Button>
+												</div>
+											</>
+										) : (
+											/* Only show if not currently enriching */
+											!(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && (
+												<div className="text-center py-8">
+													<UserCheck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+													<p className="text-gray-500 text-sm mb-4">
+														Geen contactinformatie beschikbaar
+													</p>
+													<Button 
+														size="sm" 
+														variant="outline"
+														onClick={handleEnrichContacts}
+														disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+													>
+														<RefreshCw className={`h-4 w-4 mr-2 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
+														{enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending' 
+															? 'Contacten zoeken...' 
+															: 'Contacten zoeken'
+														}
+													</Button>
+												</div>
+											)
+										)}
+									</div>
+								)}
 							</CardContent>
 						</Card>
 

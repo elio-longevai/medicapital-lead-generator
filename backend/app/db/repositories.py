@@ -1,7 +1,7 @@
 import hashlib
 import logging
 from datetime import datetime, date
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
@@ -46,9 +46,15 @@ class CompanyRepository:
             logger.error(f"Error creating company: {e}")
             return None
 
-    def update_company(self, company_id: ObjectId, update_data: Dict[str, Any]) -> bool:
+    def update_company(
+        self, company_id: Union[str, ObjectId], update_data: Dict[str, Any]
+    ) -> bool:
         """Update a company document."""
         try:
+            # Convert string ID to ObjectId if necessary
+            if isinstance(company_id, str):
+                company_id = ObjectId(company_id)
+
             update_data["updated_at"] = datetime.utcnow()
             result = self.collection.update_one(
                 {"_id": company_id}, {"$set": update_data}
@@ -72,6 +78,11 @@ class CompanyRepository:
         cursor = self.collection.find({"icp_name": icp_name})
         return list(cursor)
 
+    def find_companies(self, filter_criteria: Dict[str, Any]) -> List[Dict]:
+        """Find companies based on filter criteria."""
+        cursor = self.collection.find(filter_criteria)
+        return list(cursor)
+
     def find_with_filters(
         self,
         skip: int = 0,
@@ -80,6 +91,8 @@ class CompanyRepository:
         status: Optional[str] = None,
         country: Optional[str] = None,
         search: Optional[str] = None,
+        entity_type: Optional[str] = None,
+        sub_industry: Optional[str] = None,
         sort_by: str = "score",
     ) -> Dict[str, Any]:
         """Find companies with filters and pagination."""
@@ -88,7 +101,14 @@ class CompanyRepository:
         filter_query = {}
 
         if icp_name and icp_name != "all":
-            filter_query["icp_name"] = icp_name
+            # Handle grouped ICP filters
+            if icp_name == "duurzaamheid":
+                # Group both sustainability ICPs together
+                filter_query["icp_name"] = {
+                    "$in": ["sustainability_supplier", "sustainability_end_user"]
+                }
+            else:
+                filter_query["icp_name"] = icp_name
 
         if status and status != "all":
             filter_query["status"] = status
@@ -98,6 +118,12 @@ class CompanyRepository:
 
         if country:
             filter_query["country"] = country
+
+        if entity_type and entity_type != "all":
+            filter_query["entity_type"] = entity_type
+
+        if sub_industry:
+            filter_query["sub_industry"] = {"$regex": sub_industry, "$options": "i"}
 
         if search:
             filter_query["$or"] = [

@@ -1,5 +1,6 @@
-from typing import Optional
-from pydantic import BaseModel, Field
+import logging
+from typing import Optional, List, Literal
+from pydantic import BaseModel, Field, field_validator
 
 
 class QualificationDetails(BaseModel):
@@ -23,14 +24,57 @@ class QualificationDetails(BaseModel):
     )
 
 
+class ContactPerson(BaseModel):
+    """Represents a single contact person extracted from a website."""
+
+    name: Optional[str] = Field(
+        description="Full name of the contact person", default=None
+    )
+    role: Optional[str] = Field(
+        description="Job title or role of the contact", default=None
+    )
+    email: Optional[str] = Field(
+        description="Email address of the contact", default=None
+    )
+    phone: Optional[str] = Field(
+        description="Phone number of the contact", default=None
+    )
+    linkedin_url: Optional[str] = Field(
+        description="LinkedIn profile URL", default=None
+    )
+    department: Optional[str] = Field(
+        description="Department (HR, Finance, Operations, Sales, etc.)", default=None
+    )
+    seniority_level: Optional[str] = Field(
+        description="Seniority level (C-Level, Director, Manager, etc.)", default=None
+    )
+
+
 class EnrichedCompanyData(BaseModel):
     """Vertegenwoordigt de gestructureerde gegevens geëxtraheerd van de website van een bedrijf."""
 
-    contact_email: Optional[str] = Field(
-        description="Primair contact e-mailadres of null", default=None
+    entity_type: Literal["end_user", "supplier", "other"] = Field(
+        description="Type of company: 'end_user', 'supplier', or 'other'",
+        default="other",
     )
-    contact_phone: Optional[str] = Field(
-        description="Primair telefoonnummer of null", default=None
+
+    @field_validator("entity_type")
+    @classmethod
+    def validate_entity_type(cls, v):
+        """Ensure entity_type is one of the three allowed values."""
+        allowed_values = {"end_user", "supplier", "other"}
+        if v not in allowed_values:
+            # Log the invalid value for debugging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Invalid entity_type '{v}' received, defaulting to 'other'")
+            return "other"
+        return v
+
+    sub_industry: Optional[str] = Field(
+        description="Specific sub-industry classification in Dutch", default=None
+    )
+    contacts: Optional[List[ContactPerson]] = Field(
+        description="List of key contact persons", default_factory=list
     )
     location_details: Optional[str] = Field(
         description="Volledig adres/locatie of null", default=None

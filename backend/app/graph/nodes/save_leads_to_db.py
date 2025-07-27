@@ -9,9 +9,12 @@ logger = logging.getLogger(__name__)
 
 def save_leads_to_db(state: GraphState) -> dict:
     """Saves unique, new leads to the database with enriched data."""
-    leads_to_save = state.enriched_companies or [
-        {"lead": lead, "enriched_data": None} for lead in state.candidate_leads
-    ]
+    # Use contact enriched companies if available, otherwise enriched companies
+    leads_to_save = (
+        state.contact_enriched_companies
+        or state.enriched_companies
+        or [{"lead": lead, "enriched_data": None} for lead in state.candidate_leads]
+    )
 
     logger.info(
         f"---NODE: Saving {len(leads_to_save)} Candidate Leads to DB (with enrichment)---"
@@ -48,12 +51,24 @@ def save_leads_to_db(state: GraphState) -> dict:
 
             # Add enriched data if available
             if enriched_data:
+                # Extract first contact email and phone for backwards compatibility/simplicity if needed elsewhere
+                contacts = enriched_data.get("contacts", [])
+                contact_persons = enriched_data.get("contact_persons", [])
+                primary_contact = contacts[0] if contacts else {}
+                primary_contact_person = contact_persons[0] if contact_persons else {}
+
                 company_data.update(
                     {
+                        "entity_type": enriched_data.get("entity_type"),
+                        "sub_industry": enriched_data.get("sub_industry"),
+                        "contacts": enriched_data.get("contacts"),
+                        "contact_email": primary_contact.get("email")
+                        or primary_contact_person.get("email"),
+                        "contact_phone": primary_contact_person.get(
+                            "phone"
+                        ),  # Get phone from contact persons
                         "website_url": enriched_data.get("website_url"),
                         "company_description": enriched_data.get("company_description"),
-                        "contact_email": enriched_data.get("contact_email"),
-                        "contact_phone": enriched_data.get("contact_phone"),
                         "location_details": enriched_data.get("location_details"),
                         "employee_count": enriched_data.get("employee_count"),
                         "equipment_needs": enriched_data.get("equipment_needs"),
@@ -63,6 +78,12 @@ def save_leads_to_db(state: GraphState) -> dict:
                         "qualification_details": enriched_data.get(
                             "qualification_details"
                         ),
+                        # Contact enrichment fields
+                        "contact_persons": enriched_data.get("contact_persons"),
+                        "contact_enrichment_status": enriched_data.get(
+                            "contact_enrichment_status"
+                        ),
+                        "contact_enriched_at": enriched_data.get("contact_enriched_at"),
                     }
                 )
 

@@ -78,3 +78,10 @@ def get_mongo_collection(collection_name: str) -> Collection:
     if mongodb.database is None:
         mongodb.connect()
     return mongodb.database[collection_name]
+
+
+def get_mongo_client() -> MongoClient:
+    """Get MongoDB client instance for transactions."""
+    if mongodb.client is None:
+        mongodb.connect()
+    return mongodb.client
