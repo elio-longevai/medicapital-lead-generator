@@ -61,7 +61,9 @@ class ContactEnrichmentService:
             logger.info(
                 f"Found {len(pdl_contacts)} contacts via People Data Labs for {company_name}"
             )
-            validated_contacts = self._validate_and_clean_contacts(pdl_contacts)
+            validated_contacts = ContactValidator.validate_and_clean_contacts(
+                pdl_contacts
+            )
 
             return {
                 "contacts": validated_contacts,
