@@ -169,15 +169,16 @@ class CompanyService:
             description=description,
             entityType=company.get("entity_type"),
             subIndustry=company.get("sub_industry"),
-            contacts=contacts,
             contactPersons=company.get("contact_persons", []),
             contactEnrichmentStatus=company.get("contact_enrichment_status"),
-            contactEnrichedAt=company.get("contact_enriched_at")
-            .replace(tzinfo=datetime.timezone.utc)
-            .isoformat()
-            if company.get("contact_enriched_at")
-            and hasattr(company.get("contact_enriched_at"), "replace")
-            else None,
+            contactEnrichedAt=(
+                company.get("contact_enriched_at")
+                .replace(tzinfo=datetime.timezone.utc)
+                .isoformat()
+                if company.get("contact_enriched_at")
+                and hasattr(company.get("contact_enriched_at"), "replace")
+                else None
+            ),
         )
 
     def _calculate_default_score(self, company: Dict[str, Any]) -> int:

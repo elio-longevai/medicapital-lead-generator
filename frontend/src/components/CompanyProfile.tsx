@@ -424,64 +424,6 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 									</Card>
 								)}
 
-								{/* Contactpersonen - Enhanced Display */}
-								{company.contacts && company.contacts.length > 0 && (
-									<Card>
-										<CardHeader>
-											<CardTitle className="flex items-center">
-												<Users className="h-5 w-5 mr-2" />
-												Contactpersonen
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<div className="space-y-4">
-												{company.contacts.map((contact, index) => (
-													<div key={index} className="group p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 hover:from-blue-50/30 hover:to-slate-50/80 hover:border-blue-200 transition-all duration-200 hover:shadow-sm">
-														<div className="space-y-3">
-															{/* Name and Role */}
-															<div className="flex items-center gap-2">
-																<User className="h-4 w-4 text-slate-500 flex-shrink-0" />
-																<h4 className="font-semibold text-slate-900 text-base">
-																	{contact.name || "Naam onbekend"}
-																</h4>
-															</div>
-															{contact.role && (
-																<div className="flex items-center gap-2 ml-6">
-																	<Briefcase className="h-3 w-3 text-slate-400 flex-shrink-0" />
-																	<p className="text-sm text-slate-600 font-medium">
-																		{contact.role}
-																	</p>
-																</div>
-															)}
-															{/* Contact Info */}
-															{contact.email && (
-																<div className="ml-6 space-y-2 pt-2 border-t border-slate-100">
-																	<div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-																		Contactgegevens
-																	</div>
-																	<div className="flex items-center gap-3 p-2 rounded-lg bg-white/60 border border-slate-100 hover:bg-blue-50/50 hover:border-blue-200 transition-colors">
-																		<div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600">
-																			<Mail className="h-3 w-3" />
-																		</div>
-																		<div className="flex-1 min-w-0">
-																			<div className="text-xs text-slate-500 font-medium">E-mail</div>
-																			<a 
-																				href={`mailto:${contact.email}`}
-																				className="text-sm text-blue-600 hover:text-blue-800 font-medium truncate block"
-																			>
-																				{contact.email}
-																			</a>
-																		</div>
-																	</div>
-																</div>
-															)}
-														</div>
-													</div>
-												))}
-											</div>
-										</CardContent>
-									</Card>
-								)}
 
 								{/* Recent News & Activity */}
 								{activities.length > 0 && (
@@ -723,53 +665,6 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 												Laatst bijgewerkt: {new Date(company.contactEnrichedAt).toLocaleDateString('nl-NL')}
 											</div>
 										)}
-									</div>
-								) : (company.contacts && company.contacts.length > 0) ? (
-									/* Fallback to older contacts format */
-									<div className="space-y-4">
-										{company.contacts.slice(0, 4).map((contact: Contact, index: number) => (
-											<div key={index} className="group p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 hover:from-blue-50/30 hover:to-slate-50/80 hover:border-blue-200 transition-all duration-200 hover:shadow-sm">
-												<div className="space-y-3">
-													{/* Name and Role */}
-													<div className="flex items-center gap-2">
-														<User className="h-4 w-4 text-slate-500 flex-shrink-0" />
-														<h4 className="font-semibold text-slate-900 text-base">
-															{contact.name || "Naam onbekend"}
-														</h4>
-													</div>
-													{contact.role && (
-														<div className="flex items-center gap-2 ml-6">
-															<Briefcase className="h-3 w-3 text-slate-400 flex-shrink-0" />
-															<p className="text-sm text-slate-600 font-medium">
-																{contact.role}
-															</p>
-														</div>
-													)}
-													{/* Contact Info */}
-													{contact.email && (
-														<div className="ml-6 space-y-2 pt-2 border-t border-slate-100">
-															<div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-																Contactgegevens
-															</div>
-															<div className="flex items-center gap-3 p-2 rounded-lg bg-white/60 border border-slate-100 hover:bg-blue-50/50 hover:border-blue-200 transition-colors">
-																<div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600">
-																	<Mail className="h-3 w-3" />
-																</div>
-																<div className="flex-1 min-w-0">
-																	<div className="text-xs text-slate-500 font-medium">E-mail</div>
-																	<a 
-																		href={`mailto:${contact.email}`}
-																		className="text-sm text-blue-600 hover:text-blue-800 font-medium truncate block"
-																	>
-																		{contact.email}
-																	</a>
-																</div>
-															</div>
-														</div>
-													)}
-												</div>
-											</div>
-										))}
 									</div>
 								) : (
 									/* Fallback to basic contact info */

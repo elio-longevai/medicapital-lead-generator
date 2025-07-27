@@ -48,7 +48,6 @@ export interface Company {
   description?: string;
   entityType?: 'end_user' | 'supplier' | 'other';
   subIndustry?: string;
-  contacts?: Contact[];
   contactPersons?: Contact[];
   contactEnrichmentStatus?: 'pending' | 'completed' | 'failed';
   contactEnrichedAt?: string;

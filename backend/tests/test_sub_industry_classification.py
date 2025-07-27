@@ -57,7 +57,7 @@ class TestSubIndustryClassification:
             "status": "qualified",
             "sub_industry": "Orthopedische Kliniek",
             "entity_type": "end_user",
-            "contacts": [
+            "contact_persons": [
                 {"name": "Dr. Smith", "role": "Orthopeed", "email": "smith@clinic.nl"}
             ],
             "company_description": "Gespecialiseerde orthopedische kliniek",
@@ -85,9 +85,9 @@ class TestSubIndustryClassification:
         # Verify sub_industry is included
         assert response.subIndustry == "Orthopedische Kliniek"
         assert response.entityType == "end_user"
-        assert len(response.contacts) == 1
-        assert response.contacts[0].name == "Dr. Smith"
-        assert response.contacts[0].email == "smith@clinic.nl"
+        assert len(response.contactPersons) == 1
+        assert response.contactPersons[0].name == "Dr. Smith"
+        assert response.contactPersons[0].email == "smith@clinic.nl"
 
     @pytest.mark.parametrize(
         "sub_industry,expected",

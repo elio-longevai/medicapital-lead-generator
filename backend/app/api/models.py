@@ -53,7 +53,6 @@ class CompanyResponse(BaseModel):
     description: Optional[str] = None  # enriched_data description
     entityType: Optional[str] = None  # entity_type
     subIndustry: Optional[str] = None  # sub_industry
-    contacts: Optional[List[ContactPersonResponse]] = None  # contacts
     contactPersons: Optional[List[ContactPersonResponse]] = (
         None  # contact_persons (enriched)
     )

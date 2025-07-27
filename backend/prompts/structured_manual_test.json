@@ -1,0 +1,15 @@
+{
+  "sectors": [
+    "Healthcare"
+  ],
+  "target_entities": [
+    "Private Clinics"
+  ],
+  "geo_focus": [],
+  "key_products": [
+    "Medical equipment"
+  ],
+  "financial_criteria": null,
+  "scale_indicators": "Small businesses",
+  "investment_range": null
+}
