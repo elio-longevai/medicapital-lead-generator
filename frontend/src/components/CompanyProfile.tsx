@@ -318,6 +318,29 @@ export const CompanyProfile = ({ company, onBack }) => {
 												</div>
 												<div>
 													<span className="text-sm font-medium text-gray-500">
+														Type Bedrijf
+													</span>
+													<div className="mt-1">
+														<Badge 
+															className={`${
+																company.entityType === 'end_user' 
+																	? 'bg-blue-100 text-blue-800 border-blue-200'
+																	: company.entityType === 'supplier'
+																	? 'bg-purple-100 text-purple-800 border-purple-200' 
+																	: 'bg-gray-100 text-gray-800 border-gray-200'
+															} border font-medium`}
+														>
+															{company.entityType === 'end_user' 
+																? 'Eindgebruiker' 
+																: company.entityType === 'supplier'
+																? 'Leverancier'
+																: 'Overig'
+															}
+														</Badge>
+													</div>
+												</div>
+												<div>
+													<span className="text-sm font-medium text-gray-500">
 														Medewerkers
 													</span>
 													<p className="mt-1 text-gray-900">

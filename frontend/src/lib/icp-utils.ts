@@ -34,7 +34,7 @@ export const icpMetadata = {
         },
     },
     healthcare_end_user: {
-        name: "Zorgverlening (Eindgebruikers)",
+        name: "Zorgverlening",
         emoji: "🏥",
         description: "Klinieken, praktijken & zorgcentra",
         icon: Users,
@@ -47,6 +47,22 @@ export const icpMetadata = {
             badgeText: "text-purple-800",
             badgeBg: "bg-purple-100",
             badgeBorder: "border-purple-300",
+        },
+    },
+    duurzaamheid: {
+        name: "Duurzaamheid",
+        emoji: "🌱",
+        description: "Duurzame technologie leveranciers & eindgebruikers",
+        icon: Globe,
+        colors: {
+            text: "text-emerald-900",
+            bg: "bg-emerald-100",
+            border: "border-emerald-200 hover:border-emerald-300",
+            gradient: "from-emerald-50 to-green-50",
+            iconText: "text-emerald-600",
+            badgeText: "text-emerald-800",
+            badgeBg: "bg-emerald-100",
+            badgeBorder: "border-emerald-300",
         },
     },
     "Healthcare": {
@@ -171,7 +187,6 @@ export const getIcpMetadata = (icpName?: string | null) => {
 }
 
 export const icpList = [
-    { id: 'sustainability_supplier', name: 'Duurzaamheid (Leveranciers)', emoji: '🌱' },
-    { id: 'sustainability_end_user', name: 'Duurzaamheid (Eindgebruikers)', emoji: '⚡️' },
-    { id: 'healthcare_end_user', name: 'Zorgverlening (Eindgebruikers)', emoji: '🏥' },
+    { id: 'duurzaamheid', name: 'Duurzaamheid', emoji: '🌱' },
+    { id: 'healthcare_end_user', name: 'Zorgverlening', emoji: '🏥' },
 ] 

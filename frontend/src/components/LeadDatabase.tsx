@@ -68,11 +68,17 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 			rejected: "bg-rose-100 text-rose-800 border-rose-200",
 		};
 
+		const dutchLabels = {
+			qualified: "Gekwalificeerd",
+			in_review: "In Beoordeling",
+			discovered: "Nieuw",
+			contacted: "Gecontacteerd",
+			rejected: "Afgewezen",
+		};
+
 		// Handle both frontend display format and backend API format
 		const normalizedStatus = status.toLowerCase().replace(/\s+/g, "_");
-		const displayStatus = status.includes("_")
-			? status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())
-			: status;
+		const displayStatus = dutchLabels[normalizedStatus] || status;
 
 		return (
 			<Badge
@@ -103,7 +109,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 			other: "Overig",
 		};
 		return (
-			<Badge className={`${variants[type] || variants.other} border font-medium`}>
+			<Badge className={`${variants[type] || variants.other} border font-medium text-xs px-2 py-1`}>
 				{display[type] || "Onbekend"}
 			</Badge>
 		);
@@ -246,12 +252,9 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 												{lead.company}
 											</CardTitle>
 										</div>
-										<div className="flex items-center text-sm text-slate-600 mb-3 space-x-2">
-											<div className="flex items-center">
-												<MapPin className="h-4 w-4 mr-1" />
-												{lead.location}
-											</div>
-											{getEntityTypeBadge(lead.entityType)}
+										<div className="flex items-center text-sm text-slate-600 mb-3">
+											<MapPin className="h-4 w-4 mr-1" />
+											<span>{lead.location}</span>
 										</div>
 									</div>
 									<div className="flex flex-col items-end space-y-3">
@@ -260,7 +263,10 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 										>
 											{lead.score}
 										</div>
-										{getStatusBadge(lead.status)}
+										<div className="flex flex-col items-end space-y-2">
+											{getStatusBadge(lead.status)}
+											{getEntityTypeBadge(lead.entityType)}
+										</div>
 									</div>
 								</div>
 							</CardHeader>
@@ -268,7 +274,7 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 								<div className="space-y-4">
 									<div className="bg-gradient-to-r from-slate-50 to-blue-50 p-4 rounded-xl border border-slate-100">
 										<p className="text-sm font-semibold text-slate-700 mb-1">
-											Apparatuurbehoefte
+											Apparatuur
 										</p>
 										<p className="text-base text-slate-900 font-medium">
 											{lead.equipmentNeed}
@@ -314,16 +320,6 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 										<p className="text-sm text-slate-700 line-clamp-2 leading-relaxed">
 											{lead.recentNews || lead.notes}
 										</p>
-									</div>
-
-									<div className="flex items-center justify-between pt-3">
-										<div className="flex items-center space-x-1">
-											<Star className="h-4 w-4 text-amber-500" />
-											<span className="text-sm font-medium text-slate-700">
-												Hoge Prioriteit
-											</span>
-										</div>
-										<ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
 									</div>
 								</div>
 							</CardContent>

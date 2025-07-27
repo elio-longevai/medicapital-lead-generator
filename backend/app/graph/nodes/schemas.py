@@ -1,5 +1,5 @@
-from typing import Optional, List
-from pydantic import BaseModel, Field
+from typing import Optional, List, Literal
+from pydantic import BaseModel, Field, field_validator
 
 
 class QualificationDetails(BaseModel):
@@ -40,10 +40,25 @@ class ContactPerson(BaseModel):
 class EnrichedCompanyData(BaseModel):
     """Vertegenwoordigt de gestructureerde gegevens geëxtraheerd van de website van een bedrijf."""
 
-    entity_type: str = Field(
+    entity_type: Literal["end_user", "supplier", "other"] = Field(
         description="Type of company: 'end_user', 'supplier', or 'other'",
         default="other",
     )
+
+    @field_validator("entity_type")
+    @classmethod
+    def validate_entity_type(cls, v):
+        """Ensure entity_type is one of the three allowed values."""
+        allowed_values = {"end_user", "supplier", "other"}
+        if v not in allowed_values:
+            # Log the invalid value for debugging
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Invalid entity_type '{v}' received, defaulting to 'other'")
+            return "other"
+        return v
+
     sub_industry: Optional[str] = Field(
         description="Specific sub-industry classification in Dutch", default=None
     )

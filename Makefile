@@ -63,7 +63,7 @@ install-backend:
 	@echo "--> Step 1: Creating a fresh virtual environment at '$(VENV)'..."
 	@$(UV) venv $(VENV) --seed
 	@echo "--> Step 2: Installing project dependencies from 'requirements.txt'..."
-	@$(UV) pip install -r requirements.txt
+	@$(UV) pip install -r backend/requirements.txt
 	@echo " -> Step 3: Installing essential development tools (ruff, pre-commit, vulture, uvicorn)..."
 	@$(UV) pip install --python $(VENV)/bin/python pre-commit vulture ruff pytest pytest-cov uvicorn[standard]
 	@echo "\n✅ Backend dependencies installed successfully!"
