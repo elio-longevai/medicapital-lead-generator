@@ -189,7 +189,7 @@ Return your response in JSON format:
             # Map sub_industry to entity_type for backward compatibility
             sub_industry = classification_result.get("sub_industry")
             if sub_industry == "Eindgebruiker":
-                update_data["entity_type"] = "hospital"
+                update_data["entity_type"] = "end_user"
             elif sub_industry == "Leverancier":
                 update_data["entity_type"] = "supplier"
             else:

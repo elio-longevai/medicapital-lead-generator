@@ -213,17 +213,6 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 									<SelectItem value="other">Overig</SelectItem>
 								</SelectContent>
 							</Select>
-
-							<Select value={sortBy} onValueChange={setSortBy}>
-								<SelectTrigger className="w-40 h-12 border-slate-200 focus:border-blue-400">
-									<SelectValue placeholder="Sorteer op" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="score">Score</SelectItem>
-									<SelectItem value="company">Bedrijf</SelectItem>
-									<SelectItem value="activity">Activiteit</SelectItem>
-								</SelectContent>
-							</Select>
 						</div>
 					</div>
 				</CardContent>
