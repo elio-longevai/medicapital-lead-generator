@@ -1,4 +1,5 @@
 import pytest
+
 from app.services.company_name_normalizer import normalize_name
 
 

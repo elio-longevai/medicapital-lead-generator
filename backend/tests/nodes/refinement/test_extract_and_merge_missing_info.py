@@ -1,5 +1,7 @@
 from unittest.mock import patch
+
 from langchain_core.messages import AIMessage
+
 from app.graph.nodes.refinement.extract_and_merge_missing_info import (
     extract_and_merge_missing_info,
 )

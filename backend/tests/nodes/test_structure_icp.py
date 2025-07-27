@@ -1,6 +1,8 @@
 import json
 from unittest.mock import patch
+
 from langchain_core.messages import AIMessage
+
 from app.graph.nodes.structure_icp import structure_icp
 
 

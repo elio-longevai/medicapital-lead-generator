@@ -1,6 +1,7 @@
 import logging
 
 from app.graph.state import GraphState
+
 from .check_enrichment_completeness import ENRICHABLE_FIELDS
 
 logger = logging.getLogger(__name__)

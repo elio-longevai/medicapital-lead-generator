@@ -1,6 +1,7 @@
 from unittest.mock import patch
-from app.graph.nodes.save_leads_to_db import save_leads_to_db
+
 from app.db.models import Company
+from app.graph.nodes.save_leads_to_db import save_leads_to_db
 from app.services.company_name_normalizer import normalize_name
 
 

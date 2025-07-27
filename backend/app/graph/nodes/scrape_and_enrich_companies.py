@@ -1,18 +1,18 @@
 import asyncio
 import logging
-from pathlib import Path
 from itertools import islice
+from pathlib import Path
 
 from crawl4ai import (
     AsyncWebCrawler,
     BrowserConfig,
-    CrawlerRunConfig,
     CacheMode,
+    CrawlerRunConfig,
 )
 
 from app.core.clients import llm_client
-from app.graph.state import CandidateLead, GraphState
 from app.graph.nodes.schemas import EnrichedCompanyData
+from app.graph.state import CandidateLead, GraphState
 
 logger = logging.getLogger(__name__)
 

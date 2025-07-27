@@ -9,8 +9,8 @@ This script analyzes existing company data (industry, description, equipment nee
 to intelligently classify each company.
 """
 
-import sys
 import os
+import sys
 from typing import Dict
 
 # Add the parent directory to sys.path so we can import from app

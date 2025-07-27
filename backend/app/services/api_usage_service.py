@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from typing import Dict, Any
+from typing import Any, Dict
 
 from app.db.repositories import ApiUsageRepository
 

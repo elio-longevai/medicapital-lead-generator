@@ -1,18 +1,20 @@
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+import logging
+from datetime import datetime
+from typing import Optional
+
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from typing import Optional
-from datetime import datetime
+
+from ..main import arun_all_icps
+from ..services.company_service import CompanyService
 from .models import (
-    CompanyResponse,
     CompanyListResponse,
-    DashboardStats,
+    CompanyResponse,
     CompanyStatusUpdate,
+    DashboardStats,
     ScrapingStatus,
 )
-from ..services.company_service import CompanyService
-from ..main import arun_all_icps
-import logging
 
 app = FastAPI(title="MediCapital Lead API", version="1.0.0")
 
@@ -167,8 +169,8 @@ def get_company_contacts(company_id: str):
 @app.post("/api/companies/{company_id}/enrich-contacts")
 async def enrich_company_contacts(company_id: str, background_tasks: BackgroundTasks):
     """Trigger contact enrichment for a specific company."""
-    from app.services.contact_enrichment import ContactEnrichmentService
     from app.db.repositories import CompanyRepository
+    from app.services.contact_enrichment import ContactEnrichmentService
 
     # Get company details
     service = CompanyService()

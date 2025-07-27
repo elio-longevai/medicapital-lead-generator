@@ -1,11 +1,13 @@
-import httpx
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Tuple
+
+import httpx
 from aiolimiter import AsyncLimiter
 from langchain_google_genai import ChatGoogleGenerativeAI
+
 from app.core.settings import settings
 from app.services.api_usage_service import ApiUsageService
 

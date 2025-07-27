@@ -1,17 +1,18 @@
 import datetime
 import json
+
 from sqlalchemy import (
+    JSON,
+    Boolean,
     Column,
+    Date,
+    DateTime,
     Integer,
     String,
-    DateTime,
     Text,
     UniqueConstraint,
-    JSON,
-    Date,
-    Boolean,
 )
-from sqlalchemy.orm import declarative_base, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 from sqlalchemy.types import TypeDecorator
 
 

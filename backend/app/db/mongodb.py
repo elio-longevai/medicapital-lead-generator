@@ -1,10 +1,12 @@
-from typing import Optional
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
-from pymongo.database import Database
-from pymongo.collection import Collection
-from app.core.settings import settings
 import logging
+from typing import Optional
+
+from pymongo import MongoClient
+from pymongo.collection import Collection
+from pymongo.database import Database
+from pymongo.server_api import ServerApi
+
+from app.core.settings import settings
 
 logger = logging.getLogger(__name__)
 

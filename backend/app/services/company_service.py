@@ -1,13 +1,14 @@
-import logging
-from typing import Optional, Dict, Any
 import datetime
-from ..db.repositories import CompanyRepository
+import logging
+from typing import Any, Dict, Optional
+
 from ..api.models import (
-    CompanyResponse,
     CompanyListResponse,
+    CompanyResponse,
     DashboardStats,
     QualificationScore,
 )
+from ..db.repositories import CompanyRepository
 
 logger = logging.getLogger(__name__)
 

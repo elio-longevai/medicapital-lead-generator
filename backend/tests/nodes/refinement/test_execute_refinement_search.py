@@ -1,5 +1,6 @@
 import asyncio
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
+
 from app.graph.nodes.refinement.execute_refinement_search import (
     execute_refinement_search,
 )

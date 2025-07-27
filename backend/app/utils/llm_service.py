@@ -7,9 +7,10 @@ Consolidates duplicate LLM interaction code across multiple services.
 
 import asyncio
 import json
-import re
 import logging
-from typing import Dict, Any, Optional, List
+import re
+from typing import Any, Dict, List, Optional
+
 from ..core.clients import llm_client
 
 logger = logging.getLogger(__name__)
@@ -155,6 +156,7 @@ INSTRUCTIES:
 4. Bepaal department en seniority level op basis van functietitel
 5. BELANGRIJK: Als je algemene contactgegevens vindt (info@, sales@, algemeen telefoonnummer) zonder specifieke persoon, maak dan een entry met name "Contactgegevens" en de gevonden contactinfo
 6. ALLEEN contacten met e-mail OF telefoon worden opgeslagen
+7. LINKEDIN PROFIELEN: Zoek naar LinkedIn profiel URLs in de tekst. Als je een LinkedIn URL vindt die overeenkomt met een contactpersoon, voeg deze toe aan het contact.
 
 DEPARTMENTS: Sales, Finance, HR, Operations, Technology, Marketing, Legal, Other
 SENIORITY LEVELS: C-Level, Director, Manager, Specialist, Other
@@ -166,6 +168,7 @@ Geef maximaal {max_contacts} relevante contactpersonen terug in JSON formaat:
     "role": "Functietitel in het Nederlands",
     "email": "email@company.com of null",
     "phone": "telefoonnummer of null", 
+    "linkedin_url": "https://linkedin.com/in/username of null",
     "department": "department naam",
     "seniority_level": "seniority level"
   }}

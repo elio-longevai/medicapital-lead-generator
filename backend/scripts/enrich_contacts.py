@@ -10,21 +10,20 @@ Usage:
     python enrich_contacts.py [--icp ICP_NAME] [--country COUNTRY] [--batch-size SIZE] [--max-companies NUM]
 """
 
-import asyncio
 import argparse
+import asyncio
 import logging
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Optional
+from pathlib import Path
+from typing import Dict, List, Optional
 
 # Add the backend directory to the Python path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from app.db.repositories import CompanyRepository
-from app.services.contact_enrichment import ContactEnrichmentService
 from app.graph.nodes.schemas import ContactPerson
-
+from app.services.contact_enrichment import ContactEnrichmentService
 
 # Configure logging
 logging.basicConfig(

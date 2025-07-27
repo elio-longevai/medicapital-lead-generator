@@ -6,10 +6,12 @@ and common query patterns.
 """
 
 import logging
-from typing import Dict, Any, List, Callable
 from datetime import datetime
-from ..db.mongodb import get_mongo_client, get_mongo_collection
+from typing import Any, Callable, Dict, List
+
 from pymongo.errors import PyMongoError
+
+from ..db.mongodb import get_mongo_client, get_mongo_collection
 
 logger = logging.getLogger(__name__)
 

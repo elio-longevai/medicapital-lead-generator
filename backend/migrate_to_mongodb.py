@@ -9,11 +9,12 @@ import logging
 # SQLAlchemy imports for reading from SQLite
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.db.models import Company, ApiUsage, SearchQuery, Lead
+
+from app.db.models import ApiUsage, Company, Lead, SearchQuery
+from app.db.mongo_models import COLLECTIONS
 
 # MongoDB imports
 from app.db.mongodb import get_mongo_db, mongodb
-from app.db.mongo_models import COLLECTIONS
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

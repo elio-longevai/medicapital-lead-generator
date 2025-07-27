@@ -1,12 +1,17 @@
 import asyncio
 import logging
-from typing import List, Optional, Dict, Any
+import re
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 import httpx
 
 from app.core.clients import create_multi_provider_search_client
 from app.graph.nodes.schemas import ContactPerson
-from app.utils.contact_validator import ContactValidator
+from app.utils.contact_validator import (
+    ContactValidator,
+    validate_and_clean_linkedin_url,
+)
 from app.utils.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
@@ -159,7 +164,12 @@ class ContactEnrichmentService:
             f'site:linkedin.com "{company_name}" CEO director manager Netherlands Nederland location:nl'
         )
 
-        return queries[:4]  # Reduced from 8 to 4 queries for faster execution
+        # Enhanced LinkedIn search for specific roles
+        queries.append(
+            f'site:linkedin.com "{company_name}" CFO CTO COO director manager Netherlands'
+        )
+
+        return queries[:5]  # Allow 5 queries for better LinkedIn coverage
 
     async def _try_people_data_labs(
         self, company_name: str, website_url: Optional[str] = None
@@ -239,13 +249,22 @@ class ContactEnrichmentService:
     ) -> List[ContactPerson]:
         """Extract contact information from search results using LLM."""
 
-        # Combine all search result text
+        # Combine all search result text and extract LinkedIn URLs
         combined_text = ""
+        linkedin_urls_found = []
+
         for result in search_results:
             if result.success:
                 for item in result.results:
                     text_content = item.get("Text", "") + " " + item.get("FirstURL", "")
                     combined_text += text_content + "\n"
+
+                    # Extract LinkedIn URLs from search results
+                    linkedin_pattern = (
+                        r"https?://(?:www\.)?linkedin\.com/in/[a-zA-Z0-9\-_]+/?"
+                    )
+                    found_urls = re.findall(linkedin_pattern, text_content)
+                    linkedin_urls_found.extend(found_urls)
 
         if not combined_text.strip():
             logger.warning(f"No search content found for {company_name}")
@@ -253,17 +272,29 @@ class ContactEnrichmentService:
 
         # Use shared LLM service for contact extraction
         try:
+            # Add found LinkedIn URLs to the text for better extraction
+            if linkedin_urls_found:
+                combined_text += "\n\nGevonden LinkedIn profielen:\n"
+                for url in set(linkedin_urls_found):  # Remove duplicates
+                    combined_text += f"- {url}\n"
+
             contacts_data = await LLMService.extract_contacts_from_text(
                 company_name, combined_text, max_contacts=5
             )
 
             contacts = []
             for contact_data in contacts_data:
+                # Validate and clean LinkedIn URL
+                linkedin_url = validate_and_clean_linkedin_url(
+                    contact_data.get("linkedin_url")
+                )
+
                 contact = ContactPerson(
                     name=contact_data.get("name"),
                     role=contact_data.get("role"),
                     email=contact_data.get("email"),
                     phone=contact_data.get("phone"),
+                    linkedin_url=linkedin_url,
                     department=contact_data.get("department"),
                     seniority_level=contact_data.get("seniority_level"),
                 )

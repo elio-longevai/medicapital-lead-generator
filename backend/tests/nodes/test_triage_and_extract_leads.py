@@ -1,7 +1,9 @@
 import asyncio
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from pydantic import ValidationError
+
 from app.graph.nodes.triage_and_extract_leads import _triage_one_result
 
 

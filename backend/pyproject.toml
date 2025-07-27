@@ -21,6 +21,9 @@ dependencies = [
     "httpx>=0.27.0",
     "langsmith",
     "pymongo>=4.0.0",
+    "aiolimiter>=1.2.1",
+    "crawl4ai>=0.7.2",
+    "beautifulsoup4>=4.13.4",
 ]
 
 [project.optional-dependencies]

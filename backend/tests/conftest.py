@@ -1,8 +1,9 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from app.db.models import Base
-from app.graph.state import GraphState, CandidateLead
+from app.graph.state import CandidateLead, GraphState
 
 # Use an in-memory SQLite database for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"

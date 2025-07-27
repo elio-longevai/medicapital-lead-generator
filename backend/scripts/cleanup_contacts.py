@@ -13,15 +13,15 @@ SAFETY FEATURES:
 """
 
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List
 
 # Add the backend directory to the Python path
 sys.path.append(str(Path(__file__).parent.parent))
 
+from app.db.mongodb import get_mongo_client, get_mongo_collection
 from app.db.repositories import CompanyRepository
-from app.db.mongodb import get_mongo_collection, get_mongo_client
 
 
 def create_backup_collection(companies_to_update: List[Dict[str, Any]]) -> str:

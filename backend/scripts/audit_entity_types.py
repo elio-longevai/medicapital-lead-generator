@@ -5,8 +5,8 @@ Identifies all unique entity_type values and their counts to understand
 what needs to be normalized to the three strict categories.
 """
 
-import sys
 import os
+import sys
 from collections import Counter
 
 # Add the parent directory to sys.path so we can import from app

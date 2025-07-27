@@ -8,8 +8,8 @@ Usage:
 """
 
 import argparse
-import sys
 import os
+import sys
 from typing import Dict
 
 # Add the parent directory to the path so we can import app modules

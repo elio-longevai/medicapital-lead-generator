@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 from typing import List
 
-from app.graph.state import GraphState
 from app.graph.nodes.schemas import ContactPerson
+from app.graph.state import GraphState
 
 logger = logging.getLogger(__name__)
 

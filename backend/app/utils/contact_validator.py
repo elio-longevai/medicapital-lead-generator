@@ -6,12 +6,47 @@ Consolidates duplicate validation code from contact_enrichment.py,
 people_data_labs.py, and hunter_io.py.
 """
 
-import re
 import logging
-from typing import Optional, List
-from ..graph.nodes.schemas import ContactPerson
+import re
+from typing import List, Optional
+
+from app.graph.nodes.schemas import ContactPerson
 
 logger = logging.getLogger(__name__)
+
+
+def validate_and_clean_linkedin_url(url: Optional[str]) -> Optional[str]:
+    """
+    Validate and clean LinkedIn URL to ensure it's properly formatted.
+
+    Args:
+        url: LinkedIn URL to validate
+
+    Returns:
+        Cleaned LinkedIn URL or None if invalid
+    """
+    if not url:
+        return None
+
+    # Remove any extra whitespace
+    url = url.strip()
+
+    # Common LinkedIn URL patterns
+    linkedin_patterns = [
+        r"https?://(?:www\.)?linkedin\.com/in/[a-zA-Z0-9\-_]+/?",
+        r"https?://(?:www\.)?linkedin\.com/company/[a-zA-Z0-9\-_]+/?",
+        r"linkedin\.com/in/[a-zA-Z0-9\-_]+/?",
+        r"linkedin\.com/company/[a-zA-Z0-9\-_]+/?",
+    ]
+
+    for pattern in linkedin_patterns:
+        if re.match(pattern, url):
+            # Ensure it starts with https://
+            if not url.startswith("http"):
+                url = "https://" + url
+            return url
+
+    return None
 
 
 class ContactValidator:
@@ -167,27 +202,50 @@ class ContactValidator:
         contacts: List[ContactPerson],
     ) -> List[ContactPerson]:
         """Validate and clean a list of contacts, removing duplicates and invalid entries."""
-        validated_contacts = []
+        if not contacts:
+            return []
+
+        # Clean and validate each contact
+        cleaned_contacts = []
+        seen_emails = set()
+        seen_names = set()
 
         for contact in contacts:
-            cleaned_contact = ContactValidator.validate_and_clean_contact(contact)
-            if cleaned_contact:
-                validated_contacts.append(cleaned_contact)
+            if not contact:
+                continue
 
-        # Remove duplicates based on name and email
-        unique_contacts = []
-        seen = set()
+            # Clean LinkedIn URL
+            if contact.linkedin_url:
+                contact.linkedin_url = validate_and_clean_linkedin_url(
+                    contact.linkedin_url
+                )
 
-        for contact in validated_contacts:
-            key = (
-                contact.name.lower() if contact.name else "",
-                contact.email.lower() if contact.email else "",
-            )
-            if key not in seen:
-                seen.add(key)
-                unique_contacts.append(contact)
+            # Skip contacts without any contact method
+            if not contact.email and not contact.phone:
+                continue
 
-        return unique_contacts
+            # Skip generic email addresses
+            if contact.email and ContactValidator._is_generic_email(contact.email):
+                continue
+
+            # Skip duplicates based on email or name
+            if contact.email and contact.email in seen_emails:
+                continue
+            if contact.name and contact.name in seen_names:
+                continue
+
+            # Add to tracking sets
+            if contact.email:
+                seen_emails.add(contact.email)
+            if contact.name:
+                seen_names.add(contact.name)
+
+            cleaned_contacts.append(contact)
+
+        logger.info(
+            f"Cleaned {len(contacts)} contacts to {len(cleaned_contacts)} valid contacts"
+        )
+        return cleaned_contacts
 
     @staticmethod
     def prioritize_dutch_contacts(contacts: List[ContactPerson]) -> List[ContactPerson]:
@@ -209,3 +267,29 @@ class ContactValidator:
 
         # Return Dutch contacts first, then international
         return dutch_contacts + international_contacts
+
+    @staticmethod
+    def _is_generic_email(email: str) -> bool:
+        """Check if email is a generic business email."""
+        if not email:
+            return False
+
+        generic_patterns = [
+            r"^info@",
+            r"^contact@",
+            r"^hello@",
+            r"^sales@",
+            r"^support@",
+            r"^admin@",
+            r"^noreply@",
+            r"^no-reply@",
+            r"^webmaster@",
+            r"^postmaster@",
+        ]
+
+        email_lower = email.lower()
+        for pattern in generic_patterns:
+            if re.match(pattern, email_lower):
+                return True
+
+        return False

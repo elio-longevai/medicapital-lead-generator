@@ -6,7 +6,8 @@ allowing us to find executive contacts without search queries.
 """
 
 import logging
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 import httpx
 
 from app.core.settings import settings
@@ -162,6 +163,12 @@ class PeopleDataLabsClient:
                 if profile.get("network") == "linkedin":
                     linkedin_url = profile.get("url")
                     break
+
+            # Validate LinkedIn URL
+            if linkedin_url:
+                from app.utils.contact_validator import validate_and_clean_linkedin_url
+
+                linkedin_url = validate_and_clean_linkedin_url(linkedin_url)
 
             # Determine department and seniority
             department = self._extract_department(job_title)

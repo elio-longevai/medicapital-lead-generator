@@ -1,6 +1,8 @@
 import json
 from unittest.mock import patch
+
 from langchain_core.messages import AIMessage
+
 from app.graph.nodes.generate_search_queries import generate_search_queries
 
 

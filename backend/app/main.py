@@ -1,14 +1,15 @@
 import asyncio
 import datetime
-import typer
-from pathlib import Path
-from apscheduler.schedulers.blocking import BlockingScheduler
 import logging
+from pathlib import Path
 
-from app.db.repositories import CompanyRepository
+import typer
+from apscheduler.schedulers.blocking import BlockingScheduler
+
 from app.db.mongodb import mongodb
-from app.graph.workflow import main_workflow
+from app.db.repositories import CompanyRepository
 from app.graph.state import GraphState
+from app.graph.workflow import main_workflow
 
 # --- ICP Configuration ---
 # This list defines which Ideal Customer Profiles the system will run.
@@ -158,10 +159,10 @@ def create_db():
 
         # Create indexes (this is handled by the repositories)
         from app.db.repositories import (
-            CompanyRepository,
-            SearchQueryRepository,
             ApiUsageRepository,
+            CompanyRepository,
             LeadRepository,
+            SearchQueryRepository,
         )
 
         # Initialize repositories to ensure indexes are created

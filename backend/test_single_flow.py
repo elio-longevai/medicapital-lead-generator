@@ -6,6 +6,7 @@ Usage: cd backend && PYTHONPATH=. ../.venv/bin/python test_single_flow.py
 
 import asyncio
 import logging
+
 from app.main import _arun_single_icp_workflow, load_icp_text
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")

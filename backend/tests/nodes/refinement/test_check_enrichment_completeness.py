@@ -1,7 +1,7 @@
 from app.graph.nodes.refinement.check_enrichment_completeness import (
-    check_enrichment_completeness,
     ENRICHABLE_FIELDS,
     MAX_REFINEMENT_LOOPS,
+    check_enrichment_completeness,
 )
 
 
