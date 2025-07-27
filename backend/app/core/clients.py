@@ -103,7 +103,17 @@ class BaseSearchClient(ABC):
                 **{request_key: params_or_payload},
             )
             response.raise_for_status()
-            return self._parse_response(response.json())
+
+            # Handle empty or invalid JSON responses
+            try:
+                json_data = response.json()
+            except ValueError as json_error:
+                logger.warning(
+                    f"⚠️ {self.__class__.__name__} returned invalid JSON: {json_error}. Response text: {response.text[:200]}..."
+                )
+                return []
+
+            return self._parse_response(json_data)
         except httpx.TimeoutException as e:
             logger.warning(
                 f"⏰ {self.__class__.__name__} API timeout after {self.DEFAULT_TIMEOUT}s"
@@ -331,7 +341,7 @@ class FirecrawlClient(BaseSearchClient, CountryMappingMixin):
 class ScrapingDogClient(BaseSearchClient, CountryMappingMixin):
     """A client for the ScrapingDog API - optimized for high-volume, low-cost searches."""
 
-    BASE_URL = "https://api.scrapingdog.com/google_search"
+    BASE_URL = "https://api.scrapingdog.com/google/"
     REQUEST_METHOD = "GET"
     DEFAULT_TIMEOUT: float = 10.0  # Fast timeout for high-speed searches
 
@@ -360,14 +370,14 @@ class ScrapingDogClient(BaseSearchClient, CountryMappingMixin):
             "api_key": self.api_key,
             "query": query,
             "country": country.lower(),
-            "num": 10,
-            "page": 1,
-            "results_type": "organic_results",
+            "results": 10,
+            "page": 0,
         }
         return self.BASE_URL, headers, params
 
     def _parse_response(self, data: dict) -> list[dict]:
         results = []
+        # ScrapingDog returns results in "organic_results" key
         organic_results = data.get("organic_results", [])
 
         for item in organic_results:
@@ -428,7 +438,7 @@ class CircuitBreaker:
 class MultiProviderSearchClient:
     """Orchestrates searches across multiple providers."""
 
-    PROVIDER_TIER = ["scrapingdog", "serper", "tavily", "brave", "firecrawl"]
+    PROVIDER_TIER = ["serper", "tavily", "brave", "scrapingdog", "firecrawl"]
 
     def __init__(self, clients: Dict[str, BaseSearchClient]):
         self.clients = clients
