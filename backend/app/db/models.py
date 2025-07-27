@@ -71,6 +71,15 @@ class Company(Base):
     location_details = Column(String, nullable=True)  # Full location (city, country)
     estimated_revenue = Column(String, nullable=True)  # Estimated annual revenue
 
+    # Contact enrichment fields
+    contact_persons = Column(SafeJSON, nullable=True)  # Detailed contact persons data
+    contact_enrichment_status = Column(
+        String, nullable=True
+    )  # enrichment status: 'pending', 'completed', 'failed'
+    contact_enriched_at = Column(
+        DateTime, nullable=True
+    )  # Last contact enrichment timestamp
+
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow

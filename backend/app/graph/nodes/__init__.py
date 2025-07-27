@@ -5,6 +5,7 @@ from .save_leads_to_db import save_leads_to_db
 from .scrape_and_enrich_companies import scrape_and_enrich_companies
 from .structure_icp import structure_icp
 from .triage_and_extract_leads import triage_and_extract_leads
+from .enrich_contact_information import enrich_contact_information
 from .refinement import (
     check_enrichment_completeness,
     generate_refinement_queries,
@@ -19,6 +20,7 @@ __all__ = [
     "execute_web_search",
     "triage_and_extract_leads",
     "scrape_and_enrich_companies",
+    "enrich_contact_information",
     "save_leads_to_db",
     "check_enrichment_completeness",
     "generate_refinement_queries",

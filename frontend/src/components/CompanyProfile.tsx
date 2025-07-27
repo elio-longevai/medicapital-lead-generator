@@ -32,6 +32,10 @@ import {
 	MessageSquare,
 	Check,
 	Trash2,
+	ExternalLink as LinkedinIcon,
+	Crown,
+	UserCheck,
+	RefreshCw,
 } from "lucide-react";
 import { useUpdateCompanyStatus } from "@/hooks/useCompanies";
 import { toast } from "sonner";
@@ -544,24 +548,173 @@ export const CompanyProfile = ({ company, onBack }) => {
 					{/* Sidebar */}
 					<div className="space-y-6">
 						<Card>
-							<CardHeader>
-								<CardTitle>Contactinformatie</CardTitle>
+							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+								<CardTitle className="flex items-center">
+									<Users className="h-5 w-5 mr-2" />
+									Contactinformatie
+								</CardTitle>
+								{/* Enrichment status indicator */}
+								{company.contactEnrichmentStatus && (
+									<Badge 
+										variant={company.contactEnrichmentStatus === 'completed' ? 'default' : 
+												company.contactEnrichmentStatus === 'failed' ? 'destructive' : 'secondary'}
+										className="text-xs"
+									>
+										{company.contactEnrichmentStatus === 'completed' ? 'Verrijkt' :
+										 company.contactEnrichmentStatus === 'failed' ? 'Mislukt' : 'Bezig...'}
+									</Badge>
+								)}
 							</CardHeader>
 							<CardContent>
-								<div className="space-y-4">
-									<div className="flex items-center">
-										<Mail className="h-4 w-4 mr-3 text-gray-500" />
-										<span className="text-gray-900">
-											{company.email || "Niet beschikbaar"}
-										</span>
+								{/* Contact Persons */}
+								{company.contactPersons && company.contactPersons.length > 0 ? (
+									<div className="space-y-4">
+										{company.contactPersons.slice(0, 4).map((contact: any, index: number) => (
+											<div key={index} className="p-3 rounded-lg border bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
+												<div className="space-y-2">
+													{/* Name and Role */}
+													<div className="flex items-start justify-between">
+														<div className="flex-1 min-w-0">
+															<h4 className="font-medium text-gray-900 truncate">
+																{contact.name || "Onbekende naam"}
+															</h4>
+															<p className="text-sm text-gray-600 truncate">
+																{contact.role || "Onbekende functie"}
+															</p>
+														</div>
+														{/* Seniority Badge */}
+														{contact.seniorityLevel && (
+															<Badge 
+																variant="outline" 
+																className={`text-xs ml-2 ${
+																	contact.seniorityLevel === 'C-Level' ? 'border-purple-200 text-purple-700 bg-purple-50' :
+																	contact.seniorityLevel === 'Director' ? 'border-blue-200 text-blue-700 bg-blue-50' :
+																	contact.seniorityLevel === 'Manager' ? 'border-green-200 text-green-700 bg-green-50' :
+																	'border-gray-200 text-gray-700 bg-gray-50'
+																}`}
+															>
+																{contact.seniorityLevel === 'C-Level' && <Crown className="h-3 w-3 mr-1" />}
+																{contact.seniorityLevel}
+															</Badge>
+														)}
+													</div>
+													
+													{/* Department */}
+													{contact.department && (
+														<div className="flex items-center text-xs text-gray-500">
+															<Briefcase className="h-3 w-3 mr-1" />
+															{contact.department}
+														</div>
+													)}
+													
+													{/* Contact Methods */}
+													<div className="space-y-1">
+														{contact.email && (
+															<div className="flex items-center group">
+																<Mail className="h-3 w-3 mr-2 text-gray-400" />
+																<a 
+																	href={`mailto:${contact.email}`}
+																	className="text-sm text-blue-600 hover:text-blue-800 truncate flex-1"
+																>
+																	{contact.email}
+																</a>
+															</div>
+														)}
+														{contact.phone && (
+															<div className="flex items-center">
+																<Phone className="h-3 w-3 mr-2 text-gray-400" />
+																<a 
+																	href={`tel:${contact.phone}`}
+																	className="text-sm text-blue-600 hover:text-blue-800"
+																>
+																	{contact.phone}
+																</a>
+															</div>
+														)}
+														{contact.linkedinUrl && (
+															<div className="flex items-center">
+																<LinkedinIcon className="h-3 w-3 mr-2 text-gray-400" />
+																<a 
+																	href={contact.linkedinUrl}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="text-sm text-blue-600 hover:text-blue-800"
+																>
+																	LinkedIn Profiel
+																</a>
+															</div>
+														)}
+													</div>
+												</div>
+											</div>
+										))}
+										
+										{/* Show more contacts indicator */}
+										{company.contactPersons.length > 4 && (
+											<div className="text-center">
+												<Badge variant="secondary" className="text-xs">
+													+{company.contactPersons.length - 4} meer
+												</Badge>
+											</div>
+										)}
+										
+										{/* Enrichment timestamp */}
+										{company.contactEnrichedAt && (
+											<div className="text-xs text-gray-500 text-center pt-2 border-t">
+												<Clock className="h-3 w-3 inline mr-1" />
+												Laatst bijgewerkt: {new Date(company.contactEnrichedAt).toLocaleDateString('nl-NL')}
+											</div>
+										)}
 									</div>
-									<div className="flex items-center">
-										<Phone className="h-4 w-4 mr-3 text-gray-500" />
-										<span className="text-gray-900">
-											{company.phone || "Niet beschikbaar"}
-										</span>
+								) : (
+									/* Fallback to basic contact info */
+									<div className="space-y-4">
+										{company.email || company.phone ? (
+											<>
+												{company.email && (
+													<div className="flex items-center">
+														<Mail className="h-4 w-4 mr-3 text-gray-500" />
+														<a 
+															href={`mailto:${company.email}`}
+															className="text-blue-600 hover:text-blue-800"
+														>
+															{company.email}
+														</a>
+													</div>
+												)}
+												{company.phone && (
+													<div className="flex items-center">
+														<Phone className="h-4 w-4 mr-3 text-gray-500" />
+														<a 
+															href={`tel:${company.phone}`}
+															className="text-blue-600 hover:text-blue-800"
+														>
+															{company.phone}
+														</a>
+													</div>
+												)}
+											</>
+										) : (
+											<div className="text-center py-8">
+												<UserCheck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+												<p className="text-gray-500 text-sm mb-4">
+													Geen contactinformatie beschikbaar
+												</p>
+												<Button 
+													size="sm" 
+													variant="outline"
+													onClick={() => {
+														// TODO: Trigger contact enrichment
+														toast.info("Contact verrijking wordt binnenkort beschikbaar");
+													}}
+												>
+													<RefreshCw className="h-4 w-4 mr-2" />
+													Contacten zoeken
+												</Button>
+											</div>
+										)}
 									</div>
-								</div>
+								)}
 							</CardContent>
 						</Card>
 

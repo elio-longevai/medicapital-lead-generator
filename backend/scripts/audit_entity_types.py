@@ -73,10 +73,10 @@ def audit_entity_types():
 
     print("\n📈 Summary:")
     print(
-        f"   ✅ Correctly classified: {standard_count} ({(standard_count/total_companies)*100:.1f}%)"
+        f"   ✅ Correctly classified: {standard_count} ({(standard_count / total_companies) * 100:.1f}%)"
     )
     print(
-        f"   ❌ Need normalization: {non_standard_count} ({(non_standard_count/total_companies)*100:.1f}%)"
+        f"   ❌ Need normalization: {non_standard_count} ({(non_standard_count / total_companies) * 100:.1f}%)"
     )
 
     return {

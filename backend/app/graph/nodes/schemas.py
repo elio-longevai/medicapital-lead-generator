@@ -35,6 +35,18 @@ class ContactPerson(BaseModel):
     email: Optional[str] = Field(
         description="Email address of the contact", default=None
     )
+    phone: Optional[str] = Field(
+        description="Phone number of the contact", default=None
+    )
+    linkedin_url: Optional[str] = Field(
+        description="LinkedIn profile URL", default=None
+    )
+    department: Optional[str] = Field(
+        description="Department (HR, Finance, Operations, Sales, etc.)", default=None
+    )
+    seniority_level: Optional[str] = Field(
+        description="Seniority level (C-Level, Director, Manager, etc.)", default=None
+    )
 
 
 class EnrichedCompanyData(BaseModel):

@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import Optional
+from datetime import datetime
 from .models import (
     CompanyResponse,
     CompanyListResponse,
@@ -139,6 +140,81 @@ async def scrape_leads(background_tasks: BackgroundTasks):
     background_tasks.add_task(run_scraping_with_status_tracking, queries_per_icp=5)
     return {
         "message": "Lead scraping process started. It will take approximately 10 minutes to complete."
+    }
+
+
+@app.get("/api/companies/{company_id}/contacts")
+def get_company_contacts(company_id: str):
+    """Get detailed contact information for a company."""
+    service = CompanyService()
+    company = service.get_company_by_id(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    contacts = company.get("contactPersons", [])
+    enrichment_status = company.get("contactEnrichmentStatus")
+    enriched_at = company.get("contactEnrichedAt")
+
+    return {
+        "companyId": company_id,
+        "companyName": company.get("company"),
+        "contacts": contacts,
+        "enrichmentStatus": enrichment_status,
+        "enrichedAt": enriched_at,
+    }
+
+
+@app.post("/api/companies/{company_id}/enrich-contacts")
+async def enrich_company_contacts(company_id: str, background_tasks: BackgroundTasks):
+    """Trigger contact enrichment for a specific company."""
+    from app.services.contact_enrichment import ContactEnrichmentService
+    from app.db.repositories import CompanyRepository
+
+    # Get company details
+    service = CompanyService()
+    company = service.get_company_by_id(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    company_name = company.get("company")
+    website_url = company.get("website")
+
+    # Start enrichment in background
+    async def perform_enrichment():
+        try:
+            contact_service = ContactEnrichmentService()
+            result = await contact_service.enrich_company_contacts(
+                company_name=company_name, website_url=website_url
+            )
+
+            # Update company record
+            repo = CompanyRepository()
+            update_data = {
+                "contact_persons": [
+                    contact.model_dump() for contact in result["contacts"]
+                ],
+                "contact_enrichment_status": result["enrichment_status"],
+                "contact_enriched_at": datetime.utcnow(),
+            }
+            repo.update_company(company_id, update_data)
+
+        except Exception as e:
+            logger.error(f"Contact enrichment failed for {company_name}: {str(e)}")
+            # Update with error status
+            repo = CompanyRepository()
+            repo.update_company(
+                company_id,
+                {
+                    "contact_enrichment_status": "failed",
+                    "contact_enriched_at": datetime.utcnow(),
+                },
+            )
+
+    background_tasks.add_task(perform_enrichment)
+
+    return {
+        "message": f"Contact enrichment started for {company_name}",
+        "companyId": company_id,
     }
 
 

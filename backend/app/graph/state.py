@@ -38,6 +38,7 @@ class GraphState(BaseModel):
     search_results: list[dict] = Field(default_factory=list)
     candidate_leads: list[CandidateLead] = Field(default_factory=list)
     enriched_companies: list[dict] = Field(default_factory=list)
+    contact_enriched_companies: list[dict] = Field(default_factory=list)
 
     # For refinement loop
     refinement_attempts: int = 0

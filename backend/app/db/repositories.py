@@ -46,9 +46,13 @@ class CompanyRepository:
             logger.error(f"Error creating company: {e}")
             return None
 
-    def update_company(self, company_id: ObjectId, update_data: Dict[str, Any]) -> bool:
+    def update_company(self, company_id, update_data: Dict[str, Any]) -> bool:
         """Update a company document."""
         try:
+            # Convert string ID to ObjectId if necessary
+            if isinstance(company_id, str):
+                company_id = ObjectId(company_id)
+
             update_data["updated_at"] = datetime.utcnow()
             result = self.collection.update_one(
                 {"_id": company_id}, {"$set": update_data}
@@ -70,6 +74,11 @@ class CompanyRepository:
     def find_by_icp_name(self, icp_name: str) -> List[Dict]:
         """Find companies by ICP name."""
         cursor = self.collection.find({"icp_name": icp_name})
+        return list(cursor)
+
+    def find_companies(self, filter_criteria: Dict[str, Any]) -> List[Dict]:
+        """Find companies based on filter criteria."""
+        cursor = self.collection.find(filter_criteria)
         return list(cursor)
 
     def find_with_filters(

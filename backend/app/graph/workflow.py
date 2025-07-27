@@ -14,6 +14,7 @@ def build_workflow():
     workflow.add_node("execute_web_search", nodes.execute_web_search)
     workflow.add_node("triage_and_extract_leads", nodes.triage_and_extract_leads)
     workflow.add_node("scrape_and_enrich_companies", nodes.scrape_and_enrich_companies)
+    workflow.add_node("enrich_contact_information", nodes.enrich_contact_information)
 
     # Add refinement loop nodes
     workflow.add_node("generate_refinement_queries", nodes.generate_refinement_queries)
@@ -31,10 +32,11 @@ def build_workflow():
     workflow.add_edge("generate_search_queries", "execute_web_search")
     workflow.add_edge("execute_web_search", "triage_and_extract_leads")
     workflow.add_edge("triage_and_extract_leads", "scrape_and_enrich_companies")
+    workflow.add_edge("scrape_and_enrich_companies", "enrich_contact_information")
 
     # Conditional edge for refinement
     workflow.add_conditional_edges(
-        "scrape_and_enrich_companies",
+        "enrich_contact_information",
         nodes.check_enrichment_completeness,
         {
             "refine": "generate_refinement_queries",
