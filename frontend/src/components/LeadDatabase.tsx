@@ -108,9 +108,16 @@ export const LeadDatabase = ({ onSelectCompany }) => {
 			supplier: "Leverancier",
 			other: "Overig",
 		};
+		// Use the same logic as CompanyProfile for consistency
+		const displayText = type === 'end_user' 
+			? 'Eindgebruiker' 
+			: type === 'supplier'
+			? 'Leverancier'
+			: 'Overig';
+		
 		return (
 			<Badge className={`${variants[type] || variants.other} border font-medium text-xs px-2 py-1`}>
-				{display[type] || "Onbekend"}
+				{displayText}
 			</Badge>
 		);
 	};
