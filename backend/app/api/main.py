@@ -14,6 +14,7 @@ from .models import (
     CompanyStatusUpdate,
     DashboardStats,
     ScrapingStatus,
+    EnrichmentStatusResponse,
 )
 
 app = FastAPI(title="MediCapital Lead API", version="1.0.0")
@@ -183,14 +184,35 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
 
     # Start enrichment in background
     async def perform_enrichment():
+        from app.services.contact_enrichment import ProgressTracker
+
         repo = CompanyRepository()
+
+        # Check if this is a retry attempt
+        existing_company = repo.find_by_id(company_id)
+        is_retry = (
+            existing_company
+            and existing_company.get("contact_enrichment_status") == "failed"
+        )
+
+        progress_tracker = ProgressTracker(company_id, repo)
+
+        if is_retry:
+            # Initialize retry
+            progress_tracker.retry()
+            logger.info(
+                f"Starting retry for {company_name} (attempt #{existing_company.get('contact_enrichment_retry_count', 0)})"
+            )
+
         try:
             contact_service = ContactEnrichmentService()
             result = await contact_service.enrich_company_contacts(
-                company_name=company_name, website_url=website_url
+                company_name=company_name,
+                website_url=website_url,
+                progress_tracker=progress_tracker,
             )
 
-            # Update company record
+            # Update company record with final data
             update_data = {
                 "contact_persons": [
                     contact.model_dump() for contact in result["contacts"]
@@ -200,16 +222,15 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
             }
             repo.update_company(company_id, update_data)
 
+            # Log success for retry attempts
+            if is_retry:
+                logger.info(
+                    f"Retry successful for {company_name} after {existing_company.get('contact_enrichment_retry_count', 0)} attempts"
+                )
+
         except Exception as e:
             logger.error(f"Contact enrichment failed for {company_name}: {str(e)}")
-            # Update with error status
-            repo.update_company(
-                company_id,
-                {
-                    "contact_enrichment_status": "failed",
-                    "contact_enriched_at": datetime.utcnow(),
-                },
-            )
+            # Progress tracker will handle the error status update with retry count
 
     background_tasks.add_task(perform_enrichment)
 
@@ -217,6 +238,33 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
         "message": f"Contact enrichment started for {company_name}",
         "companyId": company_id,
     }
+
+
+@app.get(
+    "/api/companies/{company_id}/enrichment-status",
+    response_model=EnrichmentStatusResponse,
+)
+def get_enrichment_status(company_id: str):
+    """Get detailed enrichment status with progress information for a company."""
+    service = CompanyService()
+    company = service.get_company_by_id(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    # Get all enrichment-related fields from the company
+    return EnrichmentStatusResponse(
+        companyId=company_id,
+        companyName=company.company,
+        status=company.contactEnrichmentStatus or "not_started",
+        progress=company.contactEnrichmentProgress or 0,
+        currentStep=company.contactEnrichmentCurrentStep,
+        stepsCompleted=company.contactEnrichmentStepsCompleted or [],
+        errorDetails=company.contactEnrichmentErrorDetails,
+        retryCount=company.contactEnrichmentRetryCount or 0,
+        startedAt=company.contactEnrichmentStartedAt,
+        completedAt=company.contactEnrichedAt,
+        contactsFound=len(company.contactPersons or []),
+    )
 
 
 @app.get("/health")

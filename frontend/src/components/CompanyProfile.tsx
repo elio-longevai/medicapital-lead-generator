@@ -38,6 +38,7 @@ import {
 	RefreshCw,
 } from "lucide-react";
 import { useUpdateCompanyStatus, useEnrichCompanyContacts } from "@/hooks/useCompanies";
+import { useContactEnrichmentStatus } from "@/hooks/useContactEnrichmentStatus";
 import { toast } from "sonner";
 import type { Company, Contact } from "@/services/api";
 import {
@@ -66,6 +67,16 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 	const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 	const updateStatusMutation = useUpdateCompanyStatus();
 	const enrichContactsMutation = useEnrichCompanyContacts();
+	
+	// Real-time enrichment status polling
+	const enrichmentStatus = useContactEnrichmentStatus(company?.id || 0);
+	
+	// Helper function to check if enrichment is pending
+	const isEnrichmentPending = () => {
+		return enrichContactsMutation.isPending || 
+			   enrichmentStatus.data?.status === 'pending' ||
+			   company.contactEnrichmentStatus === 'pending';
+	};
 
 	const activities = useMemo(() => {
 		if (!company) return [];
@@ -544,16 +555,25 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 									Contactinformatie
 								</CardTitle>
 								<div className="flex items-center gap-2">
-									{/* Enrichment status indicator */}
-									{company.contactEnrichmentStatus && (
+									{/* Real-time enrichment status indicator */}
+									{(company.contactEnrichmentStatus || enrichmentStatus.data?.status !== 'not_started') && (
 										<Badge 
-											variant={company.contactEnrichmentStatus === 'completed' ? 'default' : 
-													company.contactEnrichmentStatus === 'failed' ? 'destructive' : 'secondary'}
+											variant={
+												(enrichmentStatus.data?.status || company.contactEnrichmentStatus) === 'completed' 
+													? 'default' 
+													: (enrichmentStatus.data?.status || company.contactEnrichmentStatus) === 'failed' 
+													? 'destructive' 
+													: 'secondary'
+											}
 											className="text-xs"
 										>
-											{company.contactEnrichmentStatus === 'completed' ? 'Verrijkt' :
-											 company.contactEnrichmentStatus === 'failed' ? 'Mislukt' : 
-											 enrichContactsMutation.isPending ? 'Verrijken...' : 'Bezig...'}
+											{(enrichmentStatus.data?.status || company.contactEnrichmentStatus) === 'completed' 
+												? `Verrijkt (${enrichmentStatus.data?.contactsFound || company.contactPersons?.length || 0} contacten)` 
+												: (enrichmentStatus.data?.status || company.contactEnrichmentStatus) === 'failed' 
+												? 'Mislukt' 
+												: enrichmentStatus.data?.progress 
+												? `${enrichmentStatus.data.progress}% voltooid`
+												: 'Bezig...'}
 										</Badge>
 									)}
 									{/* Refresh button for existing contacts */}
@@ -562,22 +582,85 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 											size="sm"
 											variant="ghost"
 											onClick={handleEnrichContacts}
-											disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+											disabled={isEnrichmentPending()}
 											className="h-8 w-8 p-0"
 										>
-											<RefreshCw className={`h-4 w-4 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
+											<RefreshCw className={`h-4 w-4 ${
+												isEnrichmentPending() ? 'animate-spin' : ''
+											}`} />
 										</Button>
 									)}
 								</div>
 							</CardHeader>
 							<CardContent>
-								{/* Loading state during enrichment */}
-								{(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && 
+								{/* Real-time enrichment progress */}
+								{isEnrichmentPending() && 
 								 (!company.contactPersons || company.contactPersons.length === 0) && (
 									<div className="text-center py-8">
-										<RefreshCw className="h-8 w-8 text-blue-500 mx-auto mb-3 animate-spin" />
-										<p className="text-sm text-gray-600 mb-2">Contacten worden gezocht...</p>
-										<p className="text-xs text-gray-500">Dit kan enkele minuten duren</p>
+										<div className="mb-4">
+											<RefreshCw className="h-8 w-8 text-blue-500 mx-auto mb-3 animate-spin" />
+											<div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+												<div 
+													className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+													style={{ width: `${enrichmentStatus.data?.progress || 0}%` }}
+												></div>
+											</div>
+										</div>
+										<p className="text-sm text-gray-600 mb-2 font-medium">
+											{enrichmentStatus.data?.currentStep || 'Contacten worden gezocht...'}
+										</p>
+										<p className="text-xs text-gray-500">
+											{enrichmentStatus.data?.progress || 0}% voltooid • Dit kan enkele minuten duren
+										</p>
+										
+										{/* Show completed steps */}
+										{enrichmentStatus.data?.stepsCompleted && enrichmentStatus.data.stepsCompleted.length > 0 && (
+											<div className="mt-4 text-left">
+												<div className="text-xs font-semibold text-gray-600 mb-2">Voltooide stappen:</div>
+												<div className="space-y-1">
+													{enrichmentStatus.data.stepsCompleted.slice(-3).map((step, index) => (
+														<div key={index} className="flex items-center text-xs text-gray-500">
+															<CheckCircle className="h-3 w-3 text-green-500 mr-2" />
+															{step.description}
+														</div>
+													))}
+												</div>
+											</div>
+										)}
+									</div>
+								)}
+								
+								{/* Error display for failed enrichments */}
+								{enrichmentStatus.data?.status === 'failed' && enrichmentStatus.data?.errorDetails && (
+									<div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
+										<div className="flex items-start gap-3">
+											<AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+											<div className="flex-1">
+												<h4 className="text-sm font-semibold text-red-800 mb-1">
+													Contactverrijking mislukt
+												</h4>
+												<p className="text-sm text-red-700 mb-2">
+													{enrichmentStatus.data.errorDetails.error}
+												</p>
+												{enrichmentStatus.data.errorDetails.details && (
+													<p className="text-xs text-red-600">
+														Details: {enrichmentStatus.data.errorDetails.details}
+													</p>
+												)}
+												<div className="mt-3">
+													<Button
+														size="sm"
+														variant="outline"
+														onClick={handleEnrichContacts}
+														disabled={enrichContactsMutation.isPending}
+														className="text-red-700 border-red-300 hover:bg-red-100"
+													>
+														<RefreshCw className={`h-4 w-4 mr-2 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
+														Opnieuw proberen
+													</Button>
+												</div>
+											</div>
+										</div>
 									</div>
 								)}
 								
@@ -585,11 +668,28 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 								{(company.contactPersons && company.contactPersons.length > 0) ? (
 									<div className="space-y-4">
 										{/* Show enrichment in progress indicator even when contacts exist */}
-										{(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && (
-											<div className="text-center py-3 bg-blue-50 rounded-lg border border-blue-200">
-												<div className="flex items-center justify-center gap-2">
-													<RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
-													<p className="text-sm text-blue-800 font-medium">Contacten worden bijgewerkt...</p>
+										{isEnrichmentPending() && (
+											<div className="text-center py-4 bg-blue-50 rounded-lg border border-blue-200">
+												<div className="flex flex-col items-center gap-2">
+													<div className="flex items-center gap-2">
+														<RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+														<p className="text-sm text-blue-800 font-medium">
+															{enrichmentStatus.data?.currentStep || 'Contacten worden bijgewerkt...'}
+														</p>
+													</div>
+													{enrichmentStatus.data?.progress && (
+														<div className="w-full max-w-xs">
+															<div className="w-full bg-blue-200 rounded-full h-1.5">
+																<div 
+																	className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+																	style={{ width: `${enrichmentStatus.data.progress}%` }}
+																></div>
+															</div>
+															<p className="text-xs text-blue-600 mt-1">
+																{enrichmentStatus.data.progress}% voltooid
+															</p>
+														</div>
+													)}
 												</div>
 											</div>
 										)}
@@ -750,11 +850,13 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 														size="sm" 
 														variant="outline"
 														onClick={handleEnrichContacts}
-														disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+														disabled={isEnrichmentPending()}
 													>
-														<RefreshCw className={`h-4 w-4 mr-2 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
-														{enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending' 
-															? 'Contacten zoeken...' 
+														<RefreshCw className={`h-4 w-4 mr-2 ${
+															isEnrichmentPending() ? 'animate-spin' : ''
+														}`} />
+														{isEnrichmentPending() 
+															? enrichmentStatus.data?.currentStep || 'Contacten zoeken...'
 															: 'Meer contacten zoeken'
 														}
 													</Button>
@@ -762,7 +864,7 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 											</>
 										) : (
 											/* Only show if not currently enriching */
-											!(enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending') && (
+											!isEnrichmentPending() && (
 												<div className="text-center py-8">
 													<UserCheck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
 													<p className="text-gray-500 text-sm mb-4">
@@ -772,11 +874,13 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 														size="sm" 
 														variant="outline"
 														onClick={handleEnrichContacts}
-														disabled={enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending'}
+														disabled={isEnrichmentPending()}
 													>
-														<RefreshCw className={`h-4 w-4 mr-2 ${enrichContactsMutation.isPending ? 'animate-spin' : ''}`} />
-														{enrichContactsMutation.isPending || company.contactEnrichmentStatus === 'pending' 
-															? 'Contacten zoeken...' 
+														<RefreshCw className={`h-4 w-4 mr-2 ${
+															isEnrichmentPending() ? 'animate-spin' : ''
+														}`} />
+														{isEnrichmentPending() 
+															? enrichmentStatus.data?.currentStep || 'Contacten zoeken...' 
 															: 'Contacten zoeken'
 														}
 													</Button>

@@ -81,6 +81,26 @@ class Company(Base):
         DateTime, nullable=True
     )  # Last contact enrichment timestamp
 
+    # Enhanced enrichment progress tracking
+    contact_enrichment_progress = Column(
+        Integer, nullable=True, default=0
+    )  # Progress percentage (0-100)
+    contact_enrichment_current_step = Column(
+        String, nullable=True
+    )  # Current enrichment step description
+    contact_enrichment_steps_completed = Column(
+        SafeJSON, nullable=True
+    )  # List of completed steps with timestamps
+    contact_enrichment_error_details = Column(
+        SafeJSON, nullable=True
+    )  # Detailed error information for failed enrichments
+    contact_enrichment_retry_count = Column(
+        Integer, nullable=True, default=0
+    )  # Number of retry attempts
+    contact_enrichment_started_at = Column(
+        DateTime, nullable=True
+    )  # When enrichment process started
+
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow

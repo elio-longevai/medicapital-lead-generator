@@ -180,6 +180,24 @@ class CompanyService:
                 and hasattr(company.get("contact_enriched_at"), "replace")
                 else None
             ),
+            # Enhanced enrichment progress fields
+            contactEnrichmentProgress=company.get("contact_enrichment_progress"),
+            contactEnrichmentCurrentStep=company.get("contact_enrichment_current_step"),
+            contactEnrichmentStepsCompleted=company.get(
+                "contact_enrichment_steps_completed", []
+            ),
+            contactEnrichmentErrorDetails=company.get(
+                "contact_enrichment_error_details"
+            ),
+            contactEnrichmentRetryCount=company.get("contact_enrichment_retry_count"),
+            contactEnrichmentStartedAt=(
+                company.get("contact_enrichment_started_at")
+                .replace(tzinfo=datetime.timezone.utc)
+                .isoformat()
+                if company.get("contact_enrichment_started_at")
+                and hasattr(company.get("contact_enrichment_started_at"), "replace")
+                else None
+            ),
         )
 
     def _calculate_default_score(self, company: Dict[str, Any]) -> int:

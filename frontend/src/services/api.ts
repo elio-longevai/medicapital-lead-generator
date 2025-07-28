@@ -49,7 +49,7 @@ export interface Company {
   entityType?: 'end_user' | 'supplier' | 'other';
   subIndustry?: string;
   contactPersons?: Contact[];
-  contactEnrichmentStatus?: 'pending' | 'completed' | 'failed';
+  contactEnrichmentStatus?: 'not_started' | 'pending' | 'completed' | 'failed';
   contactEnrichedAt?: string;
 }
 
@@ -87,6 +87,28 @@ export interface ScrapingStatus {
 export interface ContactEnrichmentResponse {
   message: string;
   companyId: string;
+}
+
+export interface EnrichmentStatusResponse {
+  companyId: string;
+  companyName: string;
+  status: 'not_started' | 'pending' | 'completed' | 'failed';
+  progress: number; // 0-100
+  currentStep?: string;
+  stepsCompleted: Array<{
+    step: string;
+    description: string;
+    completed_at: string;
+  }>;
+  errorDetails?: {
+    error: string;
+    details: string;
+    step: string;
+  };
+  retryCount: number;
+  startedAt?: string;
+  completedAt?: string;
+  contactsFound: number;
 }
 
 class ApiService {
@@ -166,6 +188,20 @@ class ApiService {
       }));
       throw new Error(
         errorData.detail || `Contactverrijking mislukt: ${response.statusText}`,
+      );
+    }
+    return response.json();
+  }
+
+  async getEnrichmentStatus(companyId: number): Promise<EnrichmentStatusResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/enrichment-status`);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        detail: "Kon verrijkingsstatus niet ophalen.",
+      }));
+      throw new Error(
+        errorData.detail || `Status ophalen mislukt: ${response.statusText}`,
       );
     }
     return response.json();

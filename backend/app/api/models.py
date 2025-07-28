@@ -60,7 +60,37 @@ class CompanyResponse(BaseModel):
     contactEnrichmentStatus: Optional[str] = None  # contact_enrichment_status
     contactEnrichedAt: Optional[str] = None  # contact_enriched_at
 
+    # Enhanced enrichment progress fields
+    contactEnrichmentProgress: Optional[int] = None  # contact_enrichment_progress
+    contactEnrichmentCurrentStep: Optional[str] = (
+        None  # contact_enrichment_current_step
+    )
+    contactEnrichmentStepsCompleted: Optional[List[dict]] = (
+        None  # contact_enrichment_steps_completed
+    )
+    contactEnrichmentErrorDetails: Optional[dict] = (
+        None  # contact_enrichment_error_details
+    )
+    contactEnrichmentRetryCount: Optional[int] = None  # contact_enrichment_retry_count
+    contactEnrichmentStartedAt: Optional[str] = None  # contact_enrichment_started_at
+
     model_config = ConfigDict(from_attributes=True)
+
+
+class EnrichmentStatusResponse(BaseModel):
+    """Detailed enrichment status response for polling."""
+
+    companyId: str
+    companyName: str
+    status: str  # 'not_started', 'pending', 'completed', 'failed'
+    progress: int  # 0-100
+    currentStep: Optional[str] = None
+    stepsCompleted: List[dict] = []
+    errorDetails: Optional[dict] = None
+    retryCount: int = 0
+    startedAt: Optional[str] = None
+    completedAt: Optional[str] = None
+    contactsFound: int = 0
 
 
 class CompanyListResponse(BaseModel):
