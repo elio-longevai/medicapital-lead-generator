@@ -13,6 +13,50 @@ from app.services.api_usage_service import ApiUsageService
 
 logger = logging.getLogger(__name__)
 
+# Module-level rate limiters to ensure proper rate limiting across all instances
+_brave_limiter = None
+_serper_limiter = None
+_tavily_limiter = None
+_firecrawl_limiter = None
+_scrapingdog_limiter = None
+
+
+def _get_brave_limiter():
+    global _brave_limiter
+    if _brave_limiter is None:
+        _brave_limiter = AsyncLimiter(1, 1.2)  # 1 request per 1.2 seconds
+    return _brave_limiter
+
+
+def _get_serper_limiter():
+    global _serper_limiter
+    if _serper_limiter is None:
+        _serper_limiter = AsyncLimiter(2, 1)  # 2 requests per second
+    return _serper_limiter
+
+
+def _get_tavily_limiter():
+    global _tavily_limiter
+    if _tavily_limiter is None:
+        _tavily_limiter = AsyncLimiter(1, 1)  # 1 request per second
+    return _tavily_limiter
+
+
+def _get_firecrawl_limiter():
+    global _firecrawl_limiter
+    if _firecrawl_limiter is None:
+        _firecrawl_limiter = AsyncLimiter(
+            1, 2
+        )  # 1 request per 2 seconds (conservative)
+    return _firecrawl_limiter
+
+
+def _get_scrapingdog_limiter():
+    global _scrapingdog_limiter
+    if _scrapingdog_limiter is None:
+        _scrapingdog_limiter = AsyncLimiter(3, 1)  # 3 requests per second
+    return _scrapingdog_limiter
+
 
 class RateLimitError(Exception):
     """Custom exception for when a search provider API rate limit is hit."""
@@ -162,21 +206,12 @@ class BraveSearchClient(BaseSearchClient, CountryMappingMixin):
 
     def __init__(self, api_key: str):
         super().__init__(api_key)
-        # Limiter will be created lazily to avoid event loop binding
-        self._limiter = None
-
-    @property
-    def limiter(self):
-        """Lazy initialization of limiter to ensure it's bound to the current event loop."""
-        if self._limiter is None:
-            self._limiter = AsyncLimiter(1, 1.2)
-        return self._limiter
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
     ) -> List[Dict[str, str]]:
         """Performs an asynchronous web search with a shared rate limit."""
-        async with self.limiter:
+        async with _get_brave_limiter():
             return await super().search_async(query, country, client)
 
     def _prepare_request(self, query: str, country: str):
@@ -203,20 +238,12 @@ class SerperClient(BaseSearchClient, CountryMappingMixin):
 
     def __init__(self, api_key: str):
         super().__init__(api_key)
-        self._limiter = None
-
-    @property
-    def limiter(self):
-        """Rate limiter for Serper API."""
-        if self._limiter is None:
-            self._limiter = AsyncLimiter(2, 1)  # 2 requests per second
-        return self._limiter
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
     ) -> List[Dict[str, str]]:
         """Performs an asynchronous web search with rate limiting."""
-        async with self.limiter:
+        async with _get_serper_limiter():
             return await super().search_async(query, country, client)
 
     def _prepare_request(self, query: str, country: str):
@@ -246,20 +273,12 @@ class TavilyClient(BaseSearchClient, CountryMappingMixin):
 
     def __init__(self, api_key: str):
         super().__init__(api_key)
-        self._limiter = None
-
-    @property
-    def limiter(self):
-        """Rate limiter for Tavily API."""
-        if self._limiter is None:
-            self._limiter = AsyncLimiter(1, 1)  # 1 request per second
-        return self._limiter
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
     ) -> List[Dict[str, str]]:
         """Performs an asynchronous web search with rate limiting."""
-        async with self.limiter:
+        async with _get_tavily_limiter():
             return await super().search_async(query, country, client)
 
     def _prepare_request(self, query: str, country: str):
@@ -296,20 +315,12 @@ class FirecrawlClient(BaseSearchClient, CountryMappingMixin):
 
     def __init__(self, api_key: str):
         super().__init__(api_key)
-        self._limiter = None
-
-    @property
-    def limiter(self):
-        """Rate limiter for Firecrawl API."""
-        if self._limiter is None:
-            self._limiter = AsyncLimiter(1, 2)  # 1 request per 2 seconds (conservative)
-        return self._limiter
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
     ) -> List[Dict[str, str]]:
         """Performs an asynchronous web search with rate limiting."""
-        async with self.limiter:
+        async with _get_firecrawl_limiter():
             return await super().search_async(query, country, client)
 
     def _prepare_request(self, query: str, country: str):
@@ -349,21 +360,12 @@ class ScrapingDogClient(BaseSearchClient, CountryMappingMixin):
 
     def __init__(self, api_key: str):
         super().__init__(api_key)
-        # Rate limiter for ScrapingDog (can handle higher volume)
-        self._limiter = None
-
-    @property
-    def limiter(self):
-        """Lazy initialization of limiter - more generous for ScrapingDog."""
-        if self._limiter is None:
-            self._limiter = AsyncLimiter(3, 1)  # 3 requests per second
-        return self._limiter
 
     async def search_async(
         self, query: str, country: str, client: httpx.AsyncClient
     ) -> List[Dict[str, str]]:
         """Performs an asynchronous web search with rate limiting."""
-        async with self.limiter:
+        async with _get_scrapingdog_limiter():
             return await super().search_async(query, country, client)
 
     def _prepare_request(self, query: str, country: str):
@@ -395,24 +397,26 @@ class ScrapingDogClient(BaseSearchClient, CountryMappingMixin):
 
 
 class CircuitBreaker:
-    """Simple circuit breaker to temporarily disable failing providers."""
+    """Simple circuit breaker to temporarily disable failing providers using MongoDB state."""
 
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 120):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout  # seconds
-        self.failure_counts: Dict[str, int] = {}
-        self.last_failure_times: Dict[str, datetime] = {}
-        self.disabled_until: Dict[str, datetime] = {}
+        from app.db.repositories import CircuitBreakerRepository
+
+        self.repo = CircuitBreakerRepository()
 
     def is_disabled(self, provider: str) -> bool:
         """Check if provider is currently disabled."""
-        if provider not in self.disabled_until:
+        state = self.repo.get_provider_state(provider)
+        disabled_until = state.get("disabled_until")
+
+        if not disabled_until:
             return False
 
-        if datetime.now() >= self.disabled_until[provider]:
+        if datetime.now() >= disabled_until:
             # Recovery time has passed, re-enable provider
-            del self.disabled_until[provider]
-            self.failure_counts[provider] = 0
+            self.repo.record_success(provider)
             logger.info(f"🔄 Re-enabled provider {provider} after recovery timeout")
             return False
 
@@ -420,21 +424,21 @@ class CircuitBreaker:
 
     def record_failure(self, provider: str):
         """Record a failure for the provider."""
-        self.failure_counts[provider] = self.failure_counts.get(provider, 0) + 1
-        self.last_failure_times[provider] = datetime.now()
+        state = self.repo.get_provider_state(provider)
+        current_failures = state.get("failure_count", 0) + 1
 
-        if self.failure_counts[provider] >= self.failure_threshold:
-            self.disabled_until[provider] = datetime.now() + timedelta(
-                seconds=self.recovery_timeout
-            )
+        if current_failures >= self.failure_threshold:
+            disabled_until = datetime.now() + timedelta(seconds=self.recovery_timeout)
+            self.repo.record_failure(provider, disabled_until)
             logger.warning(
-                f"🚫 Temporarily disabled provider {provider} due to {self.failure_counts[provider]} failures"
+                f"🚫 Temporarily disabled provider {provider} due to {current_failures} failures"
             )
+        else:
+            self.repo.record_failure(provider)
 
     def record_success(self, provider: str):
         """Record a success for the provider."""
-        if provider in self.failure_counts:
-            self.failure_counts[provider] = 0
+        self.repo.record_success(provider)
 
 
 class MultiProviderSearchClient:

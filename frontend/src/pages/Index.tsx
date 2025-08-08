@@ -43,10 +43,11 @@ import { QualificationWorkflow } from "@/components/QualificationWorkflow";
 import { useDashboardStats, useCompanies } from "@/hooks/useCompanies";
 import { getIcpMetadata } from "@/lib/icp-utils";
 import { useScrapingStatus, useScrapeLeads } from "@/hooks/useScrapingStatus";
+import { getStatusBadgeForDashboard, getScoreColorForDashboard } from "@/lib/ui-utils";
 
 const Index = () => {
 	const [activeTab, setActiveTab] = useState("dashboard");
-	const [selectedCompany, setSelectedCompany] = useState(null);
+	const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
 
 	// Fetch real dashboard data
 	const { data: dashboardData, isLoading: dashboardLoading } =
@@ -103,35 +104,6 @@ const Index = () => {
 			]
 		: [];
 
-	const getStatusBadge = (status: string) => {
-		const variants = {
-			qualified: "bg-emerald-100 text-emerald-800 border-emerald-200",
-			in_review: "bg-amber-100 text-amber-800 border-amber-200",
-			discovered: "bg-slate-100 text-slate-800 border-slate-200",
-			contacted: "bg-blue-100 text-blue-800 border-blue-200",
-			rejected: "bg-rose-100 text-rose-800 border-rose-200",
-		};
-
-		// Handle both frontend display format and backend API format
-		const normalizedStatus = status.toLowerCase().replace(/\s+/g, "_");
-		const displayStatus = status.includes("_")
-			? status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())
-			: status;
-
-		return (
-			<Badge
-				className={`${variants[normalizedStatus] || variants.discovered} border font-medium`}
-			>
-				{displayStatus}
-			</Badge>
-		);
-	};
-
-	const getScoreColor = (score) => {
-		if (score >= 85) return "text-emerald-600";
-		if (score >= 70) return "text-amber-600";
-		return "text-red-600";
-	};
 
 	const handleScrape = async () => {
 		toast.info("De lead scraping wordt gestart...", {
@@ -155,12 +127,12 @@ const Index = () => {
 		});
 	};
 
-	if (selectedCompany) {
+	if (selectedCompanyId) {
 		return (
 			<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 				<CompanyProfile
-					company={selectedCompany}
-					onBack={() => setSelectedCompany(null)}
+					companyId={selectedCompanyId}
+					onBack={() => setSelectedCompanyId(null)}
 				/>
 			</div>
 		);
@@ -611,7 +583,7 @@ const Index = () => {
 														key={lead.id}
 														type="button"
 														className="w-full p-3 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-lg hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 cursor-pointer transition-all duration-200 group text-left"
-														onClick={() => setSelectedCompany(lead)}
+														onClick={() => setSelectedCompanyId(lead.id)}
 														aria-label={`Bekijk ${lead.company}`}
 													>
 														<div className="flex items-center justify-between mb-2">
@@ -619,7 +591,7 @@ const Index = () => {
 																{lead.company}
 															</h4>
 															<div
-																className={`text-sm font-bold px-2 py-1 rounded-full ${getScoreColor(lead.score)} border`}
+																className={`text-sm font-bold px-2 py-1 rounded-full ${getScoreColorForDashboard(lead.score)} border`}
 															>
 																{lead.score}
 															</div>
@@ -628,7 +600,7 @@ const Index = () => {
 															<span className="text-slate-600 truncate">
 																{lead.industry}
 															</span>
-															{getStatusBadge(lead.status)}
+															{getStatusBadgeForDashboard(lead.status)}
 														</div>
 													</button>
 												))}
@@ -658,7 +630,7 @@ const Index = () => {
 					</TabsContent>
 
 					<TabsContent value="leads" className="mt-0">
-						<LeadDatabase onSelectCompany={setSelectedCompany} />
+						<LeadDatabase onSelectCompany={(company) => setSelectedCompanyId(company.id)} />
 					</TabsContent>
 
 					<TabsContent value="qualification" className="mt-0">

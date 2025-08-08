@@ -30,63 +30,22 @@ class CompanyService:
     ) -> CompanyListResponse:
         # Handle grouped ICP business logic at the service layer
         if icp_name == "duurzaamheid":
-            # Group both sustainability ICPs together
-            # We'll modify the repository call to handle this with a custom filter
-            # First get results for both ICP types
-            filter_criteria = {}
-
-            if status and status != "all":
-                filter_criteria["status"] = status
-            elif not status or status == "all":
-                filter_criteria["status"] = {"$ne": "rejected"}
-
-            if country:
-                filter_criteria["country"] = country
-
-            if entity_type and entity_type != "all":
-                filter_criteria["entity_type"] = entity_type
-
-            if sub_industry:
-                filter_criteria["sub_industry"] = {
-                    "$regex": sub_industry,
-                    "$options": "i",
-                }
-
-            if search:
-                filter_criteria["$or"] = [
-                    {"discovered_name": {"$regex": search, "$options": "i"}},
-                    {"equipment_needs": {"$regex": search, "$options": "i"}},
-                ]
-
-            # Add the grouped ICP filter
-            filter_criteria["icp_name"] = {
-                "$in": ["sustainability_supplier", "sustainability_end_user"]
-            }
-
-            # Use the repository's find_companies method with our custom filter
-            companies = self.repo.find_companies(filter_criteria)
-
-            # Sort the results
-            if sort_by == "score":
-                companies.sort(
-                    key=lambda x: x.get("qualification_score", 0), reverse=True
-                )
-            elif sort_by == "company":
-                companies.sort(key=lambda x: x.get("discovered_name", ""))
-            elif sort_by == "activity":
-                companies.sort(
-                    key=lambda x: x.get("created_at", datetime.min), reverse=True
-                )
-
-            # Apply pagination
-            total = len(companies)
-            companies = (
-                companies[skip : skip + 50] if skip >= 0 else companies
-            )  # Default limit of 50
+            # Use the optimized repository method with multiple ICP names
+            icp_names = ["sustainability_supplier", "sustainability_end_user"]
+            result = self.repo.find_with_filters(
+                skip=skip,
+                icp_name=icp_names,
+                status=status,
+                country=country,
+                search=search,
+                entity_type=entity_type,
+                sub_industry=sub_industry,
+                sort_by=sort_by,
+            )
 
             return CompanyListResponse(
-                companies=[self._transform_company(c) for c in companies],
-                total=total,
+                companies=[self._transform_company(c) for c in result["companies"]],
+                total=result["total"],
             )
         else:
             # For all other cases, use the standard repository method

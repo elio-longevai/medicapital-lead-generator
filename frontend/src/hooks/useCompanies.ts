@@ -27,7 +27,7 @@ export function useDashboardStats() {
 
 export function useUpdateCompanyStatus() {
   const queryClient = useQueryClient();
-  return useMutation<Company, Error, { id: number; status: 'contacted' | 'rejected' }>({
+  return useMutation<Company, Error, { id: number; status: string }>({
     mutationFn: ({ id, status }) => apiService.updateCompanyStatus(id, status),
     onSuccess: (data, variables) => {
       // Invalidate queries to refetch data from the server

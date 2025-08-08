@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from ..main import arun_all_icps
 from ..services.company_service import CompanyService
+from ..db.repositories import BackgroundTaskRepository
 from .models import (
     CompanyListResponse,
     CompanyResponse,
@@ -18,9 +19,6 @@ from .models import (
 )
 
 app = FastAPI(title="MediCapital Lead API", version="1.0.0")
-
-# Global scraping status tracker
-_scraping_status = {"is_scraping": False}
 
 app.add_middleware(
     CORSMiddleware,
@@ -113,12 +111,11 @@ async def run_scraping_with_status_tracking(queries_per_icp: int):
     """
     Wrapper function to track scraping status during the process.
     """
-    global _scraping_status
-    _scraping_status["is_scraping"] = True
+    task_repo = BackgroundTaskRepository()
     try:
         await arun_all_icps(queries_per_icp=queries_per_icp)
     finally:
-        _scraping_status["is_scraping"] = False
+        task_repo.set_task_idle("global_scraping")
 
 
 @app.get("/api/scrape-status", response_model=ScrapingStatus)
@@ -126,7 +123,9 @@ def get_scrape_status():
     """
     Returns the current scraping status.
     """
-    return _scraping_status
+    task_repo = BackgroundTaskRepository()
+    status = task_repo.get_task_status("global_scraping")
+    return {"is_scraping": status == "running"}
 
 
 @app.post("/api/scrape-leads", status_code=202)
@@ -134,7 +133,10 @@ async def scrape_leads(background_tasks: BackgroundTasks):
     """
     Triggers a new lead scraping process in the background.
     """
-    if _scraping_status["is_scraping"]:
+    task_repo = BackgroundTaskRepository()
+
+    # Atomically try to set the task to running if it's idle
+    if not task_repo.set_task_running("global_scraping"):
         raise HTTPException(
             status_code=409,
             detail="Scraping is already in progress. Please wait for it to complete.",

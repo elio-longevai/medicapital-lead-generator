@@ -25,8 +25,8 @@ def save_leads_to_db(state: GraphState) -> dict:
     icp_name = state.icp_name
 
     try:
-        # Get existing normalized names for deduplication
-        existing_names = company_repo.get_all_normalized_names()
+        # Initialize set to track names within this batch
+        existing_names = set()
 
         for item in leads_to_save:
             lead = item["lead"]
