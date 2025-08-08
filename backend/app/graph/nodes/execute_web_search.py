@@ -6,7 +6,6 @@ import httpx
 from app.core.clients import create_multi_provider_search_client
 from app.graph.state import GraphState
 from app.services.search_query_service import SearchQueryService
-# from .utils.search_utils import save_search_results
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +56,6 @@ async def execute_web_search(state: GraphState) -> dict:
             else:
                 results, provider = result
                 if provider and results:
-                    # save_search_results(query, provider, results)
                     all_results.extend(results)
                     query_tracking_data.append(
                         (

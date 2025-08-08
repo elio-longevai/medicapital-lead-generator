@@ -5,7 +5,8 @@ This service provides email validation and finding capabilities using Hunter.io 
 """
 
 import logging
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 import httpx
 
 from app.core.settings import settings

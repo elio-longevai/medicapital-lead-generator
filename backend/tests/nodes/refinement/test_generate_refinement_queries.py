@@ -1,6 +1,6 @@
 from app.graph.nodes.refinement.generate_refinement_queries import (
-    generate_refinement_queries,
     ENRICHABLE_FIELDS,
+    generate_refinement_queries,
 )
 
 

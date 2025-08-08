@@ -1,0 +1,38 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { apiService, type EnrichmentStatusResponse } from '@/services/api';
+
+export function useContactEnrichmentStatus(companyId: number) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery<EnrichmentStatusResponse>({
+    queryKey: ['enrichment-status', companyId],
+    queryFn: () => apiService.getEnrichmentStatus(companyId),
+    enabled: !!companyId,
+    staleTime: 0, // Always consider data stale to ensure fresh polling
+    gcTime: 0, // Don't cache old data
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.status === 'pending') {
+        // Faster polling during enrichment - 1 second intervals
+        // After 80% completion, slow down to 2 seconds to reduce server load
+        return (data.progress || 0) >= 80 ? 2000 : 1000;
+      }
+      return false; // Stop polling when not pending
+    },
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+  });
+
+  // Handle side effects when enrichment completes
+  useEffect(() => {
+    if (query.data && (query.data.status === 'completed' || query.data.status === 'failed')) {
+      // Invalidate related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+    }
+  }, [query.data, companyId, queryClient]);
+
+  return query;
+}
+

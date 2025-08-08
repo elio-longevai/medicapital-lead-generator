@@ -1,13 +1,14 @@
 import hashlib
 import logging
-from datetime import datetime, date
-from typing import List, Optional, Dict, Any, Union
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional, Union
+
+from bson import ObjectId
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError
-from bson import ObjectId
 
-from app.db.mongodb import get_mongo_collection
 from app.db.mongo_models import COLLECTIONS
+from app.db.mongodb import get_mongo_collection
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class CompanyRepository:
         self,
         skip: int = 0,
         limit: int = 0,
-        icp_name: Optional[str] = None,
+        icp_name: Optional[Union[str, List[str]]] = None,
         status: Optional[str] = None,
         country: Optional[str] = None,
         search: Optional[str] = None,
@@ -101,12 +102,8 @@ class CompanyRepository:
         filter_query = {}
 
         if icp_name and icp_name != "all":
-            # Handle grouped ICP filters
-            if icp_name == "duurzaamheid":
-                # Group both sustainability ICPs together
-                filter_query["icp_name"] = {
-                    "$in": ["sustainability_supplier", "sustainability_end_user"]
-                }
+            if isinstance(icp_name, list):
+                filter_query["icp_name"] = {"$in": icp_name}
             else:
                 filter_query["icp_name"] = icp_name
 
@@ -424,3 +421,113 @@ class LeadRepository:
         """Get leads by status."""
         cursor = self.collection.find({"status": status})
         return list(cursor)
+
+
+class BackgroundTaskRepository:
+    """Repository for Background Task Status operations."""
+
+    def __init__(self):
+        self.collection: Collection = get_mongo_collection(
+            COLLECTIONS["background_tasks"]
+        )
+
+    def get_task_status(self, task_name: str) -> str:
+        """Get the current status of a background task."""
+        task = self.collection.find_one({"task_name": task_name})
+        return task["status"] if task else "idle"
+
+    def set_task_running(self, task_name: str) -> bool:
+        """Atomically set a task to 'running' status if it's currently 'idle'."""
+        try:
+            result = self.collection.find_one_and_update(
+                {"task_name": task_name, "status": "idle"},
+                {
+                    "$set": {
+                        "status": "running",
+                        "started_at": datetime.utcnow(),
+                        "updated_at": datetime.utcnow(),
+                    }
+                },
+                upsert=True,
+                return_document=True,
+            )
+            return result is not None
+        except Exception as e:
+            logger.error(f"Error setting task running: {e}")
+            return False
+
+    def set_task_idle(self, task_name: str) -> bool:
+        """Set a task to 'idle' status."""
+        try:
+            result = self.collection.update_one(
+                {"task_name": task_name},
+                {
+                    "$set": {
+                        "status": "idle",
+                        "updated_at": datetime.utcnow(),
+                    },
+                    "$unset": {"started_at": ""},
+                },
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            logger.error(f"Error setting task idle: {e}")
+            return False
+
+
+class CircuitBreakerRepository:
+    """Repository for Circuit Breaker state operations."""
+
+    def __init__(self):
+        self.collection: Collection = get_mongo_collection(
+            COLLECTIONS["circuit_breaker_state"]
+        )
+
+    def get_provider_state(self, provider: str) -> Dict[str, Any]:
+        """Get circuit breaker state for a provider."""
+        state = self.collection.find_one({"provider": provider})
+        if state:
+            return {
+                "failure_count": state.get("failure_count", 0),
+                "disabled_until": state.get("disabled_until"),
+            }
+        return {"failure_count": 0, "disabled_until": None}
+
+    def record_failure(self, provider: str, disabled_until: datetime = None) -> bool:
+        """Record a failure for a provider and optionally disable it."""
+        try:
+            update_data = {
+                "$inc": {"failure_count": 1},
+                "$set": {"updated_at": datetime.utcnow()},
+            }
+            if disabled_until:
+                update_data["$set"]["disabled_until"] = disabled_until
+
+            result = self.collection.update_one(
+                {"provider": provider},
+                update_data,
+                upsert=True,
+            )
+            return result.acknowledged
+        except Exception as e:
+            logger.error(f"Error recording failure for {provider}: {e}")
+            return False
+
+    def record_success(self, provider: str) -> bool:
+        """Record a success for a provider and reset failure count."""
+        try:
+            result = self.collection.update_one(
+                {"provider": provider},
+                {
+                    "$set": {
+                        "failure_count": 0,
+                        "updated_at": datetime.utcnow(),
+                    },
+                    "$unset": {"disabled_until": ""},
+                },
+                upsert=True,
+            )
+            return result.acknowledged
+        except Exception as e:
+            logger.error(f"Error recording success for {provider}: {e}")
+            return False

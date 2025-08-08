@@ -5,7 +5,6 @@ import httpx
 
 from app.core.clients import create_multi_provider_search_client
 from app.graph.state import GraphState
-# from ..utils.search_utils import save_search_results
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +31,6 @@ async def _execute_single_refinement_search(
 
             results, provider = result
             if provider and results:
-                # Save results for debugging
-                # save_search_results(query, provider, results)
                 # Add provider info to each search result
                 for res in results:
                     res["_provider"] = provider

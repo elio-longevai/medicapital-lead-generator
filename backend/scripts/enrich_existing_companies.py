@@ -10,23 +10,22 @@ Usage:
     python enrich_existing_companies.py [--batch-size 10] [--country NL] [--icp-name "Healthcare"]
 """
 
-import asyncio
 import argparse
+import asyncio
 import logging
 import sys
-from typing import List, Dict, Optional
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Dict, List, Optional
 
 from app.db.repositories import CompanyRepository
-from app.graph.state import GraphState, CandidateLead
 from app.graph.nodes.refinement import (
-    generate_refinement_queries,
     execute_refinement_search,
     extract_and_merge_missing_info,
+    generate_refinement_queries,
 )
 from app.graph.nodes.refinement.check_enrichment_completeness import ENRICHABLE_FIELDS
-
+from app.graph.state import CandidateLead, GraphState
 
 # Configure logging
 logging.basicConfig(

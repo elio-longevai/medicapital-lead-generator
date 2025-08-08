@@ -165,10 +165,6 @@ cython_debug/
 *.sqlite
 *.sqlite3
 
-# Alembic
-alembic/versions/*.py
-!alembic/versions/__init__.py
-
 # Logs
 *.log
 logs/
@@ -202,6 +198,8 @@ checkpoints/
 # Backup files
 *.bak
 *.backup
+# Generated ICP caches
+backend/prompts/structured_*.json
 
 .ruff_cache/
 

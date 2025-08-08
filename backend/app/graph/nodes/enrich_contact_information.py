@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 from typing import List
 
-from app.graph.state import GraphState
 from app.graph.nodes.schemas import ContactPerson
+from app.graph.state import GraphState
 
 logger = logging.getLogger(__name__)
 
@@ -184,37 +184,3 @@ def _deduplicate_contacts(contacts: List[ContactPerson]) -> List[ContactPerson]:
         unique_contacts.append(contact)
 
     return unique_contacts
-
-
-def should_enrich_contacts(enriched_company_data: dict) -> bool:
-    """
-    Determine if a company needs contact enrichment.
-
-    Args:
-        enriched_company_data: Dictionary containing lead and enriched_data
-
-    Returns:
-        True if contact enrichment is needed
-    """
-    enriched_data = enriched_company_data.get("enriched_data")
-    if not enriched_data:
-        return True
-
-    # Check if contact enrichment was already attempted
-    contact_status = enriched_data.get("contact_enrichment_status")
-    if contact_status in ["completed", "failed"]:
-        return False
-
-    # Check if we have sufficient contact information
-    contacts = enriched_data.get("contacts", [])
-    contact_persons = enriched_data.get("contact_persons", [])
-
-    # Need enrichment if we have fewer than 2 contacts with email addresses
-    email_contacts = 0
-    for contact in contacts + contact_persons:
-        if isinstance(contact, dict) and contact.get("email"):
-            email_contacts += 1
-        elif hasattr(contact, "email") and contact.email:
-            email_contacts += 1
-
-    return email_contacts < 2

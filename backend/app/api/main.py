@@ -1,23 +1,24 @@
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+import logging
+from datetime import datetime
+from typing import Optional
+
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from typing import Optional
-from datetime import datetime
-from .models import (
-    CompanyResponse,
-    CompanyListResponse,
-    DashboardStats,
-    CompanyStatusUpdate,
-    ScrapingStatus,
-)
-from ..services.company_service import CompanyService
+
 from ..main import arun_all_icps
-import logging
+from ..services.company_service import CompanyService
+from ..db.repositories import BackgroundTaskRepository
+from .models import (
+    CompanyListResponse,
+    CompanyResponse,
+    CompanyStatusUpdate,
+    DashboardStats,
+    ScrapingStatus,
+    EnrichmentStatusResponse,
+)
 
 app = FastAPI(title="MediCapital Lead API", version="1.0.0")
-
-# Global scraping status tracker
-_scraping_status = {"is_scraping": False}
 
 app.add_middleware(
     CORSMiddleware,
@@ -110,12 +111,11 @@ async def run_scraping_with_status_tracking(queries_per_icp: int):
     """
     Wrapper function to track scraping status during the process.
     """
-    global _scraping_status
-    _scraping_status["is_scraping"] = True
+    task_repo = BackgroundTaskRepository()
     try:
         await arun_all_icps(queries_per_icp=queries_per_icp)
     finally:
-        _scraping_status["is_scraping"] = False
+        task_repo.set_task_idle("global_scraping")
 
 
 @app.get("/api/scrape-status", response_model=ScrapingStatus)
@@ -123,7 +123,9 @@ def get_scrape_status():
     """
     Returns the current scraping status.
     """
-    return _scraping_status
+    task_repo = BackgroundTaskRepository()
+    status = task_repo.get_task_status("global_scraping")
+    return {"is_scraping": status == "running"}
 
 
 @app.post("/api/scrape-leads", status_code=202)
@@ -131,7 +133,10 @@ async def scrape_leads(background_tasks: BackgroundTasks):
     """
     Triggers a new lead scraping process in the background.
     """
-    if _scraping_status["is_scraping"]:
+    task_repo = BackgroundTaskRepository()
+
+    # Atomically try to set the task to running if it's idle
+    if not task_repo.set_task_running("global_scraping"):
         raise HTTPException(
             status_code=409,
             detail="Scraping is already in progress. Please wait for it to complete.",
@@ -167,8 +172,8 @@ def get_company_contacts(company_id: str):
 @app.post("/api/companies/{company_id}/enrich-contacts")
 async def enrich_company_contacts(company_id: str, background_tasks: BackgroundTasks):
     """Trigger contact enrichment for a specific company."""
-    from app.services.contact_enrichment import ContactEnrichmentService
     from app.db.repositories import CompanyRepository
+    from app.services.contact_enrichment import ContactEnrichmentService
 
     # Get company details
     service = CompanyService()
@@ -176,19 +181,48 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
+    # Check if enrichment is already in progress
+    current_status = company.contactEnrichmentStatus
+    if current_status == "pending":
+        raise HTTPException(
+            status_code=409,
+            detail="Contact enrichment is already in progress for this company. Please wait for it to complete.",
+        )
+
     company_name = company.company
     website_url = company.website
 
     # Start enrichment in background
     async def perform_enrichment():
+        from app.services.contact_enrichment import ProgressTracker
+
         repo = CompanyRepository()
+
+        # Check if this is a retry attempt
+        existing_company = repo.find_by_id(company_id)
+        is_retry = (
+            existing_company
+            and existing_company.get("contact_enrichment_status") == "failed"
+        )
+
+        progress_tracker = ProgressTracker(company_id, repo)
+
+        if is_retry:
+            # Initialize retry
+            progress_tracker.retry()
+            logger.info(
+                f"Starting retry for {company_name} (attempt #{existing_company.get('contact_enrichment_retry_count', 0)})"
+            )
+
         try:
             contact_service = ContactEnrichmentService()
             result = await contact_service.enrich_company_contacts(
-                company_name=company_name, website_url=website_url
+                company_name=company_name,
+                website_url=website_url,
+                progress_tracker=progress_tracker,
             )
 
-            # Update company record
+            # Update company record with final data
             update_data = {
                 "contact_persons": [
                     contact.model_dump() for contact in result["contacts"]
@@ -198,16 +232,15 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
             }
             repo.update_company(company_id, update_data)
 
+            # Log success for retry attempts
+            if is_retry:
+                logger.info(
+                    f"Retry successful for {company_name} after {existing_company.get('contact_enrichment_retry_count', 0)} attempts"
+                )
+
         except Exception as e:
             logger.error(f"Contact enrichment failed for {company_name}: {str(e)}")
-            # Update with error status
-            repo.update_company(
-                company_id,
-                {
-                    "contact_enrichment_status": "failed",
-                    "contact_enriched_at": datetime.utcnow(),
-                },
-            )
+            # Progress tracker will handle the error status update with retry count
 
     background_tasks.add_task(perform_enrichment)
 
@@ -215,6 +248,34 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
         "message": f"Contact enrichment started for {company_name}",
         "companyId": company_id,
     }
+
+
+@app.get(
+    "/api/companies/{company_id}/enrichment-status",
+    response_model=EnrichmentStatusResponse,
+)
+def get_enrichment_status(company_id: str):
+    """Get detailed enrichment status with progress information for a company."""
+    service = CompanyService()
+    company = service.get_company_by_id(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    # Get all enrichment-related fields from the company
+    return EnrichmentStatusResponse(
+        companyId=company_id,
+        companyName=company.company,
+        status=company.contactEnrichmentStatus or "not_started",
+        progress=company.contactEnrichmentProgress or 0,
+        currentStep=company.contactEnrichmentCurrentStep,
+        stepsCompleted=company.contactEnrichmentStepsCompleted or [],
+        errorDetails=company.contactEnrichmentErrorDetails,
+        retryCount=company.contactEnrichmentRetryCount or 0,
+        startedAt=company.contactEnrichmentStartedAt,
+        completedAt=company.contactEnrichedAt,
+        contactsFound=len(company.contactPersons or []),
+        lastUpdated=getattr(company, "contactEnrichmentLastUpdated", None),
+    )
 
 
 @app.get("/health")

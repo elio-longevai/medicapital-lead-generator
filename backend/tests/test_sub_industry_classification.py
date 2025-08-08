@@ -1,8 +1,10 @@
 """Tests for sub-industry classification functionality."""
 
-import pytest
 from unittest.mock import Mock
-from app.graph.nodes.schemas import EnrichedCompanyData, ContactPerson
+
+import pytest
+
+from app.graph.nodes.schemas import ContactPerson, EnrichedCompanyData
 from app.services.company_service import CompanyService
 
 

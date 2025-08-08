@@ -1,6 +1,7 @@
 import logging
 
 from app.graph.state import GraphState
+
 from .check_enrichment_completeness import ENRICHABLE_FIELDS
 
 logger = logging.getLogger(__name__)
@@ -105,6 +106,51 @@ def _apply_patterns_to_company(
     return queries
 
 
+def generate_contact_queries(
+    company_name: str, website_url: str = None, country: str = "NL"
+) -> list[str]:
+    """
+    Generate specialized contact search queries for finding email and phone numbers.
+
+    Args:
+        company_name: Company name to search for
+        website_url: Company website URL (optional)
+        country: Country code (NL, BE, or other)
+
+    Returns:
+        List of targeted queries for finding contact information
+    """
+    queries = []
+
+    # Primary contact search queries
+    queries.append(f'"{company_name}" contact email phone')
+
+    # Dutch-specific contact search
+    if country.upper() in ["NL", "BE"]:
+        queries.append(f'"{company_name}" contactgegevens')
+        queries.append(f'"{company_name}" contact informatie email telefoon')
+
+    # Website-specific contact search (if URL available)
+    if website_url:
+        domain = (
+            website_url.replace("https://", "").replace("http://", "").split("/")[0]
+        )
+        if domain.startswith("www."):
+            domain = domain[4:]
+        queries.append(f"site:{domain} contact")
+        queries.append(f"site:{domain} contactgegevens")
+
+    # Executive contact search
+    queries.append(f'"{company_name}" "head of sales" email')
+    queries.append(f'"{company_name}" directeur email contact')
+
+    # LinkedIn company contact search
+    clean_company_name = _clean_company_name_for_linkedin(company_name)
+    queries.append(f"site:linkedin.com/company/{clean_company_name} contact")
+
+    return queries
+
+
 def generate_employee_queries(
     company_name: str, country: str, tier: str = "all"
 ) -> dict[str, list[str]] | list[str]:
@@ -169,6 +215,17 @@ def generate_refinement_queries(state: GraphState) -> dict:
 
         if not enriched_data:
             # If no data exists, generate queries for all fields.
+
+            # Always generate contact queries when no enriched data exists
+            website_url = company_data.get("enriched_data", {}).get("website_url")
+            contact_queries = generate_contact_queries(
+                company_name, website_url, country
+            )
+            queries.extend(contact_queries)
+            logger.info(
+                f"  > 📞 Using {len(contact_queries)} specialized contact queries"
+            )
+
             for field in ENRICHABLE_FIELDS:
                 if field == "employee_count":
                     # Use smart tiered approach - start with only high-performance tier 1 queries
@@ -179,7 +236,7 @@ def generate_refinement_queries(state: GraphState) -> dict:
                     logger.info(
                         f"  > 💰 Using {len(employee_queries)} tier-1 employee queries for cost efficiency"
                     )
-                else:
+                elif field not in ["contact_email", "contact_phone"]:
                     search_term = get_search_term_for_field(field, country)
                     query = f'"{company_name}" {search_term}'
                     queries.append(query)
@@ -188,6 +245,18 @@ def generate_refinement_queries(state: GraphState) -> dict:
             )
         else:
             # If partial data exists, generate queries only for missing fields.
+
+            # Check if we need more contacts based on contact_persons list
+            if len(enriched_data.get("contact_persons", [])) < 2:
+                website_url = enriched_data.get("website_url")
+                contact_queries = generate_contact_queries(
+                    company_name, website_url, country
+                )
+                queries.extend(contact_queries)
+                logger.info(
+                    f"  > 📞 Using {len(contact_queries)} specialized contact queries - insufficient contacts ({len(enriched_data.get('contact_persons', []))} < 2)"
+                )
+
             for field in ENRICHABLE_FIELDS:
                 if not enriched_data.get(field):
                     if field == "employee_count":
@@ -199,6 +268,9 @@ def generate_refinement_queries(state: GraphState) -> dict:
                         logger.info(
                             f"  > 💰 Using {len(employee_queries)} tier-1 employee queries for cost efficiency"
                         )
+                    elif field in ["contact_email", "contact_phone"]:
+                        # Skip legacy contact fields as we now handle contacts based on contact_persons
+                        continue
                     else:
                         search_term = get_search_term_for_field(field, country)
                         query = f'"{company_name}" {search_term}'

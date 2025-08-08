@@ -6,7 +6,8 @@ allowing us to find executive contacts without search queries.
 """
 
 import logging
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 import httpx
 
 from app.core.settings import settings
@@ -163,9 +164,17 @@ class PeopleDataLabsClient:
                     linkedin_url = profile.get("url")
                     break
 
-            # Determine department and seniority
-            department = self._extract_department(job_title)
-            seniority_level = self._extract_seniority(job_title)
+            # Validate LinkedIn URL
+            if linkedin_url:
+                from app.utils.contact_validator import validate_and_clean_linkedin_url
+
+                linkedin_url = validate_and_clean_linkedin_url(linkedin_url)
+
+            # Use ContactValidator for department and seniority normalization
+            from app.utils.contact_validator import ContactValidator
+
+            department = ContactValidator.normalize_department(job_title)
+            seniority_level = ContactValidator.normalize_seniority(job_title)
 
             return ContactPerson(
                 name=full_name,
@@ -180,66 +189,6 @@ class PeopleDataLabsClient:
         except Exception as e:
             logger.warning(f"Failed to parse contact data: {str(e)}")
             return None
-
-    def _extract_department(self, job_title: str) -> str:
-        """Extract department from job title."""
-        if not job_title:
-            return "Other"
-
-        title_lower = job_title.lower()
-
-        if any(
-            term in title_lower for term in ["sales", "business development", "revenue"]
-        ):
-            return "Sales"
-        elif any(
-            term in title_lower
-            for term in ["finance", "cfo", "financial", "accounting"]
-        ):
-            return "Finance"
-        elif any(
-            term in title_lower
-            for term in ["hr", "human resources", "people", "talent"]
-        ):
-            return "HR"
-        elif any(term in title_lower for term in ["operations", "coo", "operational"]):
-            return "Operations"
-        elif any(
-            term in title_lower
-            for term in ["technology", "tech", "cto", "engineering", "development"]
-        ):
-            return "Technology"
-        elif any(term in title_lower for term in ["marketing", "growth", "digital"]):
-            return "Marketing"
-        else:
-            return "Other"
-
-    def _extract_seniority(self, job_title: str) -> str:
-        """Extract seniority level from job title."""
-        if not job_title:
-            return "Other"
-
-        title_lower = job_title.lower()
-
-        if any(
-            term in title_lower
-            for term in ["ceo", "cfo", "cto", "coo", "chief", "founder", "president"]
-        ):
-            return "C-Level"
-        elif any(
-            term in title_lower
-            for term in ["director", "head of", "vp", "vice president"]
-        ):
-            return "Director"
-        elif "manager" in title_lower:
-            return "Manager"
-        elif any(
-            term in title_lower
-            for term in ["specialist", "analyst", "coordinator", "associate"]
-        ):
-            return "Specialist"
-        else:
-            return "Other"
 
 
 # Create a default instance

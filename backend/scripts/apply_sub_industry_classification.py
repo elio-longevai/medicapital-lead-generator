@@ -12,21 +12,22 @@ Usage:
     python scripts/apply_sub_industry_classification.py [--dry-run] [--limit N]
 """
 
+import argparse
 import asyncio
 import logging
-import argparse
-import sys
 import os
-from typing import List, Dict, Any
+import sys
+from typing import Any, Dict, List
 
 # Add the parent directory to the path so we can import app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.db.repositories import CompanyRepository
-from app.core.clients import llm_client
-from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
+
+from app.core.clients import llm_client
+from app.db.repositories import CompanyRepository
 
 # Setup logging
 logging.basicConfig(

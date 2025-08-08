@@ -1,15 +1,200 @@
 import asyncio
 import logging
-from typing import List, Optional, Dict, Any
+import re
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import httpx
 
 from app.core.clients import create_multi_provider_search_client
 from app.graph.nodes.schemas import ContactPerson
-from app.utils.contact_validator import ContactValidator
+from app.utils.contact_validator import (
+    ContactValidator,
+    validate_and_clean_linkedin_url,
+)
 from app.utils.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
+
+
+class ProgressTracker:
+    """Tracks and updates enrichment progress in real-time."""
+
+    STEPS = [
+        {
+            "name": "initializing",
+            "description": "Voorbereiden contactverrijking",
+            "progress": 5,
+        },
+        {
+            "name": "people_data_labs",
+            "description": "Zoeken in People Data Labs database",
+            "progress": 20,
+        },
+        {
+            "name": "generating_queries",
+            "description": "Genereren zoekquery's",
+            "progress": 30,
+        },
+        {
+            "name": "web_search",
+            "description": "Uitvoeren web zoekopdrachten",
+            "progress": 60,
+        },
+        {
+            "name": "extracting_contacts",
+            "description": "Extracten contactgegevens",
+            "progress": 80,
+        },
+        {
+            "name": "validating_contacts",
+            "description": "Valideren en opschonen contacten",
+            "progress": 90,
+        },
+        {
+            "name": "hunter_enhancement",
+            "description": "Verrijken met Hunter.io",
+            "progress": 95,
+        },
+        {
+            "name": "completed",
+            "description": "Contactverrijking voltooid",
+            "progress": 100,
+        },
+    ]
+
+    def __init__(self, company_id: str, repo):
+        self.company_id = company_id
+        self.repo = repo
+        self.steps_completed = []
+        self.started_at = datetime.utcnow()
+
+        # Initialize enrichment
+        self._update_progress("initializing")
+
+    def _update_progress(self, step_name: str, error_details: Optional[Dict] = None):
+        """Update progress in database with immediate commit and better error handling"""
+        step_info = next((s for s in self.STEPS if s["name"] == step_name), None)
+        if not step_info:
+            logger.warning(f"Unknown step: {step_name}")
+            return
+
+        # Mark step as completed with precise timestamp
+        step_completed = {
+            "step": step_name,
+            "description": step_info["description"],
+            "completed_at": datetime.utcnow().isoformat(),
+        }
+        self.steps_completed.append(step_completed)
+
+        # Build comprehensive update data
+        update_data = {
+            "contact_enrichment_progress": step_info["progress"],
+            "contact_enrichment_current_step": step_info["description"],
+            "contact_enrichment_steps_completed": self.steps_completed,
+            "contact_enrichment_started_at": self.started_at.isoformat()
+            if isinstance(self.started_at, datetime)
+            else self.started_at,
+            "contact_enrichment_last_updated": datetime.utcnow().isoformat(),  # Track last update time
+        }
+
+        # Set status based on step
+        if step_name == "completed":
+            update_data["contact_enrichment_status"] = "completed"
+            update_data["contact_enriched_at"] = datetime.utcnow()
+        elif error_details:
+            update_data["contact_enrichment_status"] = "failed"
+            update_data["contact_enrichment_error_details"] = error_details
+        else:
+            update_data["contact_enrichment_status"] = "pending"
+
+        # Perform database update with retry mechanism
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                self.repo.update_company(self.company_id, update_data)
+                logger.info(
+                    f"Progress updated for {self.company_id}: {step_name} ({step_info['progress']}%)"
+                )
+                break
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    logger.error(
+                        f"Failed to update progress for {self.company_id} after {max_retries} attempts: {str(e)}"
+                    )
+                    raise
+                else:
+                    logger.warning(
+                        f"Progress update attempt {attempt + 1} failed for {self.company_id}, retrying: {str(e)}"
+                    )
+                    # Brief wait before retry
+                    import time
+
+                    time.sleep(0.1 * (attempt + 1))
+
+    def step(self, step_name: str):
+        """Mark a step as completed"""
+        self._update_progress(step_name)
+
+    def error(self, step_name: str, error_details: Dict):
+        """Mark enrichment as failed with error details"""
+        # Increment retry count
+        try:
+            # Get current retry count from database
+            company = self.repo.find_by_id(self.company_id)
+            current_retry_count = (
+                company.get("contact_enrichment_retry_count") or 0
+            ) + 1
+
+            error_details_with_retry = {
+                **error_details,
+                "retry_count": current_retry_count,
+                "failed_at": datetime.utcnow().isoformat(),
+            }
+
+            # Update with incremented retry count
+            update_data = {
+                "contact_enrichment_retry_count": current_retry_count,
+                "contact_enrichment_error_details": error_details_with_retry,
+                "contact_enrichment_status": "failed",
+            }
+            self.repo.update_company(self.company_id, update_data)
+
+        except Exception as e:
+            logger.error(
+                f"Failed to update retry count for {self.company_id}: {str(e)}"
+            )
+            # Fallback to original error handling
+            self._update_progress(step_name, error_details)
+
+    def retry(self):
+        """Reset progress for a retry attempt"""
+        try:
+            company = self.repo.find_by_id(self.company_id)
+            current_retry_count = (
+                company.get("contact_enrichment_retry_count") or 0
+            ) + 1
+
+            self.steps_completed = []
+            self.started_at = datetime.utcnow()
+
+            update_data = {
+                "contact_enrichment_progress": 0,
+                "contact_enrichment_current_step": "Voorbereiden hernieuwde poging...",
+                "contact_enrichment_steps_completed": [],
+                "contact_enrichment_status": "pending",
+                "contact_enrichment_retry_count": current_retry_count,
+                "contact_enrichment_started_at": self.started_at,
+                "contact_enrichment_error_details": None,  # Clear previous errors
+            }
+            self.repo.update_company(self.company_id, update_data)
+            logger.info(
+                f"Started retry attempt #{current_retry_count} for {self.company_id}"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to initialize retry for {self.company_id}: {str(e)}")
 
 
 @dataclass
@@ -36,6 +221,7 @@ class ContactEnrichmentService:
         company_name: str,
         website_url: Optional[str] = None,
         existing_contacts: Optional[List[ContactPerson]] = None,
+        progress_tracker: Optional[ProgressTracker] = None,
     ) -> Dict[str, Any]:
         """
         Enrich contact information for a company using web search.
@@ -44,122 +230,207 @@ class ContactEnrichmentService:
             company_name: Name of the company
             website_url: Company website URL
             existing_contacts: Existing contact information
+            progress_tracker: Optional progress tracker for real-time updates
 
         Returns:
             Dict containing enriched contact data and status
         """
         logger.info(f"Starting contact enrichment for {company_name}")
 
-        # Generate search queries
-        search_queries = self._generate_search_queries(company_name, website_url)
+        try:
+            # Try People Data Labs first (direct contact lookup - fastest method)
+            if progress_tracker:
+                progress_tracker.step("people_data_labs")
+            pdl_contacts = await self._try_people_data_labs(company_name, website_url)
 
-        # Try People Data Labs first (direct contact lookup - fastest method)
-        pdl_contacts = await self._try_people_data_labs(company_name, website_url)
+            # If we have sufficient contacts from PDL, use them directly
+            if len(pdl_contacts) >= 2:
+                logger.info(
+                    f"Found {len(pdl_contacts)} contacts via People Data Labs for {company_name}"
+                )
+                if progress_tracker:
+                    progress_tracker.step("validating_contacts")
+                validated_contacts = ContactValidator.validate_and_clean_contacts(
+                    pdl_contacts
+                )
 
-        # If we have sufficient contacts from PDL, use them directly
-        if len(pdl_contacts) >= 2:
+                if progress_tracker:
+                    progress_tracker.step("completed")
+
+                return {
+                    "contacts": validated_contacts,
+                    "search_queries_executed": 0,  # No search queries needed
+                    "contacts_found": len(validated_contacts),
+                    "enrichment_status": "completed",
+                    "search_results_summary": {
+                        "pdl_contacts": len(pdl_contacts),
+                        "search_used": False,
+                    },
+                }
+
+            # Generate search queries only when PDL doesn't provide enough contacts
+            if progress_tracker:
+                progress_tracker.step("generating_queries")
+            search_queries = await self._generate_search_queries(
+                company_name, website_url
+            )
+
+            # Execute search queries in parallel (much faster than sequential)
+            if progress_tracker:
+                progress_tracker.step("web_search")
             logger.info(
-                f"Found {len(pdl_contacts)} contacts via People Data Labs for {company_name}"
+                f"Running {len(search_queries)} search queries in parallel for {company_name}"
             )
+            search_tasks = [
+                self._execute_search(company_name, query) for query in search_queries
+            ]
+
+            try:
+                # Execute all searches concurrently
+                search_results = await asyncio.gather(
+                    *search_tasks, return_exceptions=True
+                )
+
+                # Filter out exceptions and convert to proper results
+                valid_results = []
+                for result in search_results:
+                    if isinstance(result, Exception):
+                        logger.warning(f"Search task failed: {str(result)}")
+                    elif isinstance(result, ContactSearchResult):
+                        valid_results.append(result)
+
+                search_results = valid_results
+
+            except Exception as e:
+                logger.error(
+                    f"Parallel search execution failed for {company_name}: {str(e)}"
+                )
+                if progress_tracker:
+                    progress_tracker.error(
+                        "web_search",
+                        {
+                            "error": "Search execution failed",
+                            "details": str(e),
+                            "step": "web_search",
+                        },
+                    )
+                search_results = []
+
+            # Extract contacts from search results (combining with PDL results if any)
+            if progress_tracker:
+                progress_tracker.step("extracting_contacts")
+            search_contacts = await self._extract_contacts_from_results(
+                company_name, search_results, existing_contacts
+            )
+
+            # Combine PDL contacts with search-based contacts
+            all_contacts = pdl_contacts + search_contacts
+
+            # Validate and clean contacts using shared utility
+            if progress_tracker:
+                progress_tracker.step("validating_contacts")
             validated_contacts = ContactValidator.validate_and_clean_contacts(
-                pdl_contacts
+                all_contacts
             )
+
+            # Enhance with Hunter.io email verification (if API key available)
+            if validated_contacts and website_url:
+                if progress_tracker:
+                    progress_tracker.step("hunter_enhancement")
+                validated_contacts = await self._enhance_with_hunter_io(
+                    validated_contacts, website_url
+                )
+
+            # Mark as completed
+            if progress_tracker:
+                progress_tracker.step("completed")
 
             return {
                 "contacts": validated_contacts,
-                "search_queries_executed": 0,  # No search queries needed
+                "search_queries_executed": len(search_results),
                 "contacts_found": len(validated_contacts),
-                "enrichment_status": "completed",
-                "search_results_summary": {
-                    "pdl_contacts": len(pdl_contacts),
-                    "search_used": False,
-                },
+                "enrichment_status": "completed" if validated_contacts else "partial",
+                "search_results_summary": self._summarize_search_results(
+                    search_results
+                ),
             }
 
-        # Execute search queries in parallel (much faster than sequential)
-        logger.info(
-            f"Running {len(search_queries)} search queries in parallel for {company_name}"
-        )
-        search_tasks = [
-            self._execute_search(company_name, query) for query in search_queries
-        ]
-
-        try:
-            # Execute all searches concurrently
-            search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-
-            # Filter out exceptions and convert to proper results
-            valid_results = []
-            for result in search_results:
-                if isinstance(result, Exception):
-                    logger.warning(f"Search task failed: {str(result)}")
-                elif isinstance(result, ContactSearchResult):
-                    valid_results.append(result)
-
-            search_results = valid_results
-
         except Exception as e:
-            logger.error(
-                f"Parallel search execution failed for {company_name}: {str(e)}"
-            )
-            search_results = []
+            logger.error(f"Contact enrichment failed for {company_name}: {str(e)}")
+            if progress_tracker:
+                progress_tracker.error(
+                    "extracting_contacts",
+                    {
+                        "error": "Enrichment process failed",
+                        "details": str(e),
+                        "step": "extracting_contacts",
+                    },
+                )
 
-        # Extract contacts from search results (combining with PDL results if any)
-        search_contacts = await self._extract_contacts_from_results(
-            company_name, search_results, existing_contacts
-        )
+            # Return empty result on failure
+            return {
+                "contacts": [],
+                "search_queries_executed": 0,
+                "contacts_found": 0,
+                "enrichment_status": "failed",
+                "search_results_summary": {},
+                "error": str(e),
+            }
 
-        # Combine PDL contacts with search-based contacts
-        all_contacts = pdl_contacts + search_contacts
-
-        # Validate and clean contacts using shared utility
-        validated_contacts = ContactValidator.validate_and_clean_contacts(all_contacts)
-
-        # Enhance with Hunter.io email verification (if API key available)
-        if validated_contacts and website_url:
-            validated_contacts = await self._enhance_with_hunter_io(
-                validated_contacts, website_url
-            )
-
-        return {
-            "contacts": validated_contacts,
-            "search_queries_executed": len(search_results),
-            "contacts_found": len(validated_contacts),
-            "enrichment_status": "completed" if validated_contacts else "partial",
-            "search_results_summary": self._summarize_search_results(search_results),
-        }
-
-    def _generate_search_queries(
+    async def _generate_search_queries(
         self, company_name: str, website_url: Optional[str]
     ) -> List[str]:
-        """Generate optimized search queries for finding contact information (reduced from 8 to 4)."""
-        queries = []
-
-        # Combined leadership search (combines CEO, CFO, CTO in one query) - prioritize Dutch contacts
-        queries.append(
-            f'"{company_name}" CEO CFO CTO director email contact Nederland Netherlands Dutch .nl'
-        )
-
-        # Management team search - prioritize Dutch contacts
-        queries.append(
-            f'"{company_name}" management team leadership contact email phone Nederland Netherlands'
-        )
-
-        # Website-specific search (if available)
-        if website_url:
-            domain = (
-                website_url.replace("https://", "").replace("http://", "").split("/")[0]
+        """Generate optimized search queries for finding contact information using LLM."""
+        try:
+            # Use LLM to generate dynamic, targeted search queries
+            queries = await LLMService.generate_contact_search_queries(
+                company_name=company_name,
+                website_url=website_url,
+                country="NL",  # Default to NL for now, can be made dynamic
             )
+            logger.info(
+                f"Generated {len(queries)} LLM-based search queries for {company_name}"
+            )
+            return queries
+        except Exception as e:
+            logger.warning(
+                f"LLM query generation failed, using fallback queries: {str(e)}"
+            )
+            # Fallback to basic queries if LLM fails
+            queries = []
+
+            # Combined leadership search - prioritize Dutch contacts
             queries.append(
-                f"site:{domain} contact team leadership management {company_name}"
+                f'"{company_name}" CEO CFO CTO director email contact Nederland Netherlands Dutch .nl'
             )
 
-        # LinkedIn professional search - prioritize Netherlands location
-        queries.append(
-            f'site:linkedin.com "{company_name}" CEO director manager Netherlands Nederland location:nl'
-        )
+            # Management team search - prioritize Dutch contacts
+            queries.append(
+                f'"{company_name}" management team leadership contact email phone Nederland Netherlands'
+            )
 
-        return queries[:4]  # Reduced from 8 to 4 queries for faster execution
+            # Website-specific search (if available)
+            if website_url:
+                domain = (
+                    website_url.replace("https://", "")
+                    .replace("http://", "")
+                    .split("/")[0]
+                )
+                queries.append(
+                    f"site:{domain} contact team leadership management {company_name}"
+                )
+
+            # LinkedIn professional search - prioritize Netherlands location
+            queries.append(
+                f'site:linkedin.com "{company_name}" CEO director manager Netherlands Nederland location:nl'
+            )
+
+            # Enhanced LinkedIn search for specific roles
+            queries.append(
+                f'site:linkedin.com "{company_name}" CFO CTO COO director manager Netherlands'
+            )
+
+            return queries[:5]  # Allow 5 queries for better LinkedIn coverage
 
     async def _try_people_data_labs(
         self, company_name: str, website_url: Optional[str] = None
@@ -239,13 +510,22 @@ class ContactEnrichmentService:
     ) -> List[ContactPerson]:
         """Extract contact information from search results using LLM."""
 
-        # Combine all search result text
+        # Combine all search result text and extract LinkedIn URLs
         combined_text = ""
+        linkedin_urls_found = []
+
         for result in search_results:
             if result.success:
                 for item in result.results:
                     text_content = item.get("Text", "") + " " + item.get("FirstURL", "")
                     combined_text += text_content + "\n"
+
+                    # Extract LinkedIn URLs from search results
+                    linkedin_pattern = (
+                        r"https?://(?:www\.)?linkedin\.com/in/[a-zA-Z0-9\-_]+/?"
+                    )
+                    found_urls = re.findall(linkedin_pattern, text_content)
+                    linkedin_urls_found.extend(found_urls)
 
         if not combined_text.strip():
             logger.warning(f"No search content found for {company_name}")
@@ -253,17 +533,29 @@ class ContactEnrichmentService:
 
         # Use shared LLM service for contact extraction
         try:
+            # Add found LinkedIn URLs to the text for better extraction
+            if linkedin_urls_found:
+                combined_text += "\n\nGevonden LinkedIn profielen:\n"
+                for url in set(linkedin_urls_found):  # Remove duplicates
+                    combined_text += f"- {url}\n"
+
             contacts_data = await LLMService.extract_contacts_from_text(
                 company_name, combined_text, max_contacts=5
             )
 
             contacts = []
             for contact_data in contacts_data:
+                # Validate and clean LinkedIn URL
+                linkedin_url = validate_and_clean_linkedin_url(
+                    contact_data.get("linkedin_url")
+                )
+
                 contact = ContactPerson(
                     name=contact_data.get("name"),
                     role=contact_data.get("role"),
                     email=contact_data.get("email"),
                     phone=contact_data.get("phone"),
+                    linkedin_url=linkedin_url,
                     department=contact_data.get("department"),
                     seniority_level=contact_data.get("seniority_level"),
                 )

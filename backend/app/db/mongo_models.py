@@ -1,7 +1,8 @@
 import datetime
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, Dict, List, Optional
+
 from bson import ObjectId
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PyObjectId(ObjectId):
@@ -78,6 +79,7 @@ class CompanyDocument(BaseModel):
     contact_persons: Optional[List[Dict[str, Any]]] = None
     contact_enrichment_status: Optional[str] = None
     contact_enriched_at: Optional[datetime.datetime] = None
+    contact_enrichment_last_updated: Optional[str] = None
 
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
@@ -135,10 +137,44 @@ class LeadDocument(BaseModel):
     source_url: str = Field(..., description="Unique source URL for the lead")
 
 
+class BackgroundTaskStatusDocument(BaseModel):
+    """MongoDB document model for Background Task Status tracking."""
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={ObjectId: str},
+    )
+
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    task_name: str = Field(..., description="Unique identifier for the task")
+    status: str = Field(default="idle", description="Task status: 'running' or 'idle'")
+    started_at: Optional[datetime.datetime] = None
+    updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+
+
+class CircuitBreakerStateDocument(BaseModel):
+    """MongoDB document model for Circuit Breaker state tracking."""
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={ObjectId: str},
+    )
+
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    provider: str = Field(..., description="Provider identifier")
+    failure_count: int = Field(default=0)
+    disabled_until: Optional[datetime.datetime] = None
+    updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+
+
 # Collection names
 COLLECTIONS = {
     "companies": "companies",
     "api_usage": "api_usage",
     "search_queries": "search_queries",
     "leads": "leads",
+    "background_tasks": "background_tasks",
+    "circuit_breaker_state": "circuit_breaker_state",
 }

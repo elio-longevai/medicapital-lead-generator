@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from typing import Dict, Any
+from typing import Any, Dict
 
 from app.db.repositories import ApiUsageRepository
 
@@ -20,11 +20,3 @@ class ApiUsageService:
     def get_usage_stats(self, api_name: str) -> Dict[str, Any]:
         """Get usage statistics for an API."""
         return self.repo.get_usage_stats(api_name)
-
-    def track_api_call(self, api_name: str) -> bool:
-        """Track a single API call (convenience method)."""
-        try:
-            return self.increment_usage(api_name)
-        except Exception as e:
-            logger.error(f"Failed to track API call for {api_name}: {e}")
-            return False

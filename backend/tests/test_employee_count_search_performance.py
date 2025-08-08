@@ -1,19 +1,19 @@
 import asyncio
 import logging
-import httpx
-import pytest
 import re
 from collections import defaultdict
 from typing import Dict, List, Optional
 
-from app.core.clients import create_multi_provider_search_client
+import httpx
+import pytest
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+
+from app.core.clients import create_multi_provider_search_client, llm_client
+from app.graph import prompts
 from app.graph.nodes.refinement.generate_refinement_queries import (
     generate_employee_queries,
 )
-from app.graph import prompts
-from app.core.clients import llm_client
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import PromptTemplate
 
 # Configure logging for detailed output
 logging.basicConfig(level=logging.INFO)

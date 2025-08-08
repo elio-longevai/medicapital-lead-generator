@@ -1,5 +1,4 @@
 from pathlib import Path
-from pydantic import BaseModel
 
 
 def load_prompt(filename: str) -> str:
@@ -18,11 +17,3 @@ ICP_STRUCTURING_PROMPT = load_prompt("icp_structuring.txt")
 QUERY_GENERATION_PROMPT = load_prompt("query_generation.txt")
 LEAD_TRIAGE_PROMPT = load_prompt("lead_triage.txt")
 REFINEMENT_PROMPT = load_prompt("refinement_prompt.txt")
-
-
-class CandidateLead(BaseModel):
-    discovered_name: str
-    source_url: str
-    country: str
-    primary_industry: str
-    initial_reasoning: str

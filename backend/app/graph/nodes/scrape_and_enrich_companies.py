@@ -1,18 +1,18 @@
 import asyncio
 import logging
-from pathlib import Path
 from itertools import islice
+from pathlib import Path
 
 from crawl4ai import (
     AsyncWebCrawler,
     BrowserConfig,
-    CrawlerRunConfig,
     CacheMode,
+    CrawlerRunConfig,
 )
 
 from app.core.clients import llm_client
-from app.graph.state import CandidateLead, GraphState
 from app.graph.nodes.schemas import EnrichedCompanyData
+from app.graph.state import CandidateLead, GraphState
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ async def _scrape_company_website(
     """
     browser_config = BrowserConfig(headless=True, verbose=False)
     run_config = CrawlerRunConfig(
-        cache_mode=CacheMode.ENABLED,
+        cache_mode=CacheMode.PERSISTENT,
         word_count_threshold=50,
         exclude_external_links=True,
     )

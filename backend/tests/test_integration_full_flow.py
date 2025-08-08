@@ -4,10 +4,11 @@ Provides structure validation and usage examples for full workflow testing.
 """
 
 import logging
+
 import pytest
 
-from app.graph.workflow import build_workflow
 from app.graph.state import GraphState
+from app.graph.workflow import build_workflow
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,28 +1,29 @@
+import mongomock
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.db.models import Base
-from app.graph.state import GraphState, CandidateLead
-
-# Use an in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from app.graph.state import CandidateLead, GraphState
 
 
 @pytest.fixture(scope="function")
-def test_db():
-    """Fixture for an in-memory database session."""
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
+def test_mongo_db():
+    """Fixture for an in-memory mock MongoDB database client."""
+    client = mongomock.MongoClient()
+    db = client.get_database("test_db")
+    yield db
+    client.close()
+
+
+@pytest.fixture(autouse=True)
+def mock_mongo_client(test_mongo_db, monkeypatch):
+    """
+    Mocks the MongoDB connection functions to return a mongomock instance
+    for the duration of a test.
+    """
+    monkeypatch.setattr("app.db.mongodb.get_mongo_db", lambda: test_mongo_db)
+    monkeypatch.setattr(
+        "app.db.mongodb.get_mongo_collection",
+        lambda name: test_mongo_db.get_collection(name),
+    )
+    monkeypatch.setattr("app.db.mongodb.get_mongo_client", lambda: test_mongo_db.client)
 
 
 @pytest.fixture

@@ -1,6 +1,7 @@
 import asyncio
-from unittest.mock import patch, AsyncMock, MagicMock
 import unittest
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from app.graph.nodes.scrape_and_enrich_companies import scrape_and_enrich_companies
 
 

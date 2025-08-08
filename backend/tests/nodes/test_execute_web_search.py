@@ -1,6 +1,8 @@
-import pytest
-from unittest.mock import patch, AsyncMock
 import unittest
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
 from app.graph.nodes.execute_web_search import execute_web_search
 
 
