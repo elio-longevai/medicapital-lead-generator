@@ -109,6 +109,7 @@ export interface EnrichmentStatusResponse {
   startedAt?: string;
   completedAt?: string;
   contactsFound: number;
+  lastUpdated?: string;
 }
 
 class ApiService {

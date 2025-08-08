@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
 	Card,
 	CardContent,
@@ -77,6 +77,24 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 			   enrichmentStatus.data?.status === 'pending' ||
 			   company.contactEnrichmentStatus === 'pending';
 	};
+
+	// Track enrichment status changes for toast notifications
+	const prevStatusRef = useRef(enrichmentStatus.data?.status);
+	useEffect(() => {
+		const currentStatus = enrichmentStatus.data?.status;
+		const prevStatus = prevStatusRef.current;
+		
+		// Show toast when enrichment completes or fails (only on status change)
+		if (prevStatus && prevStatus !== currentStatus && currentStatus) {
+			if (currentStatus === 'completed') {
+				toast.success(`Contactverrijking voltooid voor ${company.company}! ${enrichmentStatus.data?.contactsFound || 0} contacten gevonden.`);
+			} else if (currentStatus === 'failed') {
+				toast.error(`Contactverrijking mislukt voor ${company.company}. Probeer het opnieuw.`);
+			}
+		}
+		
+		prevStatusRef.current = currentStatus;
+	}, [enrichmentStatus.data?.status, company.company]);
 
 	const activities = useMemo(() => {
 		if (!company) return [];
@@ -264,7 +282,12 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 					toast.success(`Contactverrijking gestart voor ${company.company}. Dit kan enkele minuten duren.`);
 				},
 				onError: (error) => {
-					toast.error(`Contactverrijking mislukt: ${error.message}`);
+					// Handle specific error types
+					if (error.message.includes('409') || error.message.includes('already in progress')) {
+						toast.warning(`Contactverrijking is al bezig voor ${company.company}. Wacht tot deze voltooid is.`);
+					} else {
+						toast.error(`Contactverrijking mislukt: ${error.message}`);
+					}
 				},
 			},
 		);
@@ -565,7 +588,7 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 													? 'destructive' 
 													: 'secondary'
 											}
-											className="text-xs"
+											className="text-xs ml-4"
 										>
 											{(enrichmentStatus.data?.status || company.contactEnrichmentStatus) === 'completed' 
 												? `Verrijkt (${enrichmentStatus.data?.contactsFound || company.contactPersons?.length || 0} contacten)` 
@@ -573,7 +596,7 @@ export const CompanyProfile = ({ company, onBack }: CompanyProfileProps) => {
 												? 'Mislukt' 
 												: enrichmentStatus.data?.progress 
 												? `${enrichmentStatus.data.progress}% voltooid`
-												: 'Bezig...'}
+												: 'Nog niet verrijkt'}
 										</Badge>
 									)}
 									{/* Refresh button for existing contacts */}

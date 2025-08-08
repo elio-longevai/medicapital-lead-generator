@@ -1,4 +1,3 @@
-
 from app.db.repositories import SearchQueryRepository
 from app.graph.nodes.get_used_queries import get_used_queries
 

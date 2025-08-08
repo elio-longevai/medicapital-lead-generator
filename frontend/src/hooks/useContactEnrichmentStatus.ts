@@ -13,8 +13,12 @@ export function useContactEnrichmentStatus(companyId: number) {
     gcTime: 0, // Don't cache old data
     refetchInterval: (query) => {
       const data = query.state.data;
-      // Poll every 2 seconds if enrichment is pending, otherwise stop polling
-      return data?.status === 'pending' ? 2000 : false;
+      if (data?.status === 'pending') {
+        // Faster polling during enrichment - 1 second intervals
+        // After 80% completion, slow down to 2 seconds to reduce server load
+        return (data.progress || 0) >= 80 ? 2000 : 1000;
+      }
+      return false; // Stop polling when not pending
     },
     refetchOnWindowFocus: true,
     refetchOnMount: true,

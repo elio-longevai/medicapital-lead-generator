@@ -74,39 +74,64 @@ class ProgressTracker:
         self._update_progress("initializing")
 
     def _update_progress(self, step_name: str, error_details: Optional[Dict] = None):
-        """Update progress in database"""
+        """Update progress in database with immediate commit and better error handling"""
         step_info = next((s for s in self.STEPS if s["name"] == step_name), None)
         if not step_info:
+            logger.warning(f"Unknown step: {step_name}")
             return
 
-        # Mark step as completed
-        self.steps_completed.append(
-            {
-                "step": step_name,
-                "description": step_info["description"],
-                "completed_at": datetime.utcnow().isoformat(),
-            }
-        )
+        # Mark step as completed with precise timestamp
+        step_completed = {
+            "step": step_name,
+            "description": step_info["description"],
+            "completed_at": datetime.utcnow().isoformat(),
+        }
+        self.steps_completed.append(step_completed)
 
+        # Build comprehensive update data
         update_data = {
             "contact_enrichment_progress": step_info["progress"],
             "contact_enrichment_current_step": step_info["description"],
             "contact_enrichment_steps_completed": self.steps_completed,
-            "contact_enrichment_started_at": self.started_at,
+            "contact_enrichment_started_at": self.started_at.isoformat()
+            if isinstance(self.started_at, datetime)
+            else self.started_at,
+            "contact_enrichment_last_updated": datetime.utcnow().isoformat(),  # Track last update time
         }
 
+        # Set status based on step
         if step_name == "completed":
             update_data["contact_enrichment_status"] = "completed"
+            update_data["contact_enriched_at"] = datetime.utcnow()
         elif error_details:
             update_data["contact_enrichment_status"] = "failed"
             update_data["contact_enrichment_error_details"] = error_details
         else:
             update_data["contact_enrichment_status"] = "pending"
 
-        try:
-            self.repo.update_company(self.company_id, update_data)
-        except Exception as e:
-            logger.error(f"Failed to update progress for {self.company_id}: {str(e)}")
+        # Perform database update with retry mechanism
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                self.repo.update_company(self.company_id, update_data)
+                logger.info(
+                    f"Progress updated for {self.company_id}: {step_name} ({step_info['progress']}%)"
+                )
+                break
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    logger.error(
+                        f"Failed to update progress for {self.company_id} after {max_retries} attempts: {str(e)}"
+                    )
+                    raise
+                else:
+                    logger.warning(
+                        f"Progress update attempt {attempt + 1} failed for {self.company_id}, retrying: {str(e)}"
+                    )
+                    # Brief wait before retry
+                    import time
+
+                    time.sleep(0.1 * (attempt + 1))
 
     def step(self, step_name: str):
         """Mark a step as completed"""

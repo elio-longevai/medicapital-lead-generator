@@ -73,6 +73,9 @@ class CompanyResponse(BaseModel):
     )
     contactEnrichmentRetryCount: Optional[int] = None  # contact_enrichment_retry_count
     contactEnrichmentStartedAt: Optional[str] = None  # contact_enrichment_started_at
+    contactEnrichmentLastUpdated: Optional[str] = (
+        None  # contact_enrichment_last_updated
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -91,6 +94,7 @@ class EnrichmentStatusResponse(BaseModel):
     startedAt: Optional[str] = None
     completedAt: Optional[str] = None
     contactsFound: int = 0
+    lastUpdated: Optional[str] = None
 
 
 class CompanyListResponse(BaseModel):

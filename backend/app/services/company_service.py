@@ -271,6 +271,7 @@ class CompanyService:
                 and isinstance(company.get("contact_enrichment_started_at"), datetime)
                 else None
             ),
+            contactEnrichmentLastUpdated=company.get("contact_enrichment_last_updated"),
         )
 
     def _calculate_default_score(self, company: Dict[str, Any]) -> int:

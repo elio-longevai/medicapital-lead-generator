@@ -179,6 +179,14 @@ async def enrich_company_contacts(company_id: str, background_tasks: BackgroundT
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
+    # Check if enrichment is already in progress
+    current_status = company.contactEnrichmentStatus
+    if current_status == "pending":
+        raise HTTPException(
+            status_code=409,
+            detail="Contact enrichment is already in progress for this company. Please wait for it to complete.",
+        )
+
     company_name = company.company
     website_url = company.website
 
@@ -264,6 +272,7 @@ def get_enrichment_status(company_id: str):
         startedAt=company.contactEnrichmentStartedAt,
         completedAt=company.contactEnrichedAt,
         contactsFound=len(company.contactPersons or []),
+        lastUpdated=getattr(company, "contactEnrichmentLastUpdated", None),
     )
 
 

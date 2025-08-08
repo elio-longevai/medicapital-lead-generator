@@ -79,6 +79,7 @@ class CompanyDocument(BaseModel):
     contact_persons: Optional[List[Dict[str, Any]]] = None
     contact_enrichment_status: Optional[str] = None
     contact_enriched_at: Optional[datetime.datetime] = None
+    contact_enrichment_last_updated: Optional[str] = None
 
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)

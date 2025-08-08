@@ -57,6 +57,8 @@ export function useEnrichCompanyContacts() {
         return {
           ...oldData,
           contactEnrichmentStatus: 'pending' as const,
+          contactEnrichmentProgress: 0,
+          contactEnrichmentCurrentStep: 'Contactverrijking wordt gestart...',
         };
       });
 
@@ -67,11 +69,22 @@ export function useEnrichCompanyContacts() {
       if (context?.previousCompany) {
         queryClient.setQueryData(['company', variables.id], context.previousCompany);
       }
+      
+      // For 409 conflicts (concurrent enrichment), refresh data to get current state
+      if (err.message.includes('409') || err.message.includes('already in progress')) {
+        queryClient.invalidateQueries({ queryKey: ['company', variables.id] });
+        queryClient.invalidateQueries({ queryKey: ['enrichment-status', variables.id] });
+      }
     },
     onSettled: (data, error, variables) => {
       // Always refetch after mutation to get the latest data from server
       queryClient.invalidateQueries({ queryKey: ['company', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['companies'] });
+      
+      // Also start polling for enrichment status if successful
+      if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['enrichment-status', variables.id] });
+      }
     },
   });
 }
