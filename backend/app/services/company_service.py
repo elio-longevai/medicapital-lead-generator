@@ -203,10 +203,20 @@ class CompanyService:
         # Use company_description field directly
         description = company.get("company_description")
 
-        # Get first email/phone from contact_persons list for summary display
+        # Get first available email/phone from contact_persons list for summary display
         contact_persons = company.get("contact_persons", [])
-        primary_email = contact_persons[0].get("email") if contact_persons else None
-        primary_phone = contact_persons[0].get("phone") if contact_persons else None
+        primary_email = None
+        primary_phone = None
+
+        # Find first contact with email
+        for contact in contact_persons:
+            if contact.get("email") and not primary_email:
+                primary_email = contact.get("email")
+
+        # Find first contact with phone
+        for contact in contact_persons:
+            if contact.get("phone") and not primary_phone:
+                primary_phone = contact.get("phone")
 
         return CompanyResponse(
             id=str(company["_id"]),  # Convert ObjectId to string

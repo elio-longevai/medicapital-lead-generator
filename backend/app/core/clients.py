@@ -169,7 +169,7 @@ class BraveSearchClient(BaseSearchClient, CountryMappingMixin):
     def limiter(self):
         """Lazy initialization of limiter to ensure it's bound to the current event loop."""
         if self._limiter is None:
-            self._limiter = AsyncLimiter(1, 1)
+            self._limiter = AsyncLimiter(1, 1.2)
         return self._limiter
 
     async def search_async(
@@ -440,7 +440,7 @@ class CircuitBreaker:
 class MultiProviderSearchClient:
     """Orchestrates searches across multiple providers."""
 
-    PROVIDER_TIER = ["serper", "tavily", "brave", "scrapingdog", "firecrawl"]
+    PROVIDER_TIER = ["serper", "brave", "tavily", "scrapingdog", "firecrawl"]
 
     def __init__(self, clients: Dict[str, BaseSearchClient]):
         self.clients = clients

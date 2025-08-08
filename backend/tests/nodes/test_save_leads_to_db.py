@@ -1,19 +1,12 @@
-from unittest.mock import patch
-
-from app.db.models import Company
 from app.graph.nodes.save_leads_to_db import save_leads_to_db
 from app.services.company_name_normalizer import normalize_name
+from app.db.repositories import CompanyRepository
 
 
-@patch("app.graph.nodes.save_leads_to_db.SessionLocal")
-def test_save_new_lead(
-    mock_session_local, test_db, mock_graph_state, mock_candidate_lead
-):
+def test_save_new_lead(test_mongo_db, mock_graph_state, mock_candidate_lead):
     """
     Tests saving a single new, enriched lead to the database.
     """
-    mock_session_local.return_value = test_db
-
     enriched_data = {
         "contact_email": "contact@testclinic.com",
         "employee_count": "10-50",
@@ -28,33 +21,30 @@ def test_save_new_lead(
     # Assertions
     assert result["newly_saved_leads_count"] == 1
 
-    saved_company = test_db.query(Company).first()
+    repo = CompanyRepository()
+    saved_company = repo.find_by_normalized_name(
+        normalize_name(mock_candidate_lead.discovered_name)
+    )
     assert saved_company is not None
-    assert saved_company.discovered_name == mock_candidate_lead.discovered_name
-    assert saved_company.contact_email == "contact@testclinic.com"
-    assert saved_company.employee_count == "10-50"
-    assert saved_company.icp_name == mock_graph_state.icp_name
+    # Note: contact_email is no longer a top-level field, it's inside contact_persons
+    assert saved_company.get("employee_count") == "10-50"
+    assert saved_company["icp_name"] == mock_graph_state.icp_name
 
 
-@patch("app.graph.nodes.save_leads_to_db.SessionLocal")
-def test_skip_duplicate_lead(
-    mock_session_local, test_db, mock_graph_state, mock_candidate_lead
-):
+def test_skip_duplicate_lead(test_mongo_db, mock_graph_state, mock_candidate_lead):
     """
     Tests that a lead with a name that normalizes to an existing name is not saved.
     """
-    mock_session_local.return_value = test_db
-
+    repo = CompanyRepository()
     # Pre-populate the DB with a company
-    existing_company = Company(
-        normalized_name=normalize_name("Test Health Clinic"),
-        discovered_name="Test Health Clinic Inc.",
-        source_url="https://existing.com",
-        country="NL",
-        initial_reasoning="Exists",
-    )
-    test_db.add(existing_company)
-    test_db.commit()
+    existing_company = {
+        "normalized_name": normalize_name("Test Health Clinic"),
+        "discovered_name": "Test Health Clinic Inc.",
+        "source_url": "https://existing.com",
+        "country": "NL",
+        "initial_reasoning": "Exists",
+    }
+    repo.collection.insert_one(existing_company)
 
     mock_graph_state.enriched_companies = [
         {"lead": mock_candidate_lead, "enriched_data": {}}
@@ -65,5 +55,5 @@ def test_skip_duplicate_lead(
 
     # Assert
     assert result["newly_saved_leads_count"] == 0
-    company_count = test_db.query(Company).count()
+    company_count = repo.collection.count_documents({})
     assert company_count == 1

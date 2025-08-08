@@ -213,13 +213,6 @@ class ContactEnrichmentService:
         logger.info(f"Starting contact enrichment for {company_name}")
 
         try:
-            # Generate search queries
-            if progress_tracker:
-                progress_tracker.step("generating_queries")
-            search_queries = await self._generate_search_queries(
-                company_name, website_url
-            )
-
             # Try People Data Labs first (direct contact lookup - fastest method)
             if progress_tracker:
                 progress_tracker.step("people_data_labs")
@@ -249,6 +242,13 @@ class ContactEnrichmentService:
                         "search_used": False,
                     },
                 }
+
+            # Generate search queries only when PDL doesn't provide enough contacts
+            if progress_tracker:
+                progress_tracker.step("generating_queries")
+            search_queries = await self._generate_search_queries(
+                company_name, website_url
+            )
 
             # Execute search queries in parallel (much faster than sequential)
             if progress_tracker:
