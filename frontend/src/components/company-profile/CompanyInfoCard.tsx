@@ -48,7 +48,7 @@ export const CompanyInfoCard = ({ company }: CompanyInfoCardProps) => {
           </div>
         )}
 
-        {company.subIndustry && (
+        {company.subIndustry && !['Eindgebruiker', 'Leverancier', 'Overig', 'end_user', 'supplier', 'other'].includes(company.subIndustry) && (
           <div>
             <h4 className="font-semibold mb-2">Sub-industrie</h4>
             <Badge variant="outline">{company.subIndustry}</Badge>
