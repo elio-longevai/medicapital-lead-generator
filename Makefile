@@ -30,6 +30,7 @@ help:
 	@printf "\n\033[1m--- Running the Application ---\033[0m\n"
 	@printf "  \033[36m%-25s\033[0m %s\n" "make run-backend" "🚀 Run lead generation for Netherlands."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make run-frontend" "🚀 Start frontend development server."
+	@printf "  \033[36m%-25s\033[0m %s\n" "make dev" "🧩 Run API and frontend together (concurrently)."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make run-api" "🌐 Start the FastAPI backend server."
 	@printf "  \033[36m%-25s\033[0m %s\n" "make start-scheduler" "⏰ Start automated scheduler (4-hour intervals)."
 	@printf "\n\033[1m--- Database ---\033[0m\n"
@@ -165,6 +166,11 @@ start-scheduler:
 	@echo "--> Will run every 4 hours, alternating between NL and BE"
 	@echo "--> Press CTRL+C to stop the scheduler"
 	@cd backend && PYTHONPATH=. ../$(VENV)/bin/python -m app.main start-scheduler --interval-hours 4
+
+# Run API and frontend concurrently for development
+dev:
+	@echo "\n🧩 Starting API and frontend concurrently..."
+	@$(MAKE) -j 2 run-api run-frontend
 
 # ====================================================================================
 #  ✨ Code Quality & Testing
