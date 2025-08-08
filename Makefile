@@ -5,7 +5,7 @@
 #  To see all available commands, run `make help`.
 # ====================================================================================
 
-.PHONY: help install install-backend install-frontend compile-requirements clean test run-backend run-api lint format setup setup-pre-commit vulture create-db start-scheduler run-frontend frontend-build frontend-lint
+.PHONY: help install install-backend install-frontend compile-requirements clean test run-backend run-api lint format setup setup-pre-commit vulture create-db start-scheduler run-frontend frontend-build frontend-lint dev
 
 # --- Variables ---
 # Customize these for your project
