@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUpdateCompanyStatus, useEnrichCompanyContacts, useCompany } from "@/hooks/useCompanies";
 import { useContactEnrichmentStatus } from "@/hooks/useContactEnrichmentStatus";
 import { toast } from "sonner";
@@ -107,30 +106,14 @@ export const CompanyProfile = ({ companyId, onBack }: CompanyProfileProps) => {
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 				<div className="lg:col-span-2 space-y-8">
-					<Tabs defaultValue="overview" className="w-full">
-						<TabsList className="grid w-full grid-cols-3">
-							<TabsTrigger value="overview">Overzicht</TabsTrigger>
-							<TabsTrigger value="contacts">Contacten</TabsTrigger>
-							<TabsTrigger value="activity">Activiteit</TabsTrigger>
-						</TabsList>
-						
-						<TabsContent value="overview" className="mt-6">
-							<CompanyInfoCard company={company} />
-						</TabsContent>
-						
-						<TabsContent value="contacts" className="mt-6">
-							<ContactListCard
-								company={company}
-								isEnrichmentPending={isEnrichmentPending()}
-								enrichmentStatus={enrichmentStatus}
-								onEnrichContacts={handleEnrichContacts}
-							/>
-						</TabsContent>
-						
-						<TabsContent value="activity" className="mt-6">
-							<ActivityTimeline company={company} />
-						</TabsContent>
-					</Tabs>
+					<ContactListCard
+						company={company}
+						isEnrichmentPending={isEnrichmentPending()}
+						enrichmentStatus={enrichmentStatus}
+						onEnrichContacts={handleEnrichContacts}
+					/>
+					<CompanyInfoCard company={company} />
+					<ActivityTimeline company={company} />
 				</div>
 
 				<div className="space-y-6">

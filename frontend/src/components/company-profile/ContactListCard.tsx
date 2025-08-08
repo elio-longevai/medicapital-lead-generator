@@ -39,7 +39,7 @@ export const ContactListCard = ({
   const contacts = company.contactPersons || [];
   
   const getContactIcon = (contact: Contact) => {
-    const title = contact.title?.toLowerCase() || '';
+    const title = contact.role?.toLowerCase() || '';
     if (title.includes('ceo') || title.includes('founder') || title.includes('owner') || title.includes('director')) {
       return <Crown className="h-4 w-4 text-yellow-600" />;
     }
@@ -140,7 +140,7 @@ export const ContactListCard = ({
           <div className="max-h-96 overflow-y-auto space-y-3">
             {contacts.map((contact, index) => (
               <div
-                key={index}
+                key={`${contact.name}-${contact.email}`}
                 className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-start justify-between">
@@ -151,9 +151,9 @@ export const ContactListCard = ({
                         <h4 className="font-semibold text-sm truncate">
                           {contact.name}
                         </h4>
-                        {contact.title && (
+                        {contact.role && (
                           <Badge variant="secondary" className="text-xs">
-                            {contact.title}
+                            {contact.role}
                           </Badge>
                         )}
                       </div>
@@ -183,11 +183,11 @@ export const ContactListCard = ({
                           </div>
                         )}
                         
-                        {contact.linkedin && (
+                        {contact.linkedin_url && (
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <LinkedinIcon className="h-3 w-3" />
                             <a
-                              href={contact.linkedin}
+                              href={contact.linkedin_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="hover:text-primary hover:underline"
@@ -208,10 +208,10 @@ export const ContactListCard = ({
                         </a>
                       </Button>
                     )}
-                    {contact.linkedin && (
+                    {contact.linkedin_url && (
                       <Button variant="ghost" size="sm" asChild>
                         <a
-                          href={contact.linkedin}
+                          href={contact.linkedin_url}
                           target="_blank"
                           rel="noopener noreferrer"
                         >

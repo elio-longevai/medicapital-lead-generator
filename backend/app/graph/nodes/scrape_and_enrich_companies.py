@@ -36,7 +36,7 @@ async def _scrape_company_website(
     """
     browser_config = BrowserConfig(headless=True, verbose=False)
     run_config = CrawlerRunConfig(
-        cache_mode=CacheMode.ENABLED,
+        cache_mode=CacheMode.PERSISTENT,
         word_count_threshold=50,
         exclude_external_links=True,
     )

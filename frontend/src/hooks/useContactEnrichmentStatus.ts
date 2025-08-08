@@ -36,19 +36,3 @@ export function useContactEnrichmentStatus(companyId: number) {
   return query;
 }
 
-export function useContactEnrichmentPolling(companyId: number, isEnriching: boolean) {
-  /**
-   * Alternative hook for more granular control over polling.
-   * Use this when you want to start/stop polling based on external conditions.
-   */
-  return useQuery<EnrichmentStatusResponse>({
-    queryKey: ['enrichment-status', companyId],
-    queryFn: () => apiService.getEnrichmentStatus(companyId),
-    enabled: !!companyId && isEnriching,
-    staleTime: 0,
-    gcTime: 0,
-    refetchInterval: isEnriching ? 2000 : false,
-    refetchOnWindowFocus: false, // Don't refetch on window focus for this variant
-    refetchOnMount: true,
-  });
-}
