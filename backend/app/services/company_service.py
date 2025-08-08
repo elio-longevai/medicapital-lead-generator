@@ -1,5 +1,5 @@
-import datetime
 import logging
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from ..api.models import (
@@ -28,21 +28,83 @@ class CompanyService:
         sub_industry: Optional[str],
         sort_by: str,
     ) -> CompanyListResponse:
-        result = self.repo.find_with_filters(
-            skip=skip,
-            icp_name=icp_name,
-            status=status,
-            country=country,
-            search=search,
-            entity_type=entity_type,
-            sub_industry=sub_industry,
-            sort_by=sort_by,
-        )
+        # Handle grouped ICP business logic at the service layer
+        if icp_name == "duurzaamheid":
+            # Group both sustainability ICPs together
+            # We'll modify the repository call to handle this with a custom filter
+            # First get results for both ICP types
+            filter_criteria = {}
 
-        return CompanyListResponse(
-            companies=[self._transform_company(c) for c in result["companies"]],
-            total=result["total"],
-        )
+            if status and status != "all":
+                filter_criteria["status"] = status
+            elif not status or status == "all":
+                filter_criteria["status"] = {"$ne": "rejected"}
+
+            if country:
+                filter_criteria["country"] = country
+
+            if entity_type and entity_type != "all":
+                filter_criteria["entity_type"] = entity_type
+
+            if sub_industry:
+                filter_criteria["sub_industry"] = {
+                    "$regex": sub_industry,
+                    "$options": "i",
+                }
+
+            if search:
+                filter_criteria["$or"] = [
+                    {"discovered_name": {"$regex": search, "$options": "i"}},
+                    {"equipment_needs": {"$regex": search, "$options": "i"}},
+                ]
+
+            # Add the grouped ICP filter
+            filter_criteria["icp_name"] = {
+                "$in": ["sustainability_supplier", "sustainability_end_user"]
+            }
+
+            # Use the repository's find_companies method with our custom filter
+            companies = self.repo.find_companies(filter_criteria)
+
+            # Sort the results
+            if sort_by == "score":
+                companies.sort(
+                    key=lambda x: x.get("qualification_score", 0), reverse=True
+                )
+            elif sort_by == "company":
+                companies.sort(key=lambda x: x.get("discovered_name", ""))
+            elif sort_by == "activity":
+                companies.sort(
+                    key=lambda x: x.get("created_at", datetime.min), reverse=True
+                )
+
+            # Apply pagination
+            total = len(companies)
+            companies = (
+                companies[skip : skip + 50] if skip >= 0 else companies
+            )  # Default limit of 50
+
+            return CompanyListResponse(
+                companies=[self._transform_company(c) for c in companies],
+                total=total,
+            )
+        else:
+            # For all other cases, use the standard repository method
+            result = self.repo.find_with_filters(
+                skip=skip,
+                icp_name=icp_name,
+                status=status,
+                country=country,
+                search=search,
+                entity_type=entity_type,
+                sub_industry=sub_industry,
+                sort_by=sort_by,
+            )
+
+            return CompanyListResponse(
+                companies=[self._transform_company(c) for c in result["companies"]],
+                total=result["total"],
+            )
 
     def get_company_by_id(self, company_id: str) -> Optional[CompanyResponse]:
         company = self.repo.find_by_id(company_id)
@@ -122,28 +184,29 @@ class CompanyService:
         location = f"{company.get('location_details') or 'Onbekend'}, {company.get('country', '')}"
 
         # Format last activity - return full ISO datetime instead of date-only
+        from datetime import timezone
+
         updated_at = company.get("updated_at")
         last_activity = (
-            updated_at.replace(tzinfo=datetime.timezone.utc).isoformat()
-            if updated_at and hasattr(updated_at, "replace")
+            updated_at.replace(tzinfo=timezone.utc).isoformat()
+            if updated_at and isinstance(updated_at, datetime)
             else None
         )
 
         created_at = company.get("created_at")
         created_at_formatted = (
-            created_at.replace(tzinfo=datetime.timezone.utc).isoformat()
-            if created_at and hasattr(created_at, "replace")
+            created_at.replace(tzinfo=timezone.utc).isoformat()
+            if created_at and isinstance(created_at, datetime)
             else None
         )
 
         # Use company_description field directly
         description = company.get("company_description")
 
-        # Safely get first email/phone for summary display if needed
-        contacts = company.get("contacts", [])
-        primary_email = (
-            contacts[0].get("email") if contacts else company.get("contact_email")
-        )
+        # Get first email/phone from contact_persons list for summary display
+        contact_persons = company.get("contact_persons", [])
+        primary_email = contact_persons[0].get("email") if contact_persons else None
+        primary_phone = contact_persons[0].get("phone") if contact_persons else None
 
         return CompanyResponse(
             id=str(company["_id"]),  # Convert ObjectId to string
@@ -160,7 +223,7 @@ class CompanyService:
             website=company.get("website_url") or company.get("source_url", ""),
             sourceUrl=company.get("source_url", ""),
             email=primary_email,
-            phone=company.get("contact_phone"),
+            phone=primary_phone,
             notes=company.get("initial_reasoning", ""),
             recentNews=company.get("recent_news"),
             qualificationScore=qualification_score,
@@ -174,10 +237,10 @@ class CompanyService:
             contactEnrichmentStatus=company.get("contact_enrichment_status"),
             contactEnrichedAt=(
                 company.get("contact_enriched_at")
-                .replace(tzinfo=datetime.timezone.utc)
+                .replace(tzinfo=timezone.utc)
                 .isoformat()
                 if company.get("contact_enriched_at")
-                and hasattr(company.get("contact_enriched_at"), "replace")
+                and isinstance(company.get("contact_enriched_at"), datetime)
                 else None
             ),
             # Enhanced enrichment progress fields
@@ -192,10 +255,10 @@ class CompanyService:
             contactEnrichmentRetryCount=company.get("contact_enrichment_retry_count"),
             contactEnrichmentStartedAt=(
                 company.get("contact_enrichment_started_at")
-                .replace(tzinfo=datetime.timezone.utc)
+                .replace(tzinfo=timezone.utc)
                 .isoformat()
                 if company.get("contact_enrichment_started_at")
-                and hasattr(company.get("contact_enrichment_started_at"), "replace")
+                and isinstance(company.get("contact_enrichment_started_at"), datetime)
                 else None
             ),
         )

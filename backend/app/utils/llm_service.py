@@ -198,6 +198,105 @@ Als geen relevante contacten gevonden worden, geef dan een lege lijst [] terug.
         return valid_contacts
 
     @staticmethod
+    async def generate_contact_search_queries(
+        company_name: str, website_url: Optional[str] = None, country: str = "NL"
+    ) -> List[str]:
+        """
+        Generate targeted search queries for finding key decision-makers using LLM.
+
+        Args:
+            company_name: Name of the company
+            website_url: Company website URL (optional)
+            country: Country code for localization
+
+        Returns:
+            List of optimized search queries
+        """
+        domain = ""
+        if website_url:
+            domain = (
+                website_url.replace("https://", "").replace("http://", "").split("/")[0]
+            )
+
+        prompt = f"""
+Je bent een expert in het vinden van bedrijfscontacten via zoekmachines. 
+Genereer 6 zeer specifieke en effectieve zoekopdrachten om belangrijke beslissers en hun contactgegevens te vinden voor:
+
+Bedrijf: {company_name}
+Website: {website_url or "Onbekend"}
+Land: {country}
+
+DOEL: Vind de volgende personen met hun e-mail en telefoonnummer:
+- CEO / Directeur / Algemeen Directeur
+- CFO / Financieel Directeur
+- Head of Sales / Sales Director
+- COO / Operations Manager
+- HR Manager / Head of HR
+
+INSTRUCTIES:
+1. Gebruik verschillende zoekstrategieën: LinkedIn, bedrijfswebsite, nieuwsartikelen, directories
+2. Focus op Nederlandse/Belgische bronnen voor NL/BE bedrijven
+3. Combineer bedrijfsnaam met functietitels en contact termen
+4. Gebruik site: operators voor gerichte zoekacties
+5. Prioriteer queries die waarschijnlijk e-mailadressen en telefoonnummers opleveren
+
+Geef EXACT 6 zoekopdrachten terug in JSON formaat:
+[
+  "zoekopdracht 1",
+  "zoekopdracht 2",
+  "zoekopdracht 3",
+  "zoekopdracht 4",
+  "zoekopdracht 5",
+  "zoekopdracht 6"
+]
+
+Voor Nederlandse/Belgische bedrijven, gebruik ook Nederlandse zoektermen.
+        """
+
+        response_text = await LLMService.invoke_with_timeout(prompt, timeout=30.0)
+
+        if not response_text:
+            # Fallback to basic queries if LLM fails
+            queries = [
+                f'"{company_name}" CEO CFO director email contact',
+                f'"{company_name}" management team contact',
+            ]
+            if domain:
+                queries.append(f"site:{domain} contact team management")
+            queries.append(f'site:linkedin.com "{company_name}" CEO director')
+            return queries[:4]
+
+        # Extract queries from response
+        queries = LLMService.extract_json_array_from_response(response_text)
+
+        if not queries or not isinstance(queries, list):
+            # Fallback to basic queries
+            queries = [
+                f'"{company_name}" CEO CFO director email contact',
+                f'"{company_name}" management team contact',
+            ]
+            if domain:
+                queries.append(f"site:{domain} contact team management")
+            queries.append(f'site:linkedin.com "{company_name}" CEO director')
+            return queries[:4]
+
+        # Ensure we have string queries
+        valid_queries = []
+        for query in queries:
+            if isinstance(query, str) and query.strip():
+                valid_queries.append(query.strip())
+
+        # If we don't have enough valid queries, add some basic ones
+        if len(valid_queries) < 4:
+            if domain:
+                valid_queries.append(f"site:{domain} contact team management")
+            valid_queries.append(f'site:linkedin.com "{company_name}" CEO director')
+            valid_queries.append(f'"{company_name}" contact email phone')
+
+        logger.info(f"Generated {len(valid_queries)} search queries for {company_name}")
+        return valid_queries[:6]  # Return max 6 queries
+
+    @staticmethod
     def build_prompt_with_context(
         base_prompt: str, context_data: Dict[str, Any], instruction_suffix: str = ""
     ) -> str:

@@ -102,14 +102,7 @@ class CompanyRepository:
         filter_query = {}
 
         if icp_name and icp_name != "all":
-            # Handle grouped ICP filters
-            if icp_name == "duurzaamheid":
-                # Group both sustainability ICPs together
-                filter_query["icp_name"] = {
-                    "$in": ["sustainability_supplier", "sustainability_end_user"]
-                }
-            else:
-                filter_query["icp_name"] = icp_name
+            filter_query["icp_name"] = icp_name
 
         if status and status != "all":
             filter_query["status"] = status

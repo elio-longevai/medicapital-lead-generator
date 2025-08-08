@@ -115,9 +115,8 @@ class ContactValidator:
         if contact_name and contact_name.lower() in ["contactgegevens", "contact info"]:
             return email if ContactValidator.is_valid_email(email) else None
 
-        # Skip generic emails for individual contacts
-        email_prefix = email.split("@")[0]
-        if email_prefix in ContactValidator.GENERIC_EMAIL_PREFIXES:
+        # Skip generic emails for individual contacts using the more robust regex approach
+        if ContactValidator._is_generic_email(email):
             return None
 
         return email if ContactValidator.is_valid_email(email) else None

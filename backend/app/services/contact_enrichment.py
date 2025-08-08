@@ -216,7 +216,9 @@ class ContactEnrichmentService:
             # Generate search queries
             if progress_tracker:
                 progress_tracker.step("generating_queries")
-            search_queries = self._generate_search_queries(company_name, website_url)
+            search_queries = await self._generate_search_queries(
+                company_name, website_url
+            )
 
             # Try People Data Labs first (direct contact lookup - fastest method)
             if progress_tracker:
@@ -350,42 +352,60 @@ class ContactEnrichmentService:
                 "error": str(e),
             }
 
-    def _generate_search_queries(
+    async def _generate_search_queries(
         self, company_name: str, website_url: Optional[str]
     ) -> List[str]:
-        """Generate optimized search queries for finding contact information (reduced from 8 to 4)."""
-        queries = []
-
-        # Combined leadership search (combines CEO, CFO, CTO in one query) - prioritize Dutch contacts
-        queries.append(
-            f'"{company_name}" CEO CFO CTO director email contact Nederland Netherlands Dutch .nl'
-        )
-
-        # Management team search - prioritize Dutch contacts
-        queries.append(
-            f'"{company_name}" management team leadership contact email phone Nederland Netherlands'
-        )
-
-        # Website-specific search (if available)
-        if website_url:
-            domain = (
-                website_url.replace("https://", "").replace("http://", "").split("/")[0]
+        """Generate optimized search queries for finding contact information using LLM."""
+        try:
+            # Use LLM to generate dynamic, targeted search queries
+            queries = await LLMService.generate_contact_search_queries(
+                company_name=company_name,
+                website_url=website_url,
+                country="NL",  # Default to NL for now, can be made dynamic
             )
+            logger.info(
+                f"Generated {len(queries)} LLM-based search queries for {company_name}"
+            )
+            return queries
+        except Exception as e:
+            logger.warning(
+                f"LLM query generation failed, using fallback queries: {str(e)}"
+            )
+            # Fallback to basic queries if LLM fails
+            queries = []
+
+            # Combined leadership search - prioritize Dutch contacts
             queries.append(
-                f"site:{domain} contact team leadership management {company_name}"
+                f'"{company_name}" CEO CFO CTO director email contact Nederland Netherlands Dutch .nl'
             )
 
-        # LinkedIn professional search - prioritize Netherlands location
-        queries.append(
-            f'site:linkedin.com "{company_name}" CEO director manager Netherlands Nederland location:nl'
-        )
+            # Management team search - prioritize Dutch contacts
+            queries.append(
+                f'"{company_name}" management team leadership contact email phone Nederland Netherlands'
+            )
 
-        # Enhanced LinkedIn search for specific roles
-        queries.append(
-            f'site:linkedin.com "{company_name}" CFO CTO COO director manager Netherlands'
-        )
+            # Website-specific search (if available)
+            if website_url:
+                domain = (
+                    website_url.replace("https://", "")
+                    .replace("http://", "")
+                    .split("/")[0]
+                )
+                queries.append(
+                    f"site:{domain} contact team leadership management {company_name}"
+                )
 
-        return queries[:5]  # Allow 5 queries for better LinkedIn coverage
+            # LinkedIn professional search - prioritize Netherlands location
+            queries.append(
+                f'site:linkedin.com "{company_name}" CEO director manager Netherlands Nederland location:nl'
+            )
+
+            # Enhanced LinkedIn search for specific roles
+            queries.append(
+                f'site:linkedin.com "{company_name}" CFO CTO COO director manager Netherlands'
+            )
+
+            return queries[:5]  # Allow 5 queries for better LinkedIn coverage
 
     async def _try_people_data_labs(
         self, company_name: str, website_url: Optional[str] = None

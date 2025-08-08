@@ -51,22 +51,15 @@ def save_leads_to_db(state: GraphState) -> dict:
 
             # Add enriched data if available
             if enriched_data:
-                # Extract first contact email and phone for backwards compatibility/simplicity if needed elsewhere
-                contacts = enriched_data.get("contacts", [])
-                contact_persons = enriched_data.get("contact_persons", [])
-                primary_contact = contacts[0] if contacts else {}
-                primary_contact_person = contact_persons[0] if contact_persons else {}
+                # Don't populate legacy contact_email and contact_phone fields anymore
+                # All contact data should be in the contact_persons list
 
                 company_data.update(
                     {
                         "entity_type": enriched_data.get("entity_type"),
                         "sub_industry": enriched_data.get("sub_industry"),
                         "contacts": enriched_data.get("contacts"),
-                        "contact_email": primary_contact.get("email")
-                        or primary_contact_person.get("email"),
-                        "contact_phone": primary_contact_person.get(
-                            "phone"
-                        ),  # Get phone from contact persons
+                        # Legacy fields no longer populated - use contact_persons instead
                         "website_url": enriched_data.get("website_url"),
                         "company_description": enriched_data.get("company_description"),
                         "location_details": enriched_data.get("location_details"),
@@ -78,7 +71,7 @@ def save_leads_to_db(state: GraphState) -> dict:
                         "qualification_details": enriched_data.get(
                             "qualification_details"
                         ),
-                        # Contact enrichment fields
+                        # Contact enrichment fields - this is where contact data lives now
                         "contact_persons": enriched_data.get("contact_persons"),
                         "contact_enrichment_status": enriched_data.get(
                             "contact_enrichment_status"
